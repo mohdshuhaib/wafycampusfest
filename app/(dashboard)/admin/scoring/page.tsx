@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy } from "lucide-react"
+import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -360,103 +360,86 @@ export default function ScoringPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] animate-in fade-in duration-500 overflow-hidden pb-2 space-y-3">
+    <div className="flex h-[calc(100vh-7rem)] flex-col gap-5 overflow-hidden pb-2">
+      <section className="surface-dark relative shrink-0 overflow-hidden rounded-[2rem] p-5 sm:p-6">
 
-      {/* Header Section */}
-      <div className="shrink-0 flex items-center justify-between bg-white/60 backdrop-blur-md p-3 rounded-xl border border-border/50 shadow-sm">
-         <div>
-            <h1 className="text-xl md:text-2xl font-heading font-bold tracking-tight text-foreground">Score Registration</h1>
-            <p className="text-muted-foreground text-xs hidden md:block">Record winners and update house points in real-time.</p>
-         </div>
+        <div className="relative grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-gold">
+              <Sparkles className="size-3.5" />
+              Scoring Studio
+            </div>
+            <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Register winners with confidence.</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
+              Select a section, choose an event, rank winners, apply performance grades, and export official reports.
+            </p>
+          </div>
 
-         <div className="flex items-center gap-2">
-
-            {/* NEW: WINNERS REPORT DROPDOWN */}
+          <div className="flex flex-wrap gap-2 xl:justify-end">
             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={downloadingPdf} className="gap-2 h-8 text-xs border-dashed border-yellow-400 text-yellow-700 bg-yellow-50 hover:bg-yellow-100">
-                        <Trophy className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">First Winners</span>
-                        <ChevronDown className="w-3 h-3 opacity-50" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-white">
-                    {PERFORMANCE_CATEGORIES.map((cat) => (
-                        <DropdownMenuItem
-                            key={cat.value}
-                            onClick={() => generatePerformanceReport(cat.value)}
-                            className="cursor-pointer"
-                        >
-                            {cat.label} Section
-                        </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={downloadingPdf} className="border-gold/25 bg-gold/10 text-gold hover:bg-gold/15">
+                  <Medal className="size-4" />
+                  <span className="hidden sm:inline">First Winners</span>
+                  <ChevronDown className="size-4 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="surface-elevated z-50 w-52 rounded-2xl border-navy/10 p-2">
+                {PERFORMANCE_CATEGORIES.map((cat) => (
+                  <DropdownMenuItem key={cat.value} onClick={() => generatePerformanceReport(cat.value)} className="cursor-pointer rounded-xl px-3 py-2 font-semibold text-navy focus:bg-navy/7">
+                    {cat.label} Section
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* EXCEL EXPORT BUTTON */}
-            <Button
-                variant="outline"
-                size="sm"
-                disabled={downloadingExcel}
-                onClick={generateResultsExcel}
-                className="gap-2 h-8 text-xs border-dashed border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
-            >
-                {downloadingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
-                <span className="hidden sm:inline">Export Excel</span>
+            <Button variant="outline" disabled={downloadingExcel} onClick={generateResultsExcel}>
+              {downloadingExcel ? <Loader2 className="size-4 animate-spin" /> : <FileSpreadsheet className="size-4" />}
+              <span className="hidden sm:inline">Excel</span>
             </Button>
 
-            {/* PDF EXPORT DROPDOWN */}
             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={downloadingPdf} className="gap-2 h-8 text-xs border-dashed border-slate-300">
-                        {downloadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                        <span className="hidden sm:inline">Export PDF</span>
-                        <ChevronDown className="w-3 h-3 opacity-50" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-white">
-                    {EXPORT_CATEGORIES.map((cat) => (
-                        <DropdownMenuItem
-                            key={cat.value}
-                            onClick={() => generateResultsPDF(cat.label, cat.value)}
-                            className="cursor-pointer"
-                        >
-                            {cat.label} Section
-                        </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={downloadingPdf}>
+                  {downloadingPdf ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                  <span className="hidden sm:inline">PDF</span>
+                  <ChevronDown className="size-4 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="surface-elevated z-50 w-52 rounded-2xl border-navy/10 p-2">
+                {EXPORT_CATEGORIES.map((cat) => (
+                  <DropdownMenuItem key={cat.value} onClick={() => generateResultsPDF(cat.label, cat.value)} className="cursor-pointer rounded-xl px-3 py-2 font-semibold text-navy focus:bg-navy/7">
+                    {cat.label} Section
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(true)} className="gap-2 h-8 text-xs">
-                <Settings className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Rules</span>
+            <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
+              <Settings className="size-4" />
+              <span className="hidden sm:inline">Rules</span>
             </Button>
-            <Button size="sm" onClick={() => router.push('/admin/leaderboard')} className="gap-2 h-8 text-xs bg-slate-900 text-white hover:bg-slate-800">
-                <BarChart3 className="w-3.5 h-3.5" /> Leaderboard
+            <Button onClick={() => router.push('/admin/leaderboard')}>
+              <BarChart3 className="size-4" />
+              Leaderboard
             </Button>
-         </div>
-      </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Main Scoring Area */}
-      <div className="flex-1 flex flex-col min-h-0 glass-card border border-border/50 rounded-xl overflow-hidden shadow-sm">
+      <div className="surface-elevated flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem]">
            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
 
-             {/* Mega Highlight Tabs */}
-             <div className="shrink-0 border-b border-border/50 bg-white/50 px-2 pt-2">
+             <div className="shrink-0 border-b border-navy/10 bg-ivory/60 px-3 pt-3">
                 <div className="overflow-x-auto pb-2 scrollbar-none">
-                    <TabsList className="h-auto p-1 bg-muted/20 justify-start gap-2 w-max rounded-lg">
+                    <TabsList className="h-auto w-max justify-start gap-2 rounded-2xl bg-navy/6 p-1">
                         {SECTIONS.map(sec => (
                             <TabsTrigger
                                 key={sec.id}
                                 value={sec.id}
-                                className="
-                                    px-4 py-2 text-xs md:text-sm font-semibold rounded-md transition-all duration-200
-                                    data-[state=active]:bg-primary
-                                    data-[state=active]:text-primary-foreground
-                                    data-[state=active]:shadow-md
-                                    data-[state=active]:scale-105
-                                    text-muted-foreground hover:text-foreground hover:bg-muted/50
-                                "
+                                className="rounded-xl px-4 py-2 text-xs font-bold text-slatebrand transition-all duration-200 hover:bg-navy/7 hover:text-navy data-[state=active]:bg-navy data-[state=active]:text-ivory data-[state=active]:shadow-premium md:text-sm"
                             >
+                                <SlidersHorizontal className="mr-2 hidden size-3.5 sm:inline" />
                                 {sec.label}
                             </TabsTrigger>
                         ))}
@@ -464,7 +447,7 @@ export default function ScoringPage() {
                 </div>
              </div>
 
-             <div className="flex-1 overflow-y-auto bg-slate-50/50 relative">
+             <div className="relative flex-1 overflow-y-auto bg-mist/45">
                 {SECTIONS.map(sec => (
                     <TabsContent key={sec.id} value={sec.id} className="mt-0 h-full p-2 md:p-4 data-[state=inactive]:hidden">
                         <EventScorer

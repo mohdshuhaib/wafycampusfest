@@ -2,24 +2,23 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Trophy, Users, CheckCircle, Activity, TrendingUp, BookOpen, ExternalLink } from "lucide-react"
+import { Activity, BookOpen, CheckCircle, ExternalLink, Sparkles, TrendingUp, Trophy, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from 'recharts'
+} from "recharts"
 
-// Interfaces
 interface Profile { team_id: string }
 interface Team { id: string; name: string; color_hex: string }
 
@@ -30,7 +29,7 @@ interface DashboardData {
   categoryData: { name: string; value: number; color: string }[]
   sectionData: { name: string; students: number }[]
   recentActivity: any[]
-  handbookUrl: string | null // Added field for the link
+  handbookUrl: string | null
 }
 
 export default function CaptainOverview() {
@@ -43,64 +42,58 @@ export default function CaptainOverview() {
       try {
         setLoading(true)
 
-        // 1. Get User & Team ID
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
         const { data: profileData } = await supabase
-          .from('profiles')
-          .select('team_id')
-          .eq('id', user.id)
+          .from("profiles")
+          .select("team_id")
+          .eq("id", user.id)
           .single()
 
         const profile = profileData as unknown as Profile
         if (!profile?.team_id) return
 
-        // 2. Fetch Team Details
         const { data: teamData } = await supabase
-          .from('teams')
-          .select('*')
-          .eq('id', profile.team_id)
+          .from("teams")
+          .select("*")
+          .eq("id", profile.team_id)
           .single()
 
         const team = teamData as unknown as Team
 
-        // 3. Parallel Fetch: Students, Participations, AND Rulebook Link
         const [studentsRes, partsRes, assetRes] = await Promise.all([
-          supabase.from('students').select('section').eq('team_id', profile.team_id),
-          supabase.from('participations')
-            .select('created_at, events ( name, category, applicable_section )')
-            .eq('team_id', profile.team_id)
-            .order('created_at', { ascending: false }),
-          // Fetch the rulebook link from the new table
-          supabase.from('site_assets').select('value').eq('key', 'rulebook_link').single()
+          supabase.from("students").select("section").eq("team_id", profile.team_id),
+          supabase.from("participations")
+            .select("created_at, events ( name, category, applicable_section )")
+            .eq("team_id", profile.team_id)
+            .order("created_at", { ascending: false }),
+          supabase.from("site_assets").select("value").eq("key", "rulebook_link").single(),
         ])
 
         const students = studentsRes.data || []
         const participations = partsRes.data || []
         const handbookUrl = (assetRes.data as { value: string } | null)?.value || null
 
-        // 4. Process Section Data (Bar Chart)
-        const sections = { 'Senior': 0, 'Junior': 0, 'Sub-Junior': 0 }
-        students.forEach((s: any) => {
-          if (sections[s.section as keyof typeof sections] !== undefined) {
-            sections[s.section as keyof typeof sections]++
+        const sections = { Senior: 0, Junior: 0, "Sub-Junior": 0 }
+        students.forEach((student: any) => {
+          if (sections[student.section as keyof typeof sections] !== undefined) {
+            sections[student.section as keyof typeof sections]++
           }
         })
         const sectionData = Object.entries(sections).map(([name, count]) => ({
           name,
-          students: count
+          students: count,
         }))
 
-        // 5. Process Category Data (Pie Chart)
-        const categories = { 'ON STAGE': 0, 'OFF STAGE': 0, 'GENERAL': 0 }
+        const categories = { "ON STAGE": 0, "OFF STAGE": 0, GENERAL: 0 }
 
-        participations.forEach((p: any) => {
-          const event = p.events
+        participations.forEach((participation: any) => {
+          const event = participation.events
           if (!event) return
 
-          if (Array.isArray(event.applicable_section) && event.applicable_section.includes('General')) {
-            categories['GENERAL']++
+          if (Array.isArray(event.applicable_section) && event.applicable_section.includes("General")) {
+            categories.GENERAL++
           } else {
             const cat = event.category
             if (cat && categories[cat as keyof typeof categories] !== undefined) {
@@ -110,9 +103,9 @@ export default function CaptainOverview() {
         })
 
         const categoryData = [
-          { name: 'On Stage', value: categories['ON STAGE'], color: 'hsl(var(--primary))' },
-          { name: 'Off Stage', value: categories['OFF STAGE'], color: '#3b82f6' },
-          { name: 'General', value: categories['GENERAL'], color: '#f59e0b' },
+          { name: "On Stage", value: categories["ON STAGE"], color: "#D4AF37" },
+          { name: "Off Stage", value: categories["OFF STAGE"], color: "#123B4F" },
+          { name: "General", value: categories.GENERAL, color: "#5A6D7E" },
         ]
 
         setData({
@@ -121,10 +114,9 @@ export default function CaptainOverview() {
           totalRegistrations: participations.length,
           sectionData,
           categoryData,
-          recentActivity: participations.slice(0, 5), // Last 5
-          handbookUrl
+          recentActivity: participations.slice(0, 5),
+          handbookUrl,
         })
-
       } catch (err) {
         console.error("Error loading dashboard", err)
       } finally {
@@ -138,209 +130,176 @@ export default function CaptainOverview() {
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-          <div className="h-4 w-48 rounded bg-muted animate-pulse"></div>
+        <div className="surface-elevated flex items-center gap-3 rounded-3xl px-5 py-4">
+          <div className="size-5 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+          <span className="text-sm font-bold text-navy">Loading team command center</span>
         </div>
       </div>
     )
   }
 
-  if (!data) return <div className="p-8 text-center text-muted-foreground">No Team Data Found</div>
+  if (!data) {
+    return (
+      <div className="surface-elevated rounded-[2rem] p-8 text-center text-sm font-bold text-slatebrand">
+        No team data found.
+      </div>
+    )
+  }
+
+  const participationRate = data.totalStudents > 0
+    ? Math.round((data.totalRegistrations / (data.totalStudents * 3)) * 100)
+    : 0
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700 p-2 pb-10">
+    <div className="space-y-5 pb-20 md:pb-4">
+      <section className="surface-dark relative overflow-hidden rounded-[2rem] p-5 sm:p-6">
 
-      {/* HEADER BANNER */}
-      <div
-        className="relative overflow-hidden rounded-xl p-8 text-white shadow-xl"
-        style={{
-          background: `linear-gradient(135deg, ${data.team.color_hex} 0%, #000000 150%)`
-        }}
-      >
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-4 max-w-2xl">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-heading font-bold tracking-tight mb-2 text-white">{data.team.name}</h1>
-              <p className="opacity-90 font-medium flex items-center gap-2 text-white/80">
-                <Trophy className="w-4 h-4" /> Captain's Command Center
-              </p>
-            </div>
-
-            {/* NEW HANDBOOK BUTTON */}
+        <div className="relative grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
+          <div>
+            <Badge variant="gold" className="h-8 gap-2 px-3">
+              <Sparkles className="size-3.5" />
+              Captain Command Center
+            </Badge>
+            <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">{data.team.name}</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
+              Monitor your roster, registration mix, and latest event activity before the festival desk starts moving fast.
+            </p>
             {data.handbookUrl && (
-              <Button
-                onClick={() => window.open(data.handbookUrl!, '_blank')}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/20 backdrop-blur-md shadow-lg group transition-all duration-300"
-              >
-                <BookOpen className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+              <Button onClick={() => window.open(data.handbookUrl!, "_blank")} className="mt-5 bg-gold text-navy hover:bg-gold/90">
+                <BookOpen className="size-4" />
                 View Fest Handbook
-                <ExternalLink className="w-3 h-3 ml-2 opacity-50" />
+                <ExternalLink className="size-3.5 opacity-70" />
               </Button>
             )}
           </div>
 
-          <div className="text-left md:text-right bg-white/10 backdrop-blur-md p-4 rounded-lg border border-white/10 min-w-[140px]">
-            <div className="text-3xl font-bold font-mono">{data.totalRegistrations}</div>
-            <div className="text-[10px] uppercase tracking-wider opacity-75">Active Entries</div>
+          <div className="rounded-3xl border border-ivory/10 bg-ivory/8 p-5 text-left xl:text-right">
+            <div className="text-4xl font-black text-ivory">{data.totalRegistrations}</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.14em] text-ivory/48">Active entries</div>
           </div>
         </div>
+      </section>
 
-        {/* Decorative Blobs */}
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-black opacity-20 rounded-full blur-2xl"></div>
-      </div>
+      <section className="grid gap-4 md:grid-cols-3">
+        <MetricCard label="Team Strength" value={data.totalStudents} helper="Students registered" icon={Users} tone="navy" />
+        <MetricCard label="Participation Rate" value={`${participationRate}%`} helper="Engagement estimate" icon={TrendingUp} tone="success" />
+        <MetricCard label="Latest Activity" value={`+${data.recentActivity.length}`} helper="Recent entries" icon={Activity} tone="gold" />
+      </section>
 
-      {/* SUMMARY CARDS */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="shadow-sm hover:shadow-md transition-all glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Team Strength</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-heading">{data.totalStudents}</div>
-            <p className="text-xs text-muted-foreground mt-1">Students registered</p>
-          </CardContent>
-        </Card>
+      <section className="grid gap-5 xl:grid-cols-2">
+        <ChartPanel title="Team Composition" helper="Student distribution by section">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <BarChart data={data.sectionData} layout="vertical" margin={{ left: 20, right: 20 }}>
+              <CartesianGrid stroke="#0A1D2C14" horizontal={false} />
+              <XAxis type="number" hide />
+              <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={90} tick={{ fill: "#5A6D7E", fontSize: 12, fontWeight: 700 }} />
+              <Tooltip cursor={{ fill: "transparent" }} contentStyle={{ borderRadius: "16px", border: "1px solid #0A1D2C14", background: "#F6F2E8" }} />
+              <Bar dataKey="students" fill={data.team.color_hex} radius={[0, 10, 10, 0]} barSize={34} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
 
-        <Card className="shadow-sm hover:shadow-md transition-all glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Participation Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-heading">
-              {data.totalStudents > 0
-                ? Math.round((data.totalRegistrations / (data.totalStudents * 3)) * 100)
-                : 0}%
+        <ChartPanel title="Event Distribution" helper="Registrations by event category">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <PieChart>
+              <Pie data={data.categoryData} cx="50%" cy="48%" innerRadius={62} outerRadius={88} paddingAngle={5} dataKey="value">
+                {data.categoryData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ borderRadius: "16px", border: "1px solid #0A1D2C14", background: "#F6F2E8" }} />
+              <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: "12px", fontWeight: 700 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+      </section>
+
+      <section className="surface-elevated overflow-hidden rounded-[2rem]">
+        <div className="border-b border-navy/10 bg-ivory/70 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-navy text-gold">
+              <CheckCircle className="size-5" />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Engagement score</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm hover:shadow-md transition-all glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Latest Activity</CardTitle>
-            <Activity className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-heading">+{data.recentActivity.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">New entries recently</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* CHARTS ROW */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* 1. Student Distribution Bar Chart */}
-        <Card className="col-span-1 shadow-sm border-border/50">
-          <CardHeader>
-            <CardTitle className="font-heading">Team Composition</CardTitle>
-            <CardDescription>Student distribution by section</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.sectionData} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} stroke="currentColor" />
-                  <XAxis type="number" hide />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    axisLine={false}
-                    tickLine={false}
-                    width={80}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'transparent' }}
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid hsl(var(--border))',
-                      backgroundColor: 'hsl(var(--card))',
-                      color: 'hsl(var(--card-foreground))',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                  <Bar dataKey="students" fill={data.team.color_hex} radius={[0, 4, 4, 0]} barSize={32} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div>
+              <h2 className="text-title text-lg text-navy">Recent Registrations</h2>
+              <p className="text-xs font-semibold text-slatebrand">Latest entries submitted by your team.</p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* 2. Participation Pie Chart */}
-        <Card className="col-span-1 shadow-sm border-border/50">
-          <CardHeader>
-            <CardTitle className="font-heading">Event Distribution</CardTitle>
-            <CardDescription>Registrations by category</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.categoryData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {data.categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid hsl(var(--border))',
-                      backgroundColor: 'hsl(var(--card))',
-                      color: 'hsl(var(--card-foreground))'
-                    }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} formatter={(value) => <span style={{ color: 'hsl(var(--muted-foreground))' }}>{value}</span>} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* RECENT ACTIVITY LIST */}
-      <Card className="shadow-sm border-border/50">
-        <CardHeader>
-          <CardTitle className="font-heading">Recent Registrations</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {data.recentActivity.map((activity: any, i) => (
-              <div key={i} className="flex items-center justify-between border-b border-border/40 pb-3 last:border-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <CheckCircle className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{activity.events?.name}</p>
-                    <p className="text-xs text-muted-foreground">{activity.events?.category}</p>
-                  </div>
-                </div>
-                <div className="text-xs text-muted-foreground font-mono">
-                  {new Date(activity.created_at).toLocaleDateString()}
-                </div>
-              </div>
-            ))}
-            {data.recentActivity.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <Activity className="w-8 h-8 mb-2 opacity-20" />
-                <p className="text-sm">No recent activity.</p>
-              </div>
-            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="divide-y divide-navy/8 p-2">
+          {data.recentActivity.map((activity: any, index) => (
+            <div key={index} className="flex items-center justify-between gap-3 rounded-2xl p-3 hover:bg-gold/6">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-gold/10 text-gold">
+                  <CheckCircle className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-navy">{activity.events?.name}</p>
+                  <p className="text-xs font-semibold text-slatebrand">{activity.events?.category}</p>
+                </div>
+              </div>
+              <div className="shrink-0 font-mono text-xs font-bold text-slatebrand">
+                {new Date(activity.created_at).toLocaleDateString()}
+              </div>
+            </div>
+          ))}
+          {data.recentActivity.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-slatebrand">
+              <Activity className="mb-2 size-8 opacity-30" />
+              <p className="text-sm font-bold">No recent activity.</p>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function MetricCard({
+  label,
+  value,
+  helper,
+  icon: Icon,
+  tone,
+}: {
+  label: string
+  value: string | number
+  helper: string
+  icon: typeof Trophy
+  tone: "navy" | "success" | "gold"
+}) {
+  const toneClasses = {
+    navy: "bg-navy text-gold",
+    success: "bg-success/10 text-success",
+    gold: "bg-gold/12 text-gold",
+  }
+
+  return (
+    <div className="surface-elevated rounded-[2rem] p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow text-slatebrand">{label}</p>
+          <div className="mt-2 text-3xl font-black text-navy">{value}</div>
+          <p className="mt-1 text-xs font-semibold text-slatebrand">{helper}</p>
+        </div>
+        <div className={`flex size-11 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+          <Icon className="size-5" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChartPanel({ title, helper, children }: { title: string; helper: string; children: React.ReactNode }) {
+  return (
+    <div className="surface-elevated rounded-[2rem] p-4">
+      <div className="mb-4">
+        <h2 className="text-title text-lg text-navy">{title}</h2>
+        <p className="text-xs font-semibold text-slatebrand">{helper}</p>
+      </div>
+      <div className="h-[320px] min-h-[320px] min-w-0 w-full">
+        {children}
+      </div>
     </div>
   )
 }

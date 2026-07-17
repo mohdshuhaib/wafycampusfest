@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Loader2, Trophy, ArrowRight, Gavel, AlertCircle } from "lucide-react"
+import { AlertCircle, ArrowUpRight, Gavel, Loader2, Medal, Shield, Trophy } from "lucide-react"
 import { TeamDetailsModal } from "./team-details-modal"
 import { PenaltySettingsDialog } from "./penalty-settings-dialog"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
@@ -22,35 +22,38 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
     setLoading(true)
 
     const { data: parts } = await supabase
-      .from('participations')
+      .from("participations")
       .select(`
           points_earned,
           teams ( id, name, color_hex ),
           events ( category, applicable_section ),
           students ( section )
         `)
-      .gt('points_earned', 0)
+      .gt("points_earned", 0)
 
-    // Fetch teams WITH penalty_points
-    const { data: teams } = await supabase.from('teams').select('*')
+    const { data: teams } = await supabase.from("teams").select("*")
 
-    if (!parts || !teams) return
+    if (!parts || !teams) {
+      setScores([])
+      setLoading(false)
+      return
+    }
 
     const leaderboard = teams.map((team: any) => {
       const teamParts = parts.filter((p: any) => p.teams?.id === team.id)
       const earnedTotal = teamParts.reduce((sum: number, p: any) => sum + (p.points_earned || 0), 0)
       const penalty = team.penalty_points || 0
-      const total = Math.max(0, earnedTotal - penalty) // Ensure score doesn't go below 0 visually if needed, though raw math allows negatives
+      const total = Math.max(0, earnedTotal - penalty)
 
       const checkSection = (p: any, section: string) => {
         const appSection = p.events?.applicable_section
         return Array.isArray(appSection) && appSection.includes(section)
       }
-      const isGen = (p: any) => checkSection(p, 'General')
-      const isFnd = (p: any) => checkSection(p, 'Foundation')
-      const isSen = (p: any) => checkSection(p, 'Senior')
-      const isJun = (p: any) => checkSection(p, 'Junior')
-      const isSub = (p: any) => checkSection(p, 'Sub-Junior')
+      const isGen = (p: any) => checkSection(p, "General")
+      const isFnd = (p: any) => checkSection(p, "Foundation")
+      const isSen = (p: any) => checkSection(p, "Senior")
+      const isJun = (p: any) => checkSection(p, "Junior")
+      const isSub = (p: any) => checkSection(p, "Sub-Junior")
 
       const general = teamParts.filter(isGen).reduce((s: number, p: any) => s + (p.points_earned || 0), 0)
       const foundation = teamParts.filter(isFnd).reduce((s: number, p: any) => s + (p.points_earned || 0), 0)
@@ -69,7 +72,7 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
         junior,
         subJunior,
         general,
-        foundation
+        foundation,
       }
     })
 
@@ -82,94 +85,132 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
     calculateScores()
   }, [refreshTrigger])
 
-  if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
+  if (loading) {
+    return (
+      <div className="surface-elevated flex h-full items-center justify-center rounded-[2rem]">
+        <Loader2 className="size-5 animate-spin text-gold" />
+      </div>
+    )
+  }
+
+  const leaderTotal = scores[0]?.total || 0
 
   return (
     <>
-      <div className="flex flex-col h-full bg-white/50 backdrop-blur-sm border border-border/50 rounded-xl overflow-hidden shadow-sm">
-        {/* Compact Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-white/80 border-b border-border/50 shrink-0">
-          <h3 className="font-heading font-bold flex items-center gap-2 text-sm text-slate-800">
-            <Trophy className="w-4 h-4 text-primary" /> Team Standings
-          </h3>
-          <div className="flex items-center gap-2">
-             <TooltipProvider>
+      <div className="surface-elevated flex h-full flex-col overflow-hidden rounded-[2rem]">
+        <div className="shrink-0 border-b border-navy/10 bg-ivory/70 px-4 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-2xl bg-navy text-gold">
+                <Trophy className="size-4" />
+              </div>
+              <div>
+                <h3 className="text-title text-lg text-navy">Team Standings</h3>
+                <p className="text-xs font-semibold text-slatebrand">Live aggregate points by section.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
                 <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsPenaltyOpen(true)}
-                            className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full"
-                        >
-                            <Gavel className="w-4 h-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Manage Penalties (Minus Marks)</p>
-                    </TooltipContent>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsPenaltyOpen(true)}
+                      className="size-9 rounded-2xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Gavel className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Manage penalties</p>
+                  </TooltipContent>
                 </Tooltip>
-             </TooltipProvider>
-             <span className="text-[10px] font-mono text-muted-foreground bg-slate-100 px-2 py-0.5 rounded-full">{scores.length} Teams</span>
+              </TooltipProvider>
+              <span className="rounded-full bg-navy/7 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-slatebrand">
+                {scores.length} Teams
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Scrollable Table Area */}
-        <div className="flex-1 min-h-0 relative">
+        <div className="relative min-h-0 flex-1">
           <ScrollArea className="h-full w-full">
             <div className="w-full min-w-max">
               <Table>
-                <TableHeader className="bg-slate-50 sticky top-0 z-20 shadow-sm">
-                  <TableRow className="border-border/50 hover:bg-transparent h-8">
-                    <TableHead className="w-[50px] pl-4 text-[10px] font-bold uppercase tracking-wider h-8">Rank</TableHead>
-                    <TableHead className="min-w-[140px] sticky left-0 z-10 bg-slate-50 text-[10px] font-bold uppercase tracking-wider h-8 border-r border-border/50">Team Name</TableHead>
-                    <TableHead className="text-center w-20 bg-primary/5 text-primary font-black text-[10px] uppercase tracking-wider h-8 border-x border-primary/10">Total</TableHead>
-                    <TableHead className="text-center w-[60px] text-[10px] text-muted-foreground h-8">Senior</TableHead>
-                    <TableHead className="text-center w-[60px] text-[10px] text-muted-foreground h-8">Junior</TableHead>
-                    <TableHead className="text-center w-[60px] text-[10px] text-muted-foreground h-8">Sub-Jr</TableHead>
-                    <TableHead className="text-center w-[60px] text-[10px] text-muted-foreground h-8">General</TableHead>
-                    <TableHead className="text-center w-[60px] text-[10px] text-muted-foreground h-8 pr-4">Found.</TableHead>
+                <TableHeader className="sticky top-0 z-20 bg-mist shadow-sm">
+                  <TableRow className="h-10 border-navy/10 hover:bg-transparent">
+                    <TableHead className="h-10 w-[70px] pl-4 text-[10px] font-black uppercase tracking-[0.12em] text-slatebrand">Rank</TableHead>
+                    <TableHead className="sticky left-0 z-10 h-10 min-w-[210px] border-r border-navy/10 bg-mist text-[10px] font-black uppercase tracking-[0.12em] text-slatebrand">Team</TableHead>
+                    <TableHead className="h-10 w-24 border-x border-gold/20 bg-gold/10 text-center text-[10px] font-black uppercase tracking-[0.12em] text-navy">Total</TableHead>
+                    <TableHead className="h-10 w-[72px] text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">Senior</TableHead>
+                    <TableHead className="h-10 w-[72px] text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">Junior</TableHead>
+                    <TableHead className="h-10 w-[72px] text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">Sub-Jr</TableHead>
+                    <TableHead className="h-10 w-[78px] text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">General</TableHead>
+                    <TableHead className="h-10 w-[88px] pr-4 text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">Foundation</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {scores.map((team, idx) => (
-                    <TableRow
-                      key={team.id}
-                      className="hover:bg-blue-50/50 border-border/50 cursor-pointer group h-10 transition-colors"
-                      onClick={() => setSelectedTeamId(team.id)}
-                    >
-                      <TableCell className="pl-4 font-mono text-xs text-muted-foreground py-1">
-                        {idx === 0 ? <span className="text-lg">🥇</span> :
-                          idx === 1 ? <span className="text-lg">🥈</span> :
-                            idx === 2 ? <span className="text-lg">🥉</span> :
-                              `#${idx + 1}`}
-                      </TableCell>
-                      <TableCell className="sticky left-0 z-10 bg-white group-hover:bg-blue-50/50 border-r border-border/50 py-1">
-                        <div className="flex flex-col justify-center h-full">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-6 rounded-r-md" style={{ backgroundColor: team.color }}></div>
-                                <span className="font-semibold text-sm text-slate-700 truncate">{team.name}</span>
-                            </div>
-                            {team.penalty > 0 && (
-                                <div className="pl-4 flex items-center gap-1 text-[9px] text-red-500 font-medium">
-                                    <AlertCircle className="w-2.5 h-2.5" />
-                                    <span>-{team.penalty} penalty</span>
-                                </div>
+                  {scores.map((team, idx) => {
+                    const progress = leaderTotal > 0 ? Math.round((team.total / leaderTotal) * 100) : 0
+
+                    return (
+                      <TableRow
+                        key={team.id}
+                        className="group h-16 cursor-pointer border-navy/8 transition-colors hover:bg-gold/6"
+                        onClick={() => setSelectedTeamId(team.id)}
+                      >
+                        <TableCell className="py-2 pl-4">
+                          <div className="flex size-9 items-center justify-center rounded-2xl bg-navy/6 text-xs font-black text-slatebrand group-hover:bg-navy group-hover:text-ivory">
+                            {idx < 3 ? (
+                              <Medal className={idx === 0 ? "size-4 text-gold" : idx === 1 ? "size-4 text-slatebrand" : "size-4 text-[#c98743]"} />
+                            ) : (
+                              `#${idx + 1}`
                             )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center bg-primary/5 font-black text-lg text-primary border-x border-primary/10 py-1 shadow-inner relative">
-                        {team.total}
-                      </TableCell>
-                      <TableCell className="text-center text-xs text-slate-500 py-1">{team.senior}</TableCell>
-                      <TableCell className="text-center text-xs text-slate-500 py-1">{team.junior}</TableCell>
-                      <TableCell className="text-center text-xs text-slate-500 py-1">{team.subJunior}</TableCell>
-                      <TableCell className="text-center text-xs text-slate-500 py-1">{team.general}</TableCell>
-                      <TableCell className="text-center text-xs text-slate-500 py-1 pr-4">{team.foundation}</TableCell>
-                    </TableRow>
-                  ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="sticky left-0 z-10 border-r border-navy/10 bg-ivory py-2 group-hover:bg-[#f3ead8]">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="h-10 w-1.5 rounded-full" style={{ backgroundColor: team.color }} />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate text-sm font-black text-navy">{team.name}</span>
+                                <ArrowUpRight className="size-3 shrink-0 text-slatebrand opacity-0 transition-opacity group-hover:opacity-100" />
+                              </div>
+                              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-navy/8">
+                                <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${progress}%` }} />
+                              </div>
+                              {team.penalty > 0 && (
+                                <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-destructive">
+                                  <AlertCircle className="size-3" />
+                                  <span>-{team.penalty} penalty</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="border-x border-gold/20 bg-gold/10 py-2 text-center text-2xl font-black text-navy">
+                          {team.total}
+                        </TableCell>
+                        <TableCell className="py-2 text-center text-sm font-bold text-slatebrand">{team.senior}</TableCell>
+                        <TableCell className="py-2 text-center text-sm font-bold text-slatebrand">{team.junior}</TableCell>
+                        <TableCell className="py-2 text-center text-sm font-bold text-slatebrand">{team.subJunior}</TableCell>
+                        <TableCell className="py-2 text-center text-sm font-bold text-slatebrand">{team.general}</TableCell>
+                        <TableCell className="py-2 pr-4 text-center text-sm font-bold text-slatebrand">{team.foundation}</TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
+
+              {scores.length === 0 && (
+                <div className="flex h-64 flex-col items-center justify-center gap-2 text-center">
+                  <Shield className="size-8 text-slatebrand" />
+                  <p className="text-sm font-bold text-navy">No team scores yet</p>
+                  <p className="text-xs font-medium text-slatebrand">Scores will appear after events are judged.</p>
+                </div>
+              )}
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>

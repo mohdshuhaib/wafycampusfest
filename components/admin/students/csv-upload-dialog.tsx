@@ -126,19 +126,19 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-white">
+      <DialogContent className="rounded-[2rem] border-navy/10 bg-ivory sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Import Students via CSV</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-title text-xl text-navy">Import Students via CSV</DialogTitle>
+          <DialogDescription className="font-medium text-slatebrand">
             Upload a CSV file to add students in bulk.
-            <a href="/template_students.xlsx" download className="text-green-700 hover:underline ml-1 font-medium">
+            <a href="/template_students.xlsx" download className="ml-1 font-bold text-navy hover:text-gold">
               Download Template
             </a>
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:bg-muted/10 transition-colors">
+          <div className="rounded-3xl border-2 border-dashed border-navy/15 bg-mist/60 p-8 text-center transition-colors hover:border-gold/40 hover:bg-gold/10">
             <Input
               type="file"
               accept=".csv"
@@ -146,9 +146,9 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
               id="csv-upload"
               onChange={handleFileChange}
             />
-            <label htmlFor="csv-upload" className="cursor-pointer flex flex-col items-center gap-2">
-              <UploadCloud className="w-10 h-10 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">
+            <label htmlFor="csv-upload" className="flex cursor-pointer flex-col items-center gap-2">
+              <UploadCloud className="size-10 text-slatebrand" />
+              <span className="text-sm font-bold text-slatebrand">
                 {file ? file.name : "Click to select CSV file"}
               </span>
             </label>
@@ -156,21 +156,21 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
 
           {error && (
             <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="size-4" />
               <AlertTitle>Upload Failed</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
           {success && (
-            <Alert className="border-green-200 bg-green-50 text-green-800">
-              <CheckCircle className="h-4 w-4 text-green-600" />
+            <Alert className="border-success/20 bg-success/10 text-success">
+              <CheckCircle className="size-4 text-success" />
               <AlertTitle>Success</AlertTitle>
               <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
 
-          <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
+          <div className="rounded-2xl border border-navy/10 bg-mist p-3 text-xs font-semibold text-slatebrand">
             <strong>Required Headers:</strong> name, chest_no, class, section, team_name
           </div>
         </div>
@@ -178,7 +178,7 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleUpload} disabled={!file || loading}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
+            {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <FileText className="mr-2 size-4" />}
             Upload & Process
           </Button>
         </DialogFooter>

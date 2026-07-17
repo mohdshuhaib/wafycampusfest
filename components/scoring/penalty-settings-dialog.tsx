@@ -89,37 +89,37 @@ export function PenaltySettingsDialog({ open, onOpenChange, onSuccess }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-white">
+      <DialogContent className="max-w-md rounded-[2rem] border-navy/10 bg-ivory">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <AlertTriangle className="w-5 h-5" /> Manage Team Penalties
+          <DialogTitle className="flex items-center gap-2 text-title text-xl text-destructive">
+            <AlertTriangle className="size-5" /> Manage Team Penalties
           </DialogTitle>
-          <DialogDescription className="pt-2 text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+          <DialogDescription className="rounded-2xl border border-destructive/15 bg-destructive/10 p-3 pt-3 text-xs font-semibold text-destructive">
             <strong>Note:</strong> Minus marks should be assigned based on reports from the
             "Manage Teams" page (e.g., disciplinary issues, late reporting).
             These points will be subtracted from the total score.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+        <div className="max-h-[60vh] space-y-3 overflow-y-auto py-4 pr-1">
           {loading ? (
             <div className="flex justify-center py-4">
-              <Loader2 className="animate-spin" />
+              <Loader2 className="animate-spin text-gold" />
             </div>
           ) : (
             teams.map((team) => (
-              <div key={team.id} className="flex items-center justify-between gap-4 p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-colors">
+              <div key={team.id} className="flex items-center justify-between gap-4 rounded-2xl border border-navy/10 bg-mist/50 p-3 transition-colors hover:bg-gold/10">
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-3 h-8 rounded-r"
+                    className="h-9 w-1.5 rounded-full"
                     style={{ backgroundColor: team.color_hex }}
                   />
-                  <Label htmlFor={`penalty-${team.id}`} className="font-medium text-slate-700 cursor-pointer">
+                  <Label htmlFor={`penalty-${team.id}`} className="cursor-pointer font-bold text-navy">
                     {team.name}
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-red-500">-</span>
+                  <span className="text-sm font-black text-destructive">-</span>
                   <Input
                     id={`penalty-${team.id}`}
                     type="number"
@@ -131,7 +131,7 @@ export function PenaltySettingsDialog({ open, onOpenChange, onSuccess }: Props) 
                         [team.id]: Math.max(0, parseInt(e.target.value) || 0),
                       })
                     }
-                    className="w-20 text-right font-mono"
+                    className="w-20 rounded-2xl text-right font-mono"
                   />
                 </div>
               </div>
@@ -143,8 +143,8 @@ export function PenaltySettingsDialog({ open, onOpenChange, onSuccess }: Props) 
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || loading} className="bg-red-600 hover:bg-red-700 text-white">
-            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+          <Button onClick={handleSave} disabled={saving || loading} variant="destructive">
+            {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
             Save Deductions
           </Button>
         </DialogFooter>

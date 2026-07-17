@@ -6,60 +6,67 @@ import { Badge } from "@/components/ui/badge"
 import { UserX } from "lucide-react"
 
 export function ZeroParticipationTab({ students, filterTeam, search }: { students: any[], filterTeam: string, search: string }) {
-
   const filteredList = useMemo(() => {
-    return students.filter(s => {
-      const isTeamMatch = filterTeam === "all" || s.team_id === filterTeam
-      const isZero = s.participations.length === 0
-      const isSearchMatch = s.name.toLowerCase().includes(search.toLowerCase()) || (s.chest_no && s.chest_no.includes(search))
+    return students.filter((student) => {
+      const isTeamMatch = filterTeam === "all" || student.team_id === filterTeam
+      const isZero = student.participations.length === 0
+      const isSearchMatch = student.name.toLowerCase().includes(search.toLowerCase()) || (student.chest_no && student.chest_no.includes(search))
       return isTeamMatch && isZero && isSearchMatch
     })
   }, [students, filterTeam, search])
 
   return (
-    <div className="flex flex-col h-full bg-white border rounded-lg shadow-sm overflow-hidden">
-        <div className="shrink-0 p-4 border-b bg-red-50/30 flex justify-between items-center">
-            <div className="flex items-center gap-2 text-red-700">
-                <div className="p-2 bg-red-100 rounded-full"><UserX className="w-4 h-4" /></div>
-                <div className="flex flex-col">
-                    <span className="font-semibold text-sm">Inactive Students</span>
-                    <span className="text-xs text-red-600/80">Students with 0 registered events</span>
-                </div>
+    <div className="surface-elevated flex h-full flex-col overflow-hidden rounded-[2rem]">
+      <div className="shrink-0 border-b border-navy/10 bg-ivory/70 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+              <UserX className="size-5" />
             </div>
-            <Badge variant="destructive" className="text-sm px-3 py-1">{filteredList.length}</Badge>
+            <div>
+              <h3 className="text-title text-lg text-navy">Inactive Students</h3>
+              <p className="text-xs font-semibold text-slatebrand">Students with zero registered events.</p>
+            </div>
+          </div>
+          <Badge variant="destructive" className="h-8 px-3">{filteredList.length}</Badge>
         </div>
+      </div>
 
-        <div className="flex-1 overflow-auto">
-            <Table>
-                <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
-                    <TableRow>
-                        <TableHead className="w-[100px]">Chest No</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Class</TableHead>
-                        <TableHead>Section</TableHead>
-                        <TableHead>Team</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {filteredList.map(s => (
-                        <TableRow key={s.id} className="hover:bg-slate-50">
-                            <TableCell className="font-mono font-medium text-slate-600">{s.chest_no || '-'}</TableCell>
-                            <TableCell className="font-medium text-slate-900">{s.name}</TableCell>
-                            <TableCell>{s.class_grade}</TableCell>
-                            <TableCell><Badge variant="outline" className="font-normal">{s.section}</Badge></TableCell>
-                            <TableCell>
-                                <span style={{ color: s.teams.color_hex }} className="font-semibold text-xs border px-2 py-1 rounded bg-slate-50 border-slate-100">
-                                    {s.teams.name}
-                                </span>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                    {filteredList.length === 0 && (
-                        <TableRow><TableCell colSpan={5} className="text-center py-12 text-slate-400">No inactive students found.</TableCell></TableRow>
-                    )}
-                </TableBody>
-            </Table>
-        </div>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <Table>
+          <TableHeader className="sticky top-0 z-10 bg-mist shadow-sm">
+            <TableRow className="border-navy/10">
+              <TableHead className="w-[110px] font-black text-slatebrand">Chest No</TableHead>
+              <TableHead className="font-black text-slatebrand">Name</TableHead>
+              <TableHead className="font-black text-slatebrand">Class</TableHead>
+              <TableHead className="font-black text-slatebrand">Section</TableHead>
+              <TableHead className="font-black text-slatebrand">Team</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredList.map((student) => (
+              <TableRow key={student.id} className="border-navy/8 hover:bg-gold/6">
+                <TableCell className="font-mono font-black text-navy">{student.chest_no || "-"}</TableCell>
+                <TableCell className="font-bold text-navy">{student.name}</TableCell>
+                <TableCell className="font-semibold text-slatebrand">{student.class_grade || "-"}</TableCell>
+                <TableCell><Badge variant="outline">{student.section}</Badge></TableCell>
+                <TableCell>
+                  <span style={{ color: student.teams.color_hex, borderColor: `${student.teams.color_hex}44`, backgroundColor: `${student.teams.color_hex}12` }} className="rounded-full border px-2 py-1 text-xs font-black">
+                    {student.teams.name}
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))}
+            {filteredList.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="h-56 text-center text-sm font-bold text-slatebrand">
+                  No inactive students found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

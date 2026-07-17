@@ -133,24 +133,24 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] bg-white">
+      <DialogContent className="rounded-[2rem] border-navy/10 bg-ivory sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{event ? "Edit Event" : "Create New Event"}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-title text-xl text-navy">{event ? "Edit Event" : "Create New Event"}</DialogTitle>
+          <DialogDescription className="font-medium text-slatebrand">
             Configure event details, rules, and scoring category.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           {error && (
-            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" /> {error}
+            <div className="flex items-center gap-2 rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-sm font-bold text-destructive">
+              <AlertCircle className="size-4" /> {error}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label>Event Name <span className="text-red-500">*</span></Label>
+                <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Event Name <span className="text-destructive">*</span></Label>
                 <Input
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
@@ -158,7 +158,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                 />
             </div>
             <div className="space-y-2">
-                <Label>Event Code <span className="text-red-500">*</span></Label>
+                <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Event Code <span className="text-destructive">*</span></Label>
                 <Input
                 value={formData.event_code}
                 onChange={e => setFormData({...formData, event_code: e.target.value})}
@@ -170,7 +170,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label>Category</Label>
+                <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Category</Label>
                 <Select
                     value={formData.category}
                     onValueChange={v => setFormData({...formData, category: v})}
@@ -178,13 +178,13 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                     <SelectTrigger>
                         <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white">
+                    <SelectContent className="surface-elevated rounded-2xl border-navy/10">
                         {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                 </Select>
             </div>
             <div className="space-y-2">
-                <Label>Applicable Section</Label>
+                <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Applicable Section</Label>
                 <Select
                     value={formData.applicable_section}
                     onValueChange={v => setFormData({...formData, applicable_section: v})}
@@ -192,7 +192,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                     <SelectTrigger>
                         <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white">
+                    <SelectContent className="surface-elevated rounded-2xl border-navy/10">
                         {SECTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                 </Select>
@@ -201,7 +201,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label>Max Participants (Per Team)</Label>
+                <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Max Participants</Label>
                 <Input
                     type="number"
                     min={1}
@@ -210,7 +210,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                 />
             </div>
             <div className="space-y-2">
-                <Label>Grade Type (Scoring)</Label>
+                <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Grade Type</Label>
                 <Select
                     value={formData.grade_type}
                     onValueChange={v => setFormData({...formData, grade_type: v})}
@@ -218,7 +218,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                     <SelectTrigger>
                         <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white">
+                    <SelectContent className="surface-elevated rounded-2xl border-navy/10">
                         {GRADES.map(g => <SelectItem key={g} value={g}>Grade {g}</SelectItem>)}
                     </SelectContent>
                 </Select>
@@ -226,12 +226,12 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
           </div>
 
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Description</Label>
             <Textarea
                 value={formData.description}
                 onChange={e => setFormData({...formData, description: e.target.value})}
                 placeholder="Rules, time limits, or specific instructions..."
-                className="resize-none h-20"
+                className="h-24 resize-none rounded-2xl"
             />
           </div>
         </div>
@@ -239,7 +239,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             {event ? "Save Changes" : "Create Event"}
           </Button>
         </DialogFooter>

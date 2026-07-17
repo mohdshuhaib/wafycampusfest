@@ -18,7 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Loader2, Trophy, Save, User, Users, CheckCircle2, ChevronsUpDown, Check, Award } from "lucide-react"
+import { Loader2, Trophy, Save, User, Users, CheckCircle2, ChevronsUpDown, Check, Award, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // --- TYPES ---
@@ -379,26 +379,31 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
   const otherParticipants = itemList.filter(item => !winnerIds.has(mode === 'INDIVIDUAL' ? item.id : item.id))
 
   return (
-    <div className="flex flex-col h-full space-y-3">
+    <div className="flex h-full flex-col space-y-4">
         {/* TOP BAR: Combobox & Mode */}
-        <div className="flex flex-col md:flex-row gap-3 items-center bg-white p-2 rounded-lg border border-border/50 shrink-0 shadow-sm">
+        <div className="surface-panel flex shrink-0 flex-col items-stretch gap-3 rounded-3xl p-3 md:flex-row md:items-center">
 
-            <div className="w-full md:w-[400px]">
+            <div className="w-full md:w-[440px]">
                 <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                     <PopoverTrigger asChild>
                         <Button
                             variant="outline"
                             role="combobox"
                             aria-expanded={openCombobox}
-                            className="w-full justify-between h-9 text-xs md:text-sm"
+                            className="h-12 w-full justify-between"
                         >
-                            {selectedEventId
-                                ? events.find((e) => e.id === selectedEventId)?.name
-                                : "-- Search & Select Event --"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <span className="flex min-w-0 items-center gap-2 truncate">
+                              <Search className="size-4 text-slatebrand" />
+                              <span className="truncate">
+                                {selectedEventId
+                                    ? events.find((e) => e.id === selectedEventId)?.name
+                                    : "Search and select event"}
+                              </span>
+                            </span>
+                            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0 bg-white">
+                    <PopoverContent className="surface-elevated w-[min(440px,calc(100vw-2rem))] overflow-hidden rounded-2xl border-navy/10 p-0">
                         <Command>
                             <CommandInput placeholder="Search event..." />
                             <CommandList>
@@ -415,17 +420,17 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                                     setOpenCombobox(false)
                                                 }}
                                                 className={cn(
-                                                    "flex items-center justify-between cursor-pointer",
-                                                    isCompleted ? "bg-green-50 text-green-700 data-[selected=true]:bg-green-100" : ""
+                                                    "flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2",
+                                                    isCompleted ? "bg-success/10 text-success data-[selected=true]:bg-success/15" : "text-navy"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    {isCompleted && <Check className="w-3 h-3 text-green-600" />}
+                                                    {isCompleted && <Check className="size-3 text-success" />}
                                                     <span>{event.name}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-[10px] opacity-60">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.08em] opacity-60">
                                                     <span>{event.event_code}</span>
-                                                    <span className="bg-slate-100 px-1 rounded">Cate {event.grade_type}</span>
+                                                    <span className="rounded-full bg-navy/7 px-2 py-0.5">Grade {event.grade_type}</span>
                                                 </div>
                                             </CommandItem>
                                         )
@@ -438,9 +443,9 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
             </div>
 
             {selectedEvent && (
-                <div className="flex items-center gap-2 ml-auto">
-                    <Badge variant={mode === 'TEAM' ? 'destructive' : 'outline'} className="h-8 px-3 text-xs">
-                       {mode === 'TEAM' ? <><Users className="w-3 h-3 mr-1"/> Team Event (Cate C)</> : <><User className="w-3 h-3 mr-1"/> Individual (Cate {selectedEvent.grade_type})</>}
+                <div className="ml-auto flex items-center gap-2">
+                    <Badge variant={mode === 'TEAM' ? 'gold' : 'outline'} className="h-9 px-3 text-xs">
+                       {mode === 'TEAM' ? <><Users className="mr-1 size-3"/> Team Event - Grade C</> : <><User className="mr-1 size-3"/> Individual - Grade {selectedEvent.grade_type}</>}
                     </Badge>
                 </div>
             )}
@@ -448,10 +453,10 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
 
         {/* MAIN SCORING AREA */}
         {selectedEventId && (
-            <div className="flex-1 overflow-y-auto min-h-0 bg-slate-50/50 rounded-lg p-2 md:p-4 space-y-4">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-3xl bg-mist/50 p-2 md:p-4">
 
                 {/* 1. TOP 3 WINNERS */}
-                <div className="grid lg:grid-cols-3 gap-3 md:gap-4">
+                <div className="grid gap-3 md:gap-4 lg:grid-cols-3">
                     {['FIRST', 'SECOND', 'THIRD'].map(pos => {
                         // @ts-ignore
                         const basePts = pointsTable[selectedEvent?.grade_type || 'A']?.[pos] || 0
@@ -459,22 +464,22 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                         const selectedMap = winners[pos] as Map<string, string>
 
                         const style = {
-                            FIRST: { border: 'border-yellow-400', icon: 'text-yellow-600', bg: 'bg-yellow-50/30' },
-                            SECOND: { border: 'border-slate-300', icon: 'text-slate-600', bg: 'bg-slate-50/30' },
-                            THIRD: { border: 'border-orange-300', icon: 'text-orange-700', bg: 'bg-orange-50/30' }
+                            FIRST: { border: 'border-gold/35', icon: 'text-gold', bg: 'bg-gold/10', label: 'First Place' },
+                            SECOND: { border: 'border-navy/15', icon: 'text-slatebrand', bg: 'bg-ivory/70', label: 'Second Place' },
+                            THIRD: { border: 'border-[#c98743]/30', icon: 'text-[#c98743]', bg: 'bg-[#c98743]/10', label: 'Third Place' }
                         }[pos as 'FIRST'|'SECOND'|'THIRD']
 
                         return (
-                            <Card key={pos} className={cn("border-t-4 shadow-sm flex flex-col h-[400px]", style.border, style.bg)}>
-                                <CardHeader className="py-2 px-3 shrink-0 border-b border-border/10 bg-white/50">
-                                    <div className="flex justify-between items-center">
-                                        <CardTitle className={cn("flex items-center gap-2 text-sm font-heading", style.icon)}>
-                                            <Trophy className="w-4 h-4" /> {pos} Place
+                            <Card key={pos} className={cn("flex h-[420px] flex-col border-t-4 shadow-premium", style.border, style.bg)}>
+                                <CardHeader className="shrink-0 border-b border-navy/10 px-4 py-3">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className={cn("flex items-center gap-2 text-sm", style.icon)}>
+                                            <Trophy className="size-4" /> {style.label}
                                         </CardTitle>
-                                        <Badge variant="secondary" className="font-mono text-[10px] h-5">Base: {basePts} + Grade</Badge>
+                                        <Badge variant="outline" className="h-6 font-mono text-[10px]">Base {basePts} + Grade</Badge>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="flex-1 overflow-y-auto p-2 bg-white/60 space-y-1.5">
+                                <CardContent className="flex-1 space-y-2 overflow-y-auto p-3">
                                     {itemList.map((item: any) => {
                                         const id = mode === 'INDIVIDUAL' ? item.id : item.id
                                         const isSelected = selectedMap.has(id)
@@ -490,37 +495,37 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                                 key={id}
                                                 onClick={() => toggleWinner(pos as any, id)}
                                                 className={cn(
-                                                    "p-2 rounded border transition-all duration-200 cursor-pointer relative",
-                                                    isSelected ? "bg-white ring-1 ring-primary border-primary shadow-sm" : "bg-white border-slate-100 hover:border-primary/20 hover:bg-slate-50"
+                                                    "relative cursor-pointer rounded-2xl border p-3 transition-all duration-200",
+                                                    isSelected ? "border-gold/45 bg-ivory ring-2 ring-gold/18 shadow-premium" : "border-navy/8 bg-ivory/70 hover:border-gold/25 hover:bg-ivory"
                                                 )}
                                             >
-                                                <div className="flex justify-between items-center">
+                                                <div className="flex items-center justify-between">
                                                     <div className="min-w-0 flex-1">
-                                                        <div className={cn("font-semibold text-sm truncate", isSelected ? "text-primary" : "text-slate-700")}>
+                                                        <div className="truncate text-sm font-bold text-navy">
                                                             {mode === 'INDIVIDUAL' ? item.student?.name : item.name}
                                                         </div>
-                                                        <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                                                            {mode === 'INDIVIDUAL' && <span className="font-mono bg-slate-100 px-1 rounded text-slate-600">{item.student?.chest_no}</span>}
+                                                        <div className="mt-1 flex items-center gap-1.5 text-[10px] font-semibold text-slatebrand">
+                                                            {mode === 'INDIVIDUAL' && <span className="rounded-full bg-navy/7 px-2 py-0.5 font-mono text-navy">{item.student?.chest_no}</span>}
                                                             <span className="truncate">{mode === 'INDIVIDUAL' ? item.team.name : 'Team Entry'}</span>
                                                         </div>
                                                     </div>
-                                                    {isSelected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0 ml-2" />}
+                                                    {isSelected && <CheckCircle2 className="ml-2 size-4 shrink-0 text-gold" />}
                                                 </div>
 
                                                 {/* Grade Select Buttons - Only visible if selected */}
                                                 {isSelected && (
-                                                    <div className="mt-2 pt-1.5 border-t border-dashed border-slate-200 flex items-center justify-between gap-2 animate-in fade-in zoom-in-95 duration-200">
-                                                        <span className="text-[9px] font-bold uppercase text-slate-400">Perf.</span>
+                                                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-navy/10 pt-2 animate-in fade-in zoom-in-95 duration-200">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.12em] text-slatebrand">Perf.</span>
                                                         <div className="flex gap-0.5">
                                                             {['A', 'B', 'C', 'NONE'].map(g => (
                                                                 <button
                                                                     key={g}
                                                                     onClick={(e) => { e.stopPropagation(); updateWinnerGrade(pos as any, id, g) }}
                                                                     className={cn(
-                                                                        "text-[9px] w-5 h-5 rounded flex items-center justify-center font-bold border transition-colors",
+                                                                        "flex size-6 items-center justify-center rounded-lg border text-[9px] font-black transition-colors",
                                                                         grade === g
-                                                                            ? "bg-slate-800 text-white border-slate-800"
-                                                                            : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                                                                            ? "border-navy bg-navy text-ivory"
+                                                                            : "border-navy/10 bg-ivory text-slatebrand hover:bg-navy/7"
                                                                     )}
                                                                 >
                                                                     {g === 'NONE' ? '-' : g}
@@ -539,51 +544,51 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                 </div>
 
                 {/* 2. OTHER PARTICIPANTS (GRADES) */}
-                <Card className="border-t-4 border-slate-200 shadow-sm bg-slate-50/50">
-                    <CardHeader className="py-3 px-4 bg-white border-b border-border/10">
+                <Card className="border-t-4 border-navy/15 bg-ivory/65 shadow-premium">
+                    <CardHeader className="border-b border-navy/10 px-4 py-3">
                         <div className="flex items-center gap-2">
-                           <Award className="w-4 h-4 text-slate-500" />
-                           <CardTitle className="text-sm text-slate-700">Participation Grades</CardTitle>
-                           <Badge variant="outline" className="ml-2 font-normal text-slate-500">{otherParticipants.length} Remaining</Badge>
+                           <Award className="size-4 text-gold" />
+                           <CardTitle className="text-sm text-navy">Participation Grades</CardTitle>
+                           <Badge variant="outline" className="ml-2 text-[10px]">{otherParticipants.length} Remaining</Badge>
                         </div>
                     </CardHeader>
                     <CardContent className="p-4">
                         {otherParticipants.length === 0 ? (
-                            <div className="text-center py-8 text-slate-400 text-sm">All participants ranked!</div>
+                            <div className="py-8 text-center text-sm font-semibold text-slatebrand">All participants ranked.</div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {otherParticipants.map((item: any) => {
                                     const id = mode === 'INDIVIDUAL' ? item.id : item.id
                                     const grade = otherGrades.get(id) || 'NONE'
                                     const hasGrade = otherGrades.has(id) && grade !== 'NONE'
 
                                     return (
-                                        <div key={id} className={cn("bg-white p-3 rounded-md border shadow-sm flex flex-col gap-2 transition-all", hasGrade ? "border-slate-300 ring-1 ring-slate-200" : "border-slate-100")}>
-                                            <div className="flex justify-between items-start min-w-0">
+                                        <div key={id} className={cn("flex flex-col gap-3 rounded-2xl border bg-ivory/75 p-3 transition-all", hasGrade ? "border-gold/30 ring-2 ring-gold/12" : "border-navy/8")}>
+                                            <div className="flex min-w-0 items-start justify-between">
                                                 <div className="min-w-0">
-                                                    <div className="font-medium text-sm truncate text-slate-800">
+                                                    <div className="truncate text-sm font-bold text-navy">
                                                         {mode === 'INDIVIDUAL' ? item.student?.name : item.name}
                                                     </div>
-                                                    <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                                                        {mode === 'INDIVIDUAL' && <span className="font-mono bg-slate-100 px-1 rounded text-slate-500">{item.student?.chest_no}</span>}
+                                                    <div className="mt-1 flex items-center gap-1.5 text-[10px] font-semibold text-slatebrand">
+                                                        {mode === 'INDIVIDUAL' && <span className="rounded-full bg-navy/7 px-2 py-0.5 font-mono text-navy">{item.student?.chest_no}</span>}
                                                         <span className="truncate max-w-[100px]">{mode === 'INDIVIDUAL' ? item.team.name : 'Team'}</span>
                                                     </div>
                                                 </div>
-                                                {hasGrade && <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-slate-100 text-slate-700">+{PERF_POINTS[grade as keyof typeof PERF_POINTS]} pts</Badge>}
+                                                {hasGrade && <Badge variant="gold" className="h-5 px-1.5 text-[10px]">+{PERF_POINTS[grade as keyof typeof PERF_POINTS]} pts</Badge>}
                                             </div>
 
-                                            <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-slate-50">
-                                                <span className="text-[9px] text-slate-400 font-medium">GRADE</span>
+                                            <div className="mt-auto flex items-center justify-between gap-2 border-t border-navy/8 pt-2">
+                                                <span className="text-[9px] font-black uppercase tracking-[0.12em] text-slatebrand">Grade</span>
                                                 <div className="flex gap-1">
                                                      {['A', 'B', 'C'].map(g => (
                                                         <button
                                                             key={g}
                                                             onClick={() => updateOtherGrade(id, g)}
                                                             className={cn(
-                                                                "w-6 h-6 rounded text-[10px] font-bold border transition-all",
+                                                                "size-7 rounded-lg border text-[10px] font-black transition-all",
                                                                 grade === g
-                                                                    ? "bg-slate-800 text-white border-slate-800 shadow-sm"
-                                                                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                                                                    ? "border-navy bg-navy text-ivory shadow-sm"
+                                                                    : "border-navy/10 bg-ivory text-slatebrand hover:bg-navy/7"
                                                             )}
                                                         >
                                                             {g}
@@ -592,12 +597,12 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                                      <button
                                                         onClick={() => updateOtherGrade(id, 'NONE')}
                                                         className={cn(
-                                                            "w-6 h-6 rounded text-[10px] border transition-all",
-                                                            grade === 'NONE' ? "bg-slate-100 text-slate-400 border-transparent" : "text-red-400 hover:bg-red-50 border-transparent"
+                                                            "size-7 rounded-lg border text-[10px] transition-all",
+                                                            grade === 'NONE' ? "border-transparent bg-navy/6 text-slatebrand" : "border-transparent text-destructive hover:bg-destructive/10"
                                                         )}
                                                         title="Clear"
                                                      >
-                                                        ✕
+                                                        x
                                                      </button>
                                                 </div>
                                             </div>
@@ -614,14 +619,14 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
 
         {/* BOTTOM FLOATING SAVE */}
         {selectedEventId && (
-             <div className="fixed bottom-4 right-4 md:right-8 z-50 animate-in slide-in-from-bottom-4">
+             <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-4 md:right-8">
                  <Button
                     size="lg"
                     onClick={handleSave}
                     disabled={saving}
-                    className="shadow-2xl h-12 px-6 rounded-full bg-slate-900 hover:bg-slate-800 text-white border-2 border-white ring-4 ring-black/5"
-                 >
-                    {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                    className="h-12 rounded-full border-2 border-ivory px-6 shadow-2xl ring-4 ring-navy/8"
+                  >
+                    {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
                     Save Scores
                  </Button>
             </div>

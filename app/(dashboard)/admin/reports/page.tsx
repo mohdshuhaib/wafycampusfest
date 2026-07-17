@@ -1,31 +1,32 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from "@/components/ui/select"
-import { Loader2, Search, Filter, FileText, UserX, Layers, Users } from "lucide-react"
-
-// Import Sub-Components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { FileText, Filter, Layers, Loader2, Search, Sparkles, UserX, Users } from "lucide-react"
 import { ZeroParticipationTab } from "@/components/admin/reports/zero-participation-tab"
 import { SectionExclusiveTab } from "@/components/admin/reports/section-exclusive-tab"
 import { EventCallSheetTab } from "@/components/admin/reports/event-call-sheet-tab"
 import { StudentSheetTab } from "@/components/admin/reports/student-sheet-tab"
 
-// --- TYPES ---
 interface Team { id: string; name: string; color_hex: string }
 interface Event { id: string; name: string; event_code: string; category: string; max_participants_per_team: number }
+
+const reportTabs = [
+  { value: "event", label: "Event Call Sheet", icon: FileText },
+  { value: "student", label: "Student Sheet", icon: Users },
+  { value: "zero", label: "Zero Participation", icon: UserX },
+  { value: "section", label: "Section Exclusive", icon: Layers },
+]
 
 export default function AdminReports() {
   const [loading, setLoading] = useState(true)
   const [teams, setTeams] = useState<Team[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [allStudents, setAllStudents] = useState<any[]>([])
-
-  // Global Filter States (Used for Zero/Exclusive Tabs primarily)
   const [selectedTeam, setSelectedTeam] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -35,14 +36,14 @@ export default function AdminReports() {
     async function loadBaseData() {
       try {
         setLoading(true)
-        const { data: teamsData } = await supabase.from('teams').select('*').order('name')
+        const { data: teamsData } = await supabase.from("teams").select("*").order("name")
         if (teamsData) setTeams(teamsData as any)
 
-        const { data: eventsData } = await supabase.from('events').select('*').order('name')
+        const { data: eventsData } = await supabase.from("events").select("*").order("name")
         if (eventsData) setEvents(eventsData as any)
 
         const { data: studentsData, error } = await supabase
-          .from('students')
+          .from("students")
           .select(`
             *,
             teams ( name, color_hex ),
@@ -50,11 +51,10 @@ export default function AdminReports() {
               events ( category )
             )
           `)
-          .order('name')
+          .order("name")
 
         if (error) throw error
         setAllStudents(studentsData as any)
-
       } catch (err) {
         console.error("Error loading reports data:", err)
       } finally {
@@ -64,83 +64,128 @@ export default function AdminReports() {
     loadBaseData()
   }, [])
 
-  if (loading) return <div className="h-[calc(100vh-4rem)] flex items-center justify-center"><Loader2 className="animate-spin text-primary w-10 h-10" /></div>
+  const reportStats = useMemo(() => {
+    const zero = allStudents.filter((s) => s.participations.length === 0).length
+    const active = allStudents.length - zero
+    return { zero, active, events: events.length, teams: teams.length }
+  }, [allStudents, events, teams])
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-6rem)] items-center justify-center">
+        <div className="surface-elevated flex items-center gap-3 rounded-3xl px-5 py-4">
+          <Loader2 className="size-5 animate-spin text-gold" />
+          <span className="text-sm font-bold text-navy">Preparing report studio</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col space-y-4 animate-in fade-in duration-500 pb-4">
-      {/* HEADER SECTION */}
-      <div className="shrink-0 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-4 rounded-xl border shadow-sm">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Reports & Analysis</h2>
-          <p className="text-muted-foreground text-sm">Deep dive into participation metrics and generate lists.</p>
-        </div>
+    <div className="flex h-[calc(100vh-6rem)] flex-col gap-5 overflow-hidden pb-20 md:pb-4">
+      <section className="surface-dark relative shrink-0 overflow-hidden rounded-[2rem] p-5 sm:p-6">
 
-        {/* Filters shown for certain tabs contextually, but kept here for access */}
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-           {/* These filters apply mainly to the analysis tabs (Zero/Exclusive) */}
-           <div className="relative w-full sm:w-60">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="relative grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
+          <div>
+            <Badge variant="gold" className="h-8 gap-2 px-3">
+              <Sparkles className="size-3.5" />
+              Report Studio
+            </Badge>
+            <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Generate operational reports.</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
+              Build call sheets, student registries, inactive lists, and section-only participation views.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:w-[520px]">
+            <MiniStat label="Events" value={reportStats.events} />
+            <MiniStat label="Teams" value={reportStats.teams} />
+            <MiniStat label="Active" value={reportStats.active} />
+            <MiniStat label="Inactive" value={reportStats.zero} />
+          </div>
+        </div>
+      </section>
+
+      <section className="surface-panel shrink-0 rounded-[2rem] p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-navy text-gold">
+              <Filter className="size-4" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-navy">Global report filters</p>
+              <p className="text-xs font-semibold text-slatebrand">Applies to inactive and section-exclusive reports.</p>
+            </div>
+          </div>
+
+          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slatebrand" />
               <Input
-                placeholder="Global Search..."
-                className="pl-9 bg-slate-50 border-slate-200"
+                placeholder="Search students..."
+                className="h-11 rounded-2xl pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-           </div>
-           <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-slate-50 border-slate-200">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Filter className="w-4 h-4" />
+            </div>
+            <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+              <SelectTrigger className="h-11 w-full rounded-2xl bg-ivory sm:w-[190px]">
                 <SelectValue placeholder="All Teams" />
-              </div>
-            </SelectTrigger>
-            <SelectContent className="bg-white">
-              <SelectItem value="all">All Teams</SelectItem>
-              {teams.map(t => (
-                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-              ))}
-            </SelectContent>
-           </Select>
+              </SelectTrigger>
+              <SelectContent className="surface-elevated rounded-2xl border-navy/10">
+                <SelectItem value="all">All Teams</SelectItem>
+                {teams.map((team) => (
+                  <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* TABS CONTAINER */}
-      <Tabs defaultValue="event" className="flex-1 flex flex-col min-h-0">
-        <div className="shrink-0 mb-3">
-            <TabsList className="w-full justify-start h-auto p-1 bg-slate-100 border rounded-lg overflow-x-auto gap-2">
-            <TabsTrigger value="event" className="py-2 px-4 rounded-md data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm transition-all font-medium">
-                <FileText className="w-4 h-4 mr-2" /> Event Call Sheet
-            </TabsTrigger>
-            <TabsTrigger value="student" className="py-2 px-4 rounded-md data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm transition-all font-medium">
-                <Users className="w-4 h-4 mr-2" /> Student Sheet
-            </TabsTrigger>
-            <TabsTrigger value="zero" className="py-2 px-4 rounded-md data-[state=active]:bg-white data-[state=active]:text-red-700 data-[state=active]:shadow-sm transition-all font-medium">
-                <UserX className="w-4 h-4 mr-2" /> Zero Participation
-            </TabsTrigger>
-            <TabsTrigger value="section" className="py-2 px-4 rounded-md data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm transition-all font-medium">
-                <Layers className="w-4 h-4 mr-2" /> Section Exclusive
-            </TabsTrigger>
-            </TabsList>
+      <Tabs defaultValue="event" className="flex min-h-0 flex-1 flex-col">
+        <div className="shrink-0 overflow-x-auto pb-2 scrollbar-none">
+          <TabsList className="h-auto w-max gap-1 rounded-2xl bg-navy/6 p-1">
+            {reportTabs.map((tab) => {
+              const Icon = tab.icon
+              return (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="rounded-xl px-4 py-2 text-xs font-black text-slatebrand data-[state=active]:bg-navy data-[state=active]:text-ivory"
+                >
+                  <Icon className="mr-2 size-4" />
+                  {tab.label}
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
         </div>
 
-        <div className="flex-1 min-h-0">
-          <TabsContent value="event" className="m-0 h-full">
-             <EventCallSheetTab events={events} />
+        <div className="min-h-0 flex-1">
+          <TabsContent value="event" className="m-0 h-full data-[state=inactive]:hidden">
+            <EventCallSheetTab events={events} />
           </TabsContent>
-
-          <TabsContent value="student" className="m-0 h-full">
-             <StudentSheetTab students={allStudents} teams={teams} />
+          <TabsContent value="student" className="m-0 h-full data-[state=inactive]:hidden">
+            <StudentSheetTab students={allStudents} teams={teams} />
           </TabsContent>
-
-          <TabsContent value="zero" className="m-0 h-full">
-             <ZeroParticipationTab students={allStudents} filterTeam={selectedTeam} search={searchQuery} />
+          <TabsContent value="zero" className="m-0 h-full data-[state=inactive]:hidden">
+            <ZeroParticipationTab students={allStudents} filterTeam={selectedTeam} search={searchQuery} />
           </TabsContent>
-
-          <TabsContent value="section" className="m-0 h-full">
-             <SectionExclusiveTab students={allStudents} filterTeam={selectedTeam} search={searchQuery} />
+          <TabsContent value="section" className="m-0 h-full data-[state=inactive]:hidden">
+            <SectionExclusiveTab students={allStudents} filterTeam={selectedTeam} search={searchQuery} />
           </TabsContent>
         </div>
       </Tabs>
+    </div>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-ivory/10 bg-ivory/8 p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ivory/48">{label}</p>
+      <p className="mt-1 text-2xl font-black text-ivory">{value}</p>
     </div>
   )
 }

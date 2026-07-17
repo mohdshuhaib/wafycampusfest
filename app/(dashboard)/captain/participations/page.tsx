@@ -1,26 +1,17 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu"
-import { Loader2, AlertCircle, Calendar, Search, Printer, FileDown, ChevronDown } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { AlertCircle, Calendar, ChevronDown, FileDown, Loader2, Printer, Search, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// Raw DB Response Type
 interface RawParticipation {
   id: string
   status: string
@@ -39,47 +30,41 @@ interface RawParticipation {
   }
 }
 
-// Grouped Type for UI
 interface GroupedParticipant {
   studentId: string
-  student: RawParticipation['students']
+  student: RawParticipation["students"]
   category: string
-  events: RawParticipation['events'][]
-  status: string // simplified status for the group
+  events: RawParticipation["events"][]
+  status: string
 }
 
 interface Profile { team_id: string }
 
 export default function CaptainParticipations() {
-  const [rawData, setRawData] = useState<RawParticipation[]>([])
   const [groupedData, setGroupedData] = useState<GroupedParticipant[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-
-  // New State for Header Image
   const [headerImageUrl, setHeaderImageUrl] = useState<string | null>(null)
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
   const supabase = createClient()
 
-  // Fetch Data & Assets
   async function loadData() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
       const { data: profileData } = await supabase
-        .from('profiles')
-        .select('team_id')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("team_id")
+        .eq("id", user.id)
         .single()
 
       const profile = profileData as unknown as Profile
       if (!profile?.team_id) return
 
-      // 1. Fetch Participations
       const { data: participations, error } = await supabase
-        .from('participations')
+        .from("participations")
         .select(`
           id,
           status,
@@ -87,25 +72,19 @@ export default function CaptainParticipations() {
           students ( id, name, section, chest_no, class_grade ),
           events ( name, category, event_code )
         `)
-        .eq('team_id', profile.team_id)
-        .order('created_at', { ascending: false })
+        .eq("team_id", profile.team_id)
+        .order("created_at", { ascending: false })
 
       if (error) throw error
 
-      const rows = participations as any as RawParticipation[]
-      setRawData(rows)
-      processGroupedData(rows)
+      processGroupedData(participations as any as RawParticipation[])
 
-      // 2. Fetch Header Image Asset
-      const { data: assetData } = await (supabase.from('site_assets') as any)
-        .select('value')
-        .eq('key', 'admit_card_header')
+      const { data: assetData } = await (supabase.from("site_assets") as any)
+        .select("value")
+        .eq("key", "admit_card_header")
         .single()
 
-      if (assetData) {
-        setHeaderImageUrl(assetData.value)
-      }
-
+      if (assetData) setHeaderImageUrl(assetData.value)
     } catch (err) {
       console.error("Error fetching data:", err)
     } finally {
@@ -113,24 +92,22 @@ export default function CaptainParticipations() {
     }
   }
 
-  // Grouping Logic: Student + Category
   const processGroupedData = (rows: RawParticipation[]) => {
     const map = new Map<string, GroupedParticipant>()
 
-    rows.forEach(row => {
-        // Key is combination of StudentID and Category (e.g., "123-ON_STAGE")
-        const key = `${row.students.id}-${row.events.category}`
+    rows.forEach((row) => {
+      const key = `${row.students.id}-${row.events.category}`
 
-        if (!map.has(key)) {
-            map.set(key, {
-                studentId: row.students.id,
-                student: row.students,
-                category: row.events.category,
-                events: [],
-                status: row.status
-            })
-        }
-        map.get(key)?.events.push(row.events)
+      if (!map.has(key)) {
+        map.set(key, {
+          studentId: row.students.id,
+          student: row.students,
+          category: row.events.category,
+          events: [],
+          status: row.status,
+        })
+      }
+      map.get(key)?.events.push(row.events)
     })
 
     setGroupedData(Array.from(map.values()))
@@ -140,321 +117,296 @@ export default function CaptainParticipations() {
     loadData()
   }, [])
 
-  // --- FILTERING ---
   const filteredData = useMemo(() => {
-    return groupedData.filter(item => {
-        const matchesSearch =
-            item.student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.student.chest_no?.toLowerCase().includes(searchQuery.toLowerCase())
-
-        return matchesSearch
+    return groupedData.filter((item) => {
+      const q = searchQuery.toLowerCase()
+      return item.student.name.toLowerCase().includes(q) || item.student.chest_no?.toLowerCase().includes(q)
     })
   }, [groupedData, searchQuery])
 
-  // --- PDF GENERATOR HELPER: Convert URL to Base64 ---
   const getDataUri = async (url: string): Promise<string> => {
     try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-        });
+      const response = await fetch(url)
+      const blob = await response.blob()
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.readAsDataURL(blob)
+      })
     } catch (e) {
-        console.error("Error fetching image:", e);
-        return "";
+      console.error("Error fetching image:", e)
+      return ""
     }
   }
 
-  // --- PDF GENERATOR LOGIC ---
   const generatePDF = async (itemsToPrint: GroupedParticipant[]) => {
     if (itemsToPrint.length === 0) return alert("No data to print")
 
     setIsGeneratingPdf(true)
 
     try {
-        const doc = new jsPDF()
-        let headerBase64 = ""
+      const doc = new jsPDF()
+      let headerBase64 = ""
 
-        // Fetch Header Image if available
-        if (headerImageUrl) {
-            headerBase64 = await getDataUri(headerImageUrl)
+      if (headerImageUrl) {
+        headerBase64 = await getDataUri(headerImageUrl)
+      }
+
+      let isFirstPage = true
+
+      itemsToPrint.forEach((item, index) => {
+        if (!isFirstPage) doc.addPage()
+        isFirstPage = false
+
+        if (headerBase64) {
+          doc.addImage(headerBase64, "PNG", 0, 0, 210, 35)
+        } else {
+          doc.setFillColor(10, 29, 44)
+          doc.rect(0, 0, 210, 35, "F")
+          doc.setTextColor(255, 255, 255)
+          doc.setFontSize(20)
+          doc.setFont("helvetica", "bold")
+          doc.text("ARTS FEST 2025", 105, 20, { align: "center" })
         }
 
-        let isFirstPage = true
+        doc.setTextColor(0, 0, 0)
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(16)
+        doc.text("ADMIT CARD", 105, 48, { align: "center" })
 
-        itemsToPrint.forEach((item, index) => {
-            if (!isFirstPage) doc.addPage()
-            isFirstPage = false
+        doc.setFontSize(11)
+        doc.setTextColor(100, 100, 100)
+        doc.setFont("helvetica", "normal")
+        doc.text(`CATEGORY: ${item.category}`, 105, 54, { align: "center" })
 
-            // 1. Header Image (Top Banner)
-            // A4 width is 210mm. We use full width. Height ~35mm.
-            if (headerBase64) {
-                doc.addImage(headerBase64, "PNG", 0, 0, 210, 35)
-            } else {
-                // Fallback Header if no image
-                doc.setFillColor(40, 40, 40)
-                doc.rect(0, 0, 210, 35, "F")
-                doc.setTextColor(255, 255, 255)
-                doc.setFontSize(20)
-                doc.setFont("helvetica", "bold")
-                doc.text("ARTS FEST 2025", 105, 20, { align: "center" })
-            }
+        doc.setDrawColor(200, 200, 200)
+        doc.line(70, 58, 140, 58)
 
-            // 2. Title Section
-            doc.setTextColor(0, 0, 0)
-            doc.setFont("helvetica", "bold")
-            doc.setFontSize(16)
-            doc.text("ADMIT CARD", 105, 48, { align: "center" })
+        const startY = 65
+        const col1 = 20
+        const col2 = 110
 
-            // Category Subtitle
-            doc.setFontSize(11)
-            doc.setTextColor(100, 100, 100)
-            doc.setFont("helvetica", "normal")
-            doc.text(`CATEGORY: ${item.category}`, 105, 54, { align: "center" })
+        doc.setFontSize(10)
+        doc.setTextColor(50, 50, 50)
+        doc.setFont("helvetica", "bold")
+        doc.text("NAME:", col1, startY)
+        doc.setFont("helvetica", "normal")
+        doc.text(item.student.name.toUpperCase(), col1 + 25, startY)
 
-            // Draw line under title
-            doc.setDrawColor(200, 200, 200)
-            doc.line(70, 58, 140, 58)
+        doc.setFont("helvetica", "bold")
+        doc.text("CHEST NO:", col2, startY)
+        doc.setFontSize(12)
+        doc.text(item.student.chest_no || "N/A", col2 + 25, startY)
 
-            // 3. Student Details (Grid Layout)
-            const startY = 65
-            const col1 = 20
-            const col2 = 110
+        const row2Y = startY + 8
+        doc.setFontSize(10)
+        doc.text("SECTION:", col1, row2Y)
+        doc.setFont("helvetica", "normal")
+        doc.text(item.student.section, col1 + 25, row2Y)
 
-            doc.setFontSize(10)
-            doc.setTextColor(50, 50, 50)
+        doc.setFont("helvetica", "bold")
+        doc.text("CLASS:", col2, row2Y)
+        doc.setFont("helvetica", "normal")
+        doc.text(item.student.class_grade || "-", col2 + 25, row2Y)
 
-            // Name
-            doc.setFont("helvetica", "bold")
-            doc.text("NAME:", col1, startY)
-            doc.setFont("helvetica", "normal")
-            doc.text(item.student.name.toUpperCase(), col1 + 25, startY)
-
-            // Chest No (Prominent)
-            doc.setFont("helvetica", "bold")
-            doc.text("CHEST NO:", col2, startY)
-            doc.setFont("helvetica", "bold")
-            doc.setFontSize(12)
-            doc.text(item.student.chest_no || "N/A", col2 + 25, startY)
-
-            // Second Row
-            const row2Y = startY + 8
-            doc.setFontSize(10)
-
-            doc.setFont("helvetica", "bold")
-            doc.text("SECTION:", col1, row2Y)
-            doc.setFont("helvetica", "normal")
-            doc.text(item.student.section, col1 + 25, row2Y)
-
-            doc.setFont("helvetica", "bold")
-            doc.text("CLASS:", col2, row2Y)
-            doc.setFont("helvetica", "normal")
-            doc.text(item.student.class_grade || "-", col2 + 25, row2Y)
-
-            // 4. Events Table
-            // @ts-ignore
-            autoTable(doc, {
-                startY: 85,
-                head: [["#", "Code", "Event Name", "Invigilator Sign"]],
-                body: item.events.map((e, i) => [
-                    i + 1,
-                    e.event_code || "-",
-                    e.name,
-                    ""
-                ]),
-                theme: 'grid',
-                headStyles: {
-                    fillColor: [30, 30, 30],
-                    textColor: 255,
-                    fontSize: 10,
-                    fontStyle: 'bold',
-                    halign: 'center'
-                },
-                columnStyles: {
-                    0: { cellWidth: 15, halign: 'center' },
-                    1: { cellWidth: 30, halign: 'center' },
-                    2: { cellWidth: 'auto' },
-                    3: { cellWidth: 40 }
-                },
-                styles: {
-                    fontSize: 10,
-                    cellPadding: 4,
-                    lineColor: [200, 200, 200],
-                    lineWidth: 0.1
-                },
-                alternateRowStyles: {
-                    fillColor: [250, 250, 250]
-                }
-            })
-
-            // 5. Footer Watermark & Timestamp
-            const pageHeight = doc.internal.pageSize.height
-            const now = new Date().toLocaleString('en-IN', {
-                day: '2-digit', month: 'short', year: 'numeric',
-                hour: '2-digit', minute: '2-digit', hour12: true
-            })
-
-            doc.setFontSize(8)
-            doc.setTextColor(150, 150, 150)
-            doc.setFont("helvetica", "italic")
-
-            // Left: Timestamp
-            doc.text(`Printed: ${now}`, 15, pageHeight - 10)
-
-            // Center: Watermark
-            doc.text("Generated by Arts Fest System", 105, pageHeight - 10, { align: "center" })
-
-            // Right: Page count (optional, but nice)
-            doc.text(`Page ${index + 1} of ${itemsToPrint.length}`, 195, pageHeight - 10, { align: "right" })
+        autoTable(doc, {
+          startY: 85,
+          head: [["#", "Code", "Event Name", "Invigilator Sign"]],
+          body: item.events.map((event, i) => [
+            i + 1,
+            event.event_code || "-",
+            event.name,
+            "",
+          ]),
+          theme: "grid",
+          headStyles: {
+            fillColor: [10, 29, 44],
+            textColor: 255,
+            fontSize: 10,
+            fontStyle: "bold",
+            halign: "center",
+          },
+          columnStyles: {
+            0: { cellWidth: 15, halign: "center" },
+            1: { cellWidth: 30, halign: "center" },
+            2: { cellWidth: "auto" },
+            3: { cellWidth: 40 },
+          },
+          styles: {
+            fontSize: 10,
+            cellPadding: 4,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.1,
+          },
+          alternateRowStyles: {
+            fillColor: [250, 250, 250],
+          },
         })
 
-        doc.save(`AdmitCards_${new Date().toISOString().slice(0,10)}.pdf`)
+        const pageHeight = doc.internal.pageSize.height
+        const now = new Date().toLocaleString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+
+        doc.setFontSize(8)
+        doc.setTextColor(150, 150, 150)
+        doc.setFont("helvetica", "italic")
+        doc.text(`Printed: ${now}`, 15, pageHeight - 10)
+        doc.text("Generated by Arts Fest System", 105, pageHeight - 10, { align: "center" })
+        doc.text(`Page ${index + 1} of ${itemsToPrint.length}`, 195, pageHeight - 10, { align: "right" })
+      })
+
+      doc.save(`AdmitCards_${new Date().toISOString().slice(0, 10)}.pdf`)
     } catch (e) {
-        console.error("PDF Generation failed", e)
-        alert("Failed to generate PDF. Please try again.")
+      console.error("PDF Generation failed", e)
+      alert("Failed to generate PDF. Please try again.")
     } finally {
-        setIsGeneratingPdf(false)
+      setIsGeneratingPdf(false)
     }
   }
 
-  // Bulk Print Handler
   const handleBulkPrint = (category: string) => {
-    const listToPrint = filteredData.filter(item => item.category === category)
+    const listToPrint = filteredData.filter((item) => item.category === category)
     if (listToPrint.length === 0) {
-        alert(`No participants found for ${category} in the current view.`)
-        return
+      alert(`No participants found for ${category} in the current view.`)
+      return
     }
     generatePDF(listToPrint)
   }
 
-  if (loading) return <div className="h-[50vh] flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
-
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10 w-full max-w-full">
-
-      {/* Header Section */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">Team Registrations</h2>
-            <p className="text-muted-foreground text-sm">Manage entries and download admit cards.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2" disabled={isGeneratingPdf}>
-                        {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-                        {isGeneratingPdf ? "Generating..." : "Print All"}
-                        <ChevronDown className="w-3 h-3 opacity-50" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleBulkPrint('ON STAGE')}>
-                        On Stage Participants
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkPrint('OFF STAGE')}>
-                        Off Stage Participants
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="surface-elevated flex items-center gap-3 rounded-3xl px-5 py-4">
+          <Loader2 className="size-5 animate-spin text-gold" />
+          <span className="text-sm font-bold text-navy">Loading admit cards</span>
         </div>
       </div>
+    )
+  }
 
-      {/* Search & Info */}
-      <Card className="bg-muted/10 border-none shadow-sm">
-        <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-                <div className="relative w-full md:w-[300px]">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search student or chest no..."
-                        className="pl-9 bg-white"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
+  return (
+    <div className="space-y-5 pb-20 md:pb-4">
+      <section className="surface-dark relative overflow-hidden rounded-[2rem] p-5 sm:p-6">
 
-                <div className="flex-1" />
+        <div className="relative grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
+          <div>
+            <Badge variant="gold" className="h-8 gap-2 px-3">
+              <Sparkles className="size-3.5" />
+              Admit Card Desk
+            </Badge>
+            <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Download registered entries.</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
+              Review grouped registrations and generate admit cards by student category or in bulk.
+            </p>
+          </div>
 
-                <div className="text-xs text-muted-foreground font-mono bg-white px-2 py-1 rounded border">
-                    Showing: {filteredData.length} records (Grouped by Category)
-                </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={isGeneratingPdf} className="border-ivory/15 bg-ivory/8 text-ivory hover:bg-ivory/14">
+                {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />}
+                {isGeneratingPdf ? "Generating..." : "Print All"}
+                <ChevronDown className="size-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="surface-elevated rounded-2xl border-navy/10 p-2">
+              <DropdownMenuItem onClick={() => handleBulkPrint("ON STAGE")}>On Stage Participants</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleBulkPrint("OFF STAGE")}>Off Stage Participants</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </section>
+
+      <section className="surface-panel rounded-[2rem] p-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slatebrand" />
+            <Input
+              placeholder="Search student or chest no"
+              className="h-11 rounded-2xl pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="ml-auto rounded-full border border-navy/10 bg-ivory px-3 py-2 text-xs font-black uppercase tracking-[0.1em] text-slatebrand">
+            Showing {filteredData.length} grouped records
+          </div>
+        </div>
+      </section>
+
+      <section className="surface-elevated overflow-hidden rounded-[2rem]">
+        <div className="border-b border-navy/10 bg-ivory/70 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-navy text-gold">
+              <Calendar className="size-5" />
             </div>
-        </CardContent>
-      </Card>
+            <div>
+              <h2 className="text-title text-lg text-navy">Participants List</h2>
+              <p className="text-xs font-semibold text-slatebrand">Grouped by student and event category.</p>
+            </div>
+          </div>
+        </div>
 
-      <Card className="glass-card shadow-sm border-border/50 bg-card/80 w-full overflow-hidden">
-        <CardHeader className="border-b border-border/50 pb-4 px-4 sm:px-6">
-          <CardTitle className="text-lg font-medium flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-primary" />
-            Participants List
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {filteredData.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground flex flex-col items-center gap-4 px-4">
-              <AlertCircle className="w-12 h-12 opacity-20" />
-              <p>No participants found.</p>
-            </div>
-          ) : (
-            <div className="w-full overflow-x-auto">
-                <Table className="min-w-[800px]">
-                <TableHeader className="bg-muted/40">
-                    <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-[250px] pl-6">Student Details</TableHead>
-                    <TableHead>Section</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Events Count</TableHead>
-                    <TableHead className="text-right pr-6">Admit Card</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {filteredData.map((row) => (
-                    <TableRow key={`${row.studentId}-${row.category}`} className="hover:bg-muted/30 transition-colors">
-                        <TableCell className="pl-6">
-                            <div className="flex flex-col">
-                                <span className="font-semibold text-foreground">{row.student.name}</span>
-                                <span className="text-xs text-muted-foreground font-mono mt-0.5">
-                                    {row.student.chest_no ? `#${row.student.chest_no}` : 'No Chest No'}
-                                    {row.student.class_grade && ` • Class ${row.student.class_grade}`}
-                                </span>
-                            </div>
-                        </TableCell>
-                        <TableCell>
-                            <Badge variant="secondary" className="font-normal text-xs bg-muted text-muted-foreground border-border/50">
-                                {row.student.section}
-                            </Badge>
-                        </TableCell>
-                        <TableCell>
-                            <Badge variant="outline" className={cn("text-[10px]",
-                                row.category === 'ON STAGE' ? "border-orange-200 text-orange-700 bg-orange-50" : "border-blue-200 text-blue-700 bg-blue-50"
-                            )}>
-                                {row.category}
-                            </Badge>
-                        </TableCell>
-                        <TableCell>
-                            <span className="text-sm font-medium">{row.events.length} Events</span>
-                        </TableCell>
-                        <TableCell className="text-right pr-6">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 gap-2 text-xs"
-                                onClick={() => generatePDF([row])}
-                                disabled={isGeneratingPdf}
-                            >
-                                <FileDown className="w-3 h-3" /> Download
-                            </Button>
-                        </TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {filteredData.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-4 py-16 text-center text-slatebrand">
+            <AlertCircle className="size-12 opacity-30" />
+            <p className="text-sm font-bold text-navy">No participants found.</p>
+          </div>
+        ) : (
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[800px]">
+              <TableHeader className="bg-mist">
+                <TableRow className="border-navy/10 hover:bg-transparent">
+                  <TableHead className="w-[280px] pl-6 font-black text-slatebrand">Student Details</TableHead>
+                  <TableHead className="font-black text-slatebrand">Section</TableHead>
+                  <TableHead className="font-black text-slatebrand">Category</TableHead>
+                  <TableHead className="font-black text-slatebrand">Events Count</TableHead>
+                  <TableHead className="pr-6 text-right font-black text-slatebrand">Admit Card</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredData.map((row) => (
+                  <TableRow key={`${row.studentId}-${row.category}`} className="border-navy/8 transition-colors hover:bg-gold/6">
+                    <TableCell className="pl-6">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-navy">{row.student.name}</span>
+                        <span className="mt-0.5 font-mono text-xs font-semibold text-slatebrand">
+                          {row.student.chest_no ? `#${row.student.chest_no}` : "No Chest No"}
+                          {row.student.class_grade && ` - Class ${row.student.class_grade}`}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{row.student.section}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={row.category === "ON STAGE" ? "gold" : "outline"}
+                        className={cn(row.category === "OFF STAGE" && "border-deepblue/20 bg-deepblue/10 text-deepblue")}
+                      >
+                        {row.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-black text-navy">{row.events.length} Events</span>
+                    </TableCell>
+                    <TableCell className="pr-6 text-right">
+                      <Button variant="outline" size="sm" className="h-9 rounded-2xl" onClick={() => generatePDF([row])} disabled={isGeneratingPdf}>
+                        <FileDown className="mr-2 size-3.5" /> Download
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

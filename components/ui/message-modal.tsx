@@ -22,26 +22,26 @@ interface MessageModalProps {
 export function MessageModal({ open, onOpenChange, title, description, type = 'info' }: MessageModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] bg-white border-slate-200">
-        <DialogHeader className="flex flex-col items-center justify-center text-center space-y-3">
-          <div className={`p-3 rounded-full ${
-            type === 'error' ? 'bg-red-100 text-red-600' :
-            type === 'success' ? 'bg-emerald-100 text-emerald-600' :
-            'bg-blue-100 text-blue-600'
+      <DialogContent className="rounded-[2rem] border-navy/10 bg-ivory sm:max-w-[400px]">
+        <DialogHeader className="flex flex-col items-center justify-center space-y-3 text-center">
+          <div className={`rounded-2xl p-3 ${
+            type === 'error' ? 'bg-destructive/10 text-destructive' :
+            type === 'success' ? 'bg-success/10 text-success' :
+            'bg-gold/14 text-navy'
           }`}>
-            {type === 'error' ? <AlertCircle className="w-6 h-6" /> :
-             type === 'success' ? <CheckCircle2 className="w-6 h-6" /> :
-             <Info className="w-6 h-6" />}
+            {type === 'error' ? <AlertCircle className="size-6" /> :
+             type === 'success' ? <CheckCircle2 className="size-6" /> :
+             <Info className="size-6" />}
           </div>
           <div className="space-y-1">
-            <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
-            <DialogDescription className="text-slate-500">
+            <DialogTitle className="text-xl font-black text-navy">{title}</DialogTitle>
+            <DialogDescription className="font-medium text-slatebrand">
               {description}
             </DialogDescription>
           </div>
         </DialogHeader>
         <DialogFooter className="sm:justify-center">
-          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} className="w-full sm:w-24">
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} className="w-full sm:w-28">
             Close
           </Button>
         </DialogFooter>

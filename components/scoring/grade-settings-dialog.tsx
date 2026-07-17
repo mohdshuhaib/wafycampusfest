@@ -73,46 +73,46 @@ export function GradeSettingsDialog({ open, onOpenChange, onSuccess }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] bg-white border-border/50 shadow-lg">
+      <DialogContent className="rounded-[2rem] border-navy/10 bg-ivory sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Scoring Configuration</DialogTitle>
-          <DialogDescription>Adjust points awarded for each grade type.</DialogDescription>
+          <DialogTitle className="text-title text-xl text-navy">Scoring Configuration</DialogTitle>
+          <DialogDescription className="font-medium text-slatebrand">Adjust points awarded for each grade type.</DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="h-40 flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+          <div className="flex h-40 items-center justify-center"><Loader2 className="animate-spin text-gold" /></div>
         ) : (
           <div className="grid gap-6 py-4">
             {settings.map((setting, idx) => (
-              <div key={setting.id} className="grid grid-cols-4 items-center gap-4 border-b border-border/50 pb-4 last:pb-0 last:border-0">
-                <div className="font-bold text-lg bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center text-primary border border-primary/20">
+              <div key={setting.id} className="grid grid-cols-4 items-center gap-4 border-b border-navy/10 pb-4 last:border-0 last:pb-0">
+                <div className="flex size-11 items-center justify-center rounded-2xl border border-gold/20 bg-gold/10 text-lg font-black text-gold">
                   {setting.grade_type}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">First</Label>
+                  <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">First</Label>
                   <Input
                     type="number"
                     value={setting.first_place}
                     onChange={(e) => updateVal(idx, 'first_place', e.target.value)}
-                    className="h-9 bg-background/50"
+                    className="h-10 rounded-2xl"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Second</Label>
+                  <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Second</Label>
                   <Input
                     type="number"
                     value={setting.second_place}
                     onChange={(e) => updateVal(idx, 'second_place', e.target.value)}
-                    className="h-9 bg-background/50"
+                    className="h-10 rounded-2xl"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Third</Label>
+                  <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Third</Label>
                   <Input
                     type="number"
                     value={setting.third_place}
                     onChange={(e) => updateVal(idx, 'third_place', e.target.value)}
-                    className="h-9 bg-background/50"
+                    className="h-10 rounded-2xl"
                   />
                 </div>
               </div>
@@ -122,8 +122,8 @@ export function GradeSettingsDialog({ open, onOpenChange, onSuccess }: Props) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} variant='outline' disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
             Save Points
           </Button>
         </DialogFooter>

@@ -7,7 +7,6 @@ import { EventsCsvUpload } from "@/components/admin/events/events-csv-upload"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table"
-import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +20,22 @@ import {
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog"
-import { Loader2, Trash2, Search, Edit2, Upload, Plus, AlertTriangle, Filter, X } from "lucide-react"
+import {
+  AlertTriangle,
+  CalendarDays,
+  Edit2,
+  Filter,
+  LayoutGrid,
+  Loader2,
+  Music2,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+  Users,
+  X,
+} from "lucide-react"
 
 interface Event {
   id: string
@@ -36,22 +50,31 @@ interface Event {
 
 const SECTIONS_LIST = ['Senior', 'Junior', 'Sub-Junior', 'General', 'Foundation']
 
+function categoryClass(category: Event["category"]) {
+  return category === "ON STAGE"
+    ? "border-gold/35 bg-gold/16 text-navy"
+    : "border-deepblue/15 bg-deepblue/10 text-deepblue"
+}
+
+function gradeClass(grade: Event["grade_type"]) {
+  if (grade === "A") return "border-gold/35 bg-gold/16 text-navy"
+  if (grade === "B") return "border-navy/12 bg-navy/7 text-navy"
+  return "border-[#c98743]/30 bg-[#c98743]/12 text-[#8a5525]"
+}
+
 export default function AdminEvents() {
   const [loading, setLoading] = useState(true)
   const [events, setEvents] = useState<Event[]>([])
 
-  // Filters State
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [filterSection, setFilterSection] = useState<string>("all")
   const [filterGrade, setFilterGrade] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Modals
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
 
-  // Delete
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
 
@@ -109,220 +132,283 @@ export default function AdminEvents() {
 
   const filteredEvents = useMemo(() => {
     return events.filter(e => {
-        const matchesCategory = filterCategory === "all" || e.category === filterCategory
+      const matchesCategory = filterCategory === "all" || e.category === filterCategory
+      const matchesSection = filterSection === "all" || (e.applicable_section && e.applicable_section.includes(filterSection))
+      const matchesGrade = filterGrade === "all" || e.grade_type === filterGrade
+      const search = searchQuery.toLowerCase()
+      const matchesSearch = e.name.toLowerCase().includes(search) || e.event_code?.toLowerCase().includes(search)
 
-        const matchesSection = filterSection === "all" || (e.applicable_section && e.applicable_section.includes(filterSection))
-
-        const matchesGrade = filterGrade === "all" || e.grade_type === filterGrade
-
-        const matchesSearch = e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              e.event_code?.toLowerCase().includes(searchQuery.toLowerCase())
-
-        return matchesCategory && matchesSection && matchesGrade && matchesSearch
+      return matchesCategory && matchesSection && matchesGrade && matchesSearch
     })
   }, [events, filterCategory, filterSection, filterGrade, searchQuery])
 
   const clearFilters = () => {
-      setFilterCategory("all")
-      setFilterSection("all")
-      setFilterGrade("all")
-      setSearchQuery("")
+    setFilterCategory("all")
+    setFilterSection("all")
+    setFilterGrade("all")
+    setSearchQuery("")
   }
 
   const hasActiveFilters = filterCategory !== "all" || filterSection !== "all" || filterGrade !== "all" || searchQuery !== ""
+  const onStageCount = events.filter(event => event.category === "ON STAGE").length
+  const offStageCount = events.filter(event => event.category === "OFF STAGE").length
+  const totalCapacity = events.reduce((sum, event) => sum + (event.max_participants_per_team || 0), 0)
 
-  if (loading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary" /></div>
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="surface-panel flex items-center gap-3 rounded-3xl px-6 py-5 text-navy">
+          <Loader2 className="size-5 animate-spin text-gold" />
+          <span className="text-sm font-bold">Loading event catalogue</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-6 pb-10">
+      <section className="surface-dark relative overflow-hidden rounded-[2rem] p-6 sm:p-7">
+        <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-gold">
+              <Sparkles className="size-3.5" />
+              Event Management
+            </div>
+            <h1 className="text-display mt-5 text-4xl text-ivory sm:text-5xl">Curate every competition.</h1>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-ivory/62 sm:text-base">
+              Create event codes, sections, grade types, and participant limits while keeping the full event catalogue searchable.
+            </p>
+          </div>
 
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-4 rounded-xl border shadow-sm">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Events Manager</h2>
-          <p className="text-muted-foreground text-sm">Manage competition events and regulations.</p>
+          <div className="grid gap-2 sm:grid-cols-3 lg:w-[30rem]">
+            <div className="rounded-2xl border border-ivory/10 bg-ivory/8 p-4">
+              <div className="text-title text-2xl text-ivory">{events.length}</div>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ivory/45">Total Events</div>
+            </div>
+            <div className="rounded-2xl border border-ivory/10 bg-ivory/8 p-4">
+              <div className="text-title text-2xl text-ivory">{onStageCount}/{offStageCount}</div>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ivory/45">Stage Mix</div>
+            </div>
+            <div className="rounded-2xl border border-ivory/10 bg-ivory/8 p-4">
+              <div className="text-title text-2xl text-ivory">{totalCapacity}</div>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ivory/45">Team Slots</div>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-            <Button onClick={() => { setEditingEvent(null); setIsAddOpen(true); }} className="gap-2 flex-1 lg:flex-none bg-primary hover:bg-primary/90">
-                <Plus className="w-4 h-4" /> New Event
-            </Button>
-            <Button variant="outline" onClick={() => setIsUploadOpen(true)} className="gap-2 flex-1 lg:flex-none">
-                <Upload className="w-4 h-4" /> Import CSV
-            </Button>
-            {events.length > 0 && (
-                <Button variant="outline" onClick={() => setIsBulkDeleteOpen(true)} className="gap-2 flex-1 lg:flex-none bg-red-50 text-red-600">
-                    <Trash2 className="w-4 h-4" /> Reset
-                </Button>
-            )}
-        </div>
-      </div>
+      </section>
 
-      {/* ADVANCED FILTER BAR */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm space-y-4 md:space-y-0 md:flex md:items-center md:gap-4 sticky top-4 z-20">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-                placeholder="Search events by name or code..."
-                className="pl-9 bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+      <section className="grid gap-4 xl:grid-cols-[1fr_auto]">
+        <div className="surface-elevated sticky top-20 z-20 rounded-[1.75rem] p-4">
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slatebrand" />
+              <Input
+                placeholder="Search by event name or code"
+                className="h-12 pl-11"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-            />
-        </div>
+              />
+            </div>
 
-        {/* Dropdown Group */}
-        <div className="flex flex-wrap gap-2 items-center">
-            {/* Category Filter */}
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="w-[140px] bg-slate-50 border-slate-200">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Filter className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold uppercase tracking-wider"></span>
-                    </div>
-                    <SelectValue />
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger className="h-12 w-[9.5rem] rounded-xl border-navy/12 bg-ivory/70">
+                  <Filter className="mr-2 size-4 text-slatebrand" />
+                  <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
-                    <SelectItem value="all">Types</SelectItem>
-                    <SelectItem value="ON STAGE">On Stage</SelectItem>
-                    <SelectItem value="OFF STAGE">Off Stage</SelectItem>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="ON STAGE">On Stage</SelectItem>
+                  <SelectItem value="OFF STAGE">Off Stage</SelectItem>
                 </SelectContent>
-            </Select>
+              </Select>
 
-            {/* Section Filter */}
-            <Select value={filterSection} onValueChange={setFilterSection}>
-                <SelectTrigger className="w-[140px] bg-slate-50 border-slate-200">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Filter className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold uppercase tracking-wider"></span>
-                    </div>
-                    <SelectValue />
+              <Select value={filterSection} onValueChange={setFilterSection}>
+                <SelectTrigger className="h-12 w-[10rem] rounded-xl border-navy/12 bg-ivory/70">
+                  <Filter className="mr-2 size-4 text-slatebrand" />
+                  <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
-                    <SelectItem value="all">Sections</SelectItem>
-                    {SECTIONS_LIST.map(sec => (
-                        <SelectItem key={sec} value={sec}>{sec}</SelectItem>
-                    ))}
+                <SelectContent>
+                  <SelectItem value="all">All Sections</SelectItem>
+                  {SECTIONS_LIST.map(sec => (
+                    <SelectItem key={sec} value={sec}>{sec}</SelectItem>
+                  ))}
                 </SelectContent>
-            </Select>
+              </Select>
 
-            {/* Grade Filter */}
-            <Select value={filterGrade} onValueChange={setFilterGrade}>
-                <SelectTrigger className="w-[130px] bg-slate-50 border-slate-200">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Filter className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold uppercase tracking-wider"></span>
-                    </div>
-                    <SelectValue />
+              <Select value={filterGrade} onValueChange={setFilterGrade}>
+                <SelectTrigger className="h-12 w-[9rem] rounded-xl border-navy/12 bg-ivory/70">
+                  <Filter className="mr-2 size-4 text-slatebrand" />
+                  <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
-                    <SelectItem value="all">Grades</SelectItem>
-                    <SelectItem value="A">Grade A</SelectItem>
-                    <SelectItem value="B">Grade B</SelectItem>
-                    <SelectItem value="C">Grade C</SelectItem>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="A">Grade A</SelectItem>
+                  <SelectItem value="B">Grade B</SelectItem>
+                  <SelectItem value="C">Grade C</SelectItem>
                 </SelectContent>
-            </Select>
+              </Select>
 
-            {/* Clear Button */}
-            {hasActiveFilters && (
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={clearFilters}
-                    className="h-10 w-10 text-muted-foreground hover:text-red-500 hover:bg-red-50"
-                    title="Clear Filters"
-                >
-                    <X className="w-4 h-4" />
+              {hasActiveFilters && (
+                <Button variant="ghost" size="icon" onClick={clearFilters} title="Clear filters">
+                  <X className="size-4" />
                 </Button>
-            )}
+              )}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* EVENTS TABLE */}
-      <Card className="border shadow-sm overflow-hidden">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50/80 hover:bg-slate-50">
-                <TableHead className="w-20 font-bold text-xs uppercase tracking-wider pl-4">Code</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Event Name</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Category</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Section</TableHead>
-                <TableHead className="text-center font-bold text-xs uppercase tracking-wider">Grade</TableHead>
-                <TableHead className="text-center font-bold text-xs uppercase tracking-wider">Max</TableHead>
-                <TableHead className="text-right font-bold text-xs uppercase tracking-wider pr-4">Actions</TableHead>
+        <div className="flex flex-wrap gap-2 xl:justify-end">
+          <Button onClick={() => { setEditingEvent(null); setIsAddOpen(true); }}>
+            <Plus className="size-4" />
+            New Event
+          </Button>
+          <Button variant="outline" onClick={() => setIsUploadOpen(true)}>
+            <Upload className="size-4" />
+            Import CSV
+          </Button>
+          {events.length > 0 && (
+            <Button variant="destructive" onClick={() => setIsBulkDeleteOpen(true)}>
+              <Trash2 className="size-4" />
+              Reset
+            </Button>
+          )}
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <div className="surface-panel rounded-3xl p-5">
+          <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
+            <Music2 className="size-4 text-gold" />
+            On-stage events
+          </div>
+          <div className="text-title text-3xl text-navy">{onStageCount}</div>
+        </div>
+        <div className="surface-panel rounded-3xl p-5">
+          <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
+            <LayoutGrid className="size-4 text-gold" />
+            Filtered view
+          </div>
+          <div className="text-title text-3xl text-navy">{filteredEvents.length}</div>
+        </div>
+        <div className="surface-panel rounded-3xl p-5">
+          <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
+            <Users className="size-4 text-gold" />
+            Max per team total
+          </div>
+          <div className="text-title text-3xl text-navy">{totalCapacity}</div>
+        </div>
+      </section>
+
+      <section className="hidden overflow-hidden rounded-[2rem] border border-navy/10 bg-ivory/60 shadow-premium backdrop-blur-xl md:block">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-navy/10 bg-navy text-ivory hover:bg-navy">
+              <TableHead className="h-12 pl-5 text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Code</TableHead>
+              <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Event Name</TableHead>
+              <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Category</TableHead>
+              <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Section</TableHead>
+              <TableHead className="text-center text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Grade</TableHead>
+              <TableHead className="text-center text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Max</TableHead>
+              <TableHead className="pr-5 text-right text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredEvents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-56 text-center">
+                  <div className="flex flex-col items-center justify-center gap-3 text-slatebrand">
+                    <Search className="size-9 opacity-35" />
+                    <p className="text-sm font-semibold">No events found matching your filters.</p>
+                    {hasActiveFilters && <Button variant="link" onClick={clearFilters}>Clear all filters</Button>}
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEvents.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center h-48 text-muted-foreground bg-slate-50/30">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                        <Search className="w-8 h-8 opacity-20" />
-                        <p>No events found matching your filters.</p>
-                        {hasActiveFilters && (
-                            <Button variant="link" onClick={clearFilters} className="text-primary">Clear all filters</Button>
-                        )}
+            ) : (
+              filteredEvents.map((event) => (
+                <TableRow key={event.id} className="border-navy/8 transition hover:bg-gold/8">
+                  <TableCell className="pl-5 font-mono text-xs font-bold text-slatebrand">{event.event_code || '-'}</TableCell>
+                  <TableCell>
+                    <div className="font-bold text-navy">{event.name}</div>
+                    {event.description && <div className="mt-1 max-w-md truncate text-xs text-slatebrand">{event.description}</div>}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={categoryClass(event.category)}>{event.category}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {event.applicable_section?.map(sec => (
+                        <span key={sec} className="rounded-full border border-navy/10 bg-navy/6 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slatebrand">
+                          {sec}
+                        </span>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className={gradeClass(event.grade_type)}>Grade {event.grade_type}</Badge>
+                  </TableCell>
+                  <TableCell className="text-center font-mono text-sm font-bold text-slatebrand">{event.max_participants_per_team}</TableCell>
+                  <TableCell className="pr-5 text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(event)} aria-label={`Edit ${event.name}`}>
+                        <Edit2 className="size-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" className="hover:text-destructive" onClick={() => setDeleteId(event.id)} aria-label={`Delete ${event.name}`}>
+                        <Trash2 className="size-3.5" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : (
-                filteredEvents.map((event) => (
-                  <TableRow key={event.id} className="group hover:bg-blue-50/30 transition-colors">
-                    <TableCell className="pl-4 font-mono text-xs font-medium text-slate-500">
-                        {event.event_code || '-'}
-                    </TableCell>
-                    <TableCell className="font-semibold text-slate-700">
-                      {event.name}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={
-                        event.category === 'ON STAGE'
-                            ? 'border-purple-200 text-purple-700 bg-purple-50 text-[10px]'
-                            : 'border-indigo-200 text-indigo-700 bg-indigo-50 text-[10px]'
-                      }>
-                        {event.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                            {event.applicable_section?.map(sec => (
-                                <span key={sec} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    {sec}
-                                </span>
-                            ))}
-                        </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                        <Badge className={`h-5 min-w-5 justify-center px-1 text-[10px] pointer-events-none ${
-                            event.grade_type === 'A' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200' :
-                            event.grade_type === 'B' ? 'bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200' :
-                            'bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200'
-                        }`}>
-                            {event.grade_type}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-center text-slate-500 font-mono text-xs">
-                      {event.max_participants_per_team}
-                    </TableCell>
-                    <TableCell className="text-right pr-4">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-primary hover:bg-blue-50" onClick={() => handleEdit(event)}>
-                            <Edit2 className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50" onClick={() => setDeleteId(event.id)}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </section>
 
-      {/* DIALOGS */}
+      <section className="grid gap-3 md:hidden">
+        {filteredEvents.length === 0 ? (
+          <div className="surface-panel rounded-3xl p-8 text-center">
+            <Search className="mx-auto mb-3 size-9 text-slatebrand/40" />
+            <p className="text-sm font-semibold text-slatebrand">No events found.</p>
+            {hasActiveFilters && <Button variant="link" onClick={clearFilters}>Clear filters</Button>}
+          </div>
+        ) : (
+          filteredEvents.map((event) => (
+            <article key={event.id} className="surface-elevated rounded-3xl p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-slatebrand">{event.event_code || 'No code'}</div>
+                  <h2 className="text-title mt-2 text-xl text-navy">{event.name}</h2>
+                </div>
+                <Badge variant="outline" className={gradeClass(event.grade_type)}>Grade {event.grade_type}</Badge>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Badge variant="outline" className={categoryClass(event.category)}>{event.category}</Badge>
+                <span className="inline-flex items-center gap-1 rounded-full border border-navy/10 bg-navy/6 px-3 py-1 text-xs font-bold text-slatebrand">
+                  <Users className="size-3" />
+                  Max {event.max_participants_per_team}
+                </span>
+                {event.applicable_section?.map(sec => (
+                  <span key={sec} className="rounded-full border border-navy/10 bg-ivory/70 px-3 py-1 text-xs font-bold text-slatebrand">
+                    {sec}
+                  </span>
+                ))}
+              </div>
+              {event.description && <p className="mt-4 text-sm leading-6 text-slatebrand">{event.description}</p>}
+              <div className="mt-5 flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => handleEdit(event)}>
+                  <Edit2 className="size-4" />
+                  Edit
+                </Button>
+                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteId(event.id)}>
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            </article>
+          ))
+        )}
+      </section>
+
       <EventFormDialog
         open={isAddOpen}
         onOpenChange={setIsAddOpen}
@@ -335,33 +421,38 @@ export default function AdminEvents() {
         onSuccess={loadEvents}
       />
 
-      {/* DELETE CONFIRMATION */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="bg-white">
-            <AlertDialogHeader>
-                <AlertDialogTitle>Delete Event?</AlertDialogTitle>
-                <AlertDialogDescription>This will permanently remove the event and all associated student results/participations.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-800">Delete</AlertDialogAction>
-            </AlertDialogFooter>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete event?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the event and all associated student results and participations.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
-        <AlertDialogContent className="bg-white">
-            <AlertDialogHeader>
-                <AlertDialogTitle className="text-destructive flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Delete All Events?</AlertDialogTitle>
-                <AlertDialogDescription>This is extremely destructive. It will wipe all events and scoring data. Are you sure?</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleBulkDelete} className="bg-red-500 hover:bg-red-800">Yes, Delete All</AlertDialogAction>
-            </AlertDialogFooter>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="size-5" />
+              Delete all events?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This is extremely destructive. It will wipe all events and scoring data. Are you sure?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete all</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   )
 }

@@ -1,14 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase"
-import { Loader2, Download, BarChart3, PieChart } from "lucide-react"
+import { BarChart3, Download, Loader2, Medal, PieChart, Sparkles, Trophy, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { TeamPerformance } from "@/components/overview/team-performance"
 import { SectionAnalysis } from "@/components/overview/section-analysis"
 import { TopStudents } from "@/components/overview/top-students"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+
+interface Team {
+  id: string
+  name: string
+  color_hex: string
+  penalty_points: number
+}
 
 export default function OverviewPage() {
   const [loading, setLoading] = useState(true)
@@ -17,46 +25,24 @@ export default function OverviewPage() {
   const [studentStats, setStudentStats] = useState<Array<any>>([])
   const [isDownloading, setIsDownloading] = useState(false)
 
-  interface Team {
-    id: string
-    name: string
-    color_hex: string
-    penalty_points: number
-  }
-
   const supabase = createClient()
-
-  // Load Scripts for PDF
-  useEffect(() => {
-    const loadScript = (src: string) => {
-        if (document.querySelector(`script[src="${src}"]`)) return;
-        const script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        document.body.appendChild(script);
-    };
-    loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
-    loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js");
-  }, []);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
 
-      // 1. Fetch Teams to get Penalty Points
       const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('id, name, color_hex, penalty_points') as { data: Team[] | null; error: any }
+        .from("teams")
+        .select("id, name, color_hex, penalty_points") as { data: Team[] | null; error: any }
 
       if (teamsError || !teamsData) {
-          console.error("Error fetching teams", teamsError);
-          setLoading(false);
-          return;
+        console.error("Error fetching teams", teamsError)
+        setLoading(false)
+        return
       }
 
-      // 2. Fetch All Participations
       const { data: participations, error: partError } = await supabase
-        .from('participations')
+        .from("participations")
         .select(`
           points_earned,
           result_position,
@@ -64,7 +50,7 @@ export default function OverviewPage() {
           student:students ( id, name, chest_no, section, class_grade ),
           event:events ( category, grade_type )
         `)
-        .gt('points_earned', 0)
+        .gt("points_earned", 0)
 
       if (partError || !participations) {
         console.error("Error fetching participations", partError)
@@ -72,46 +58,40 @@ export default function OverviewPage() {
         return
       }
 
-      // --- PROCESS TEAM DATA ---
       const teamsMap = new Map()
 
-      // Initialize with all teams and their penalties
       teamsData.forEach((team) => {
-          teamsMap.set(team.id, {
-              name: team.name,
-              color: team.color_hex,
-              earnedPoints: 0,
-              penalty: team.penalty_points || 0,
-              totalPoints: 0, // Will be calculated: earned - penalty
-              first: 0,
-              second: 0,
-              third: 0
-          })
+        teamsMap.set(team.id, {
+          name: team.name,
+          color: team.color_hex,
+          earnedPoints: 0,
+          penalty: team.penalty_points || 0,
+          totalPoints: 0,
+          first: 0,
+          second: 0,
+          third: 0,
+        })
       })
 
       participations.forEach((p: any) => {
         if (!p.team) return
         const tid = p.team.id
 
-        // Ensure team exists in map (it should from step 1, but safety check)
         if (teamsMap.has(tid)) {
-            const t = teamsMap.get(tid)
-            t.earnedPoints += p.points_earned
-            if (p.result_position === 'FIRST') t.first++
-            if (p.result_position === 'SECOND') t.second++
-            if (p.result_position === 'THIRD') t.third++
+          const t = teamsMap.get(tid)
+          t.earnedPoints += p.points_earned
+          if (p.result_position === "FIRST") t.first++
+          if (p.result_position === "SECOND") t.second++
+          if (p.result_position === "THIRD") t.third++
         }
       })
 
-      // Calculate final total points (Apply Penalty)
       teamsMap.forEach((t) => {
-          t.totalPoints = Math.max(0, t.earnedPoints - t.penalty)
+        t.totalPoints = Math.max(0, t.earnedPoints - t.penalty)
       })
 
-      const processedTeams = Array.from(teamsMap.values()).sort((a,b) => b.totalPoints - a.totalPoints)
-      setTeamStats(processedTeams)
+      setTeamStats(Array.from(teamsMap.values()).sort((a, b) => b.totalPoints - a.totalPoints))
 
-      // --- PROCESS CLASS DATA ---
       const classMap = new Map()
       participations.forEach((p: any) => {
         if (!p.student || !p.student.class_grade) return
@@ -120,19 +100,17 @@ export default function OverviewPage() {
           classMap.set(key, {
             className: p.student.class_grade,
             section: p.student.section,
-            totalPoints: 0
+            totalPoints: 0,
           })
         }
         classMap.get(key).totalPoints += p.points_earned
       })
       setClassStats(Array.from(classMap.values()))
 
-      // --- PROCESS STUDENT DATA (Top 5 Calc) ---
       const studentMap = new Map()
       participations.forEach((p: any) => {
         if (!p.student) return
-        // Exclude Group Items from Individual Ranking
-        if (p.event?.grade_type === 'C') return
+        if (p.event?.grade_type === "C") return
 
         const sid = p.student.id
         if (!studentMap.has(sid)) {
@@ -145,14 +123,14 @@ export default function OverviewPage() {
             totalPoints: 0,
             first: 0,
             second: 0,
-            third: 0
+            third: 0,
           })
         }
         const s = studentMap.get(sid)
         s.totalPoints += p.points_earned
-        if (p.result_position === 'FIRST') s.first++
-        if (p.result_position === 'SECOND') s.second++
-        if (p.result_position === 'THIRD') s.third++
+        if (p.result_position === "FIRST") s.first++
+        if (p.result_position === "SECOND") s.second++
+        if (p.result_position === "THIRD") s.third++
       })
       setStudentStats(Array.from(studentMap.values()))
 
@@ -162,137 +140,184 @@ export default function OverviewPage() {
     fetchData()
   }, [])
 
+  const totals = useMemo(() => {
+    const earned = teamStats.reduce((sum, team) => sum + (team.earnedPoints || 0), 0)
+    const penalties = teamStats.reduce((sum, team) => sum + (team.penalty || 0), 0)
+    const awards = teamStats.reduce((sum, team) => sum + team.first + team.second + team.third, 0)
+    return {
+      earned,
+      penalties,
+      awards,
+      students: studentStats.length,
+      leader: teamStats[0]?.name || "Awaiting scores",
+      leaderPoints: teamStats[0]?.totalPoints || 0,
+    }
+  }, [teamStats, studentStats])
+
   const handleDownloadPDF = () => {
-    // @ts-ignore
-    if (!window.jspdf) { alert("PDF library loading..."); return; }
     setIsDownloading(true)
 
-    // @ts-ignore
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    try {
+      const doc = new jsPDF()
 
-    // Title
-    doc.setFontSize(22);
-    doc.text("ARTS FEST 2025 - OVERVIEW REPORT", 105, 20, { align: "center" });
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
+      doc.setFontSize(22)
+      doc.text("ARTS FEST 2025 - OVERVIEW REPORT", 105, 20, { align: "center" })
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 28, { align: "center" })
 
-    let yPos = 40;
+      let yPos = 40
 
-    // 1. Team Standings Table
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("1. TEAM STANDINGS", 14, yPos);
-    yPos += 5;
+      doc.setFontSize(14)
+      doc.setFont("helvetica", "bold")
+      doc.text("1. TEAM STANDINGS", 14, yPos)
+      yPos += 5
 
-    // We include Earned, Penalty, and Net Score for clarity
-    autoTable(doc, {
+      autoTable(doc, {
         startY: yPos,
         head: [["Rank", "Team Name", "Earned Pts", "Penalty", "Net Points", "1st", "2nd", "3rd"]],
         body: teamStats.map((t, i) => [
-            i + 1,
-            t.name,
-            t.earnedPoints,
-            t.penalty > 0 ? `-${t.penalty}` : "0",
-            t.totalPoints,
-            t.first,
-            t.second,
-            t.third
+          i + 1,
+          t.name,
+          t.earnedPoints,
+          t.penalty > 0 ? `-${t.penalty}` : "0",
+          t.totalPoints,
+          t.first,
+          t.second,
+          t.third,
         ]),
-        theme: 'striped',
-        headStyles: { fillColor: [40, 40, 40] },
+        theme: "striped",
+        headStyles: { fillColor: [10, 29, 44] },
         columnStyles: {
-            4: { fontStyle: 'bold' } // Highlight Net Points
-        }
-    });
+          4: { fontStyle: "bold" },
+        },
+      })
 
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY + 15;
+      // @ts-ignore jspdf-autotable augments the document instance at runtime.
+      yPos = doc.lastAutoTable.finalY + 15
 
-    // 2. Top Students (Overall)
-    doc.text("2. TOP PERFORMERS (INDIVIDUAL)", 14, yPos);
-    yPos += 5;
+      doc.text("2. TOP PERFORMERS (INDIVIDUAL)", 14, yPos)
+      yPos += 5
 
-    const topStudents = [...studentStats].sort((a,b) => b.totalPoints - a.totalPoints).slice(0, 10);
+      const topStudents = [...studentStats].sort((a, b) => b.totalPoints - a.totalPoints).slice(0, 10)
 
-    autoTable(doc, {
+      autoTable(doc, {
         startY: yPos,
         head: [["Rank", "Name", "Chest No", "Section", "Team", "Points"]],
         body: topStudents.map((s, i) => [i + 1, s.name, s.chestNo, s.section, s.teamName, s.totalPoints]),
-        theme: 'grid',
-        headStyles: { fillColor: [70, 70, 70] }
-    });
+        theme: "grid",
+        headStyles: { fillColor: [18, 59, 79] },
+      })
 
-    // @ts-ignore
-    yPos = doc.lastAutoTable.finalY + 15;
+      // @ts-ignore jspdf-autotable augments the document instance at runtime.
+      yPos = doc.lastAutoTable.finalY + 15
 
-    // 3. Class Performance (Summary)
-    if (yPos > 250) {
-        doc.addPage();
-        yPos = 20;
-    }
+      if (yPos > 250) {
+        doc.addPage()
+        yPos = 20
+      }
 
-    doc.text("3. CLASS-WISE PERFORMANCE LEADERBOARD", 14, yPos);
-    yPos += 5;
+      doc.text("3. CLASS-WISE PERFORMANCE LEADERBOARD", 14, yPos)
+      yPos += 5
 
-    const topClasses = [...classStats].sort((a,b) => b.totalPoints - a.totalPoints).slice(0, 15);
+      const topClasses = [...classStats].sort((a, b) => b.totalPoints - a.totalPoints).slice(0, 15)
 
-    autoTable(doc, {
+      autoTable(doc, {
         startY: yPos,
         head: [["Rank", "Class", "Section", "Total Points"]],
         body: topClasses.map((c, i) => [i + 1, c.className, c.section, c.totalPoints]),
-        theme: 'striped'
-    });
+        theme: "striped",
+        headStyles: { fillColor: [10, 29, 44] },
+      })
 
-    doc.save("ArtsFest_Overview_Stats.pdf");
-    setIsDownloading(false);
+      doc.save("ArtsFest_Overview_Stats.pdf")
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   if (loading) {
     return (
-      <div className="flex h-[calc(100vh-6rem)] w-full items-center justify-center bg-slate-50/50">
-        <Loader2 className="animate-spin text-primary w-10 h-10" />
+      <div className="flex h-[calc(100vh-6rem)] w-full items-center justify-center">
+        <div className="surface-elevated flex items-center gap-3 rounded-3xl px-5 py-4">
+          <Loader2 className="size-5 animate-spin text-gold" />
+          <span className="text-sm font-bold text-navy">Preparing executive overview</span>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-[calc(100vh-6rem)] p-4 md:p-6 space-y-6 animate-in fade-in duration-500">
+    <div className="min-h-[calc(100vh-6rem)] space-y-5 pb-20 md:pb-4">
+      <section className="surface-dark relative overflow-hidden rounded-[2rem] p-5 sm:p-6">
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Event Overview</h1>
-          <p className="text-slate-500 mt-1 text-sm">Real-time statistics, team standings, and performance analytics.</p>
+        <div className="relative grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
+          <div>
+            <Badge variant="gold" className="h-8 gap-2 px-3">
+              <Sparkles className="size-3.5" />
+              Executive Summary
+            </Badge>
+            <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">The festival at a glance.</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
+              Consolidated standings, class performance, and individual excellence for quick leadership decisions.
+            </p>
+          </div>
+
+          <Button onClick={handleDownloadPDF} disabled={isDownloading} className="bg-gold text-navy hover:bg-gold/90">
+            {isDownloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            Download Report
+          </Button>
         </div>
-        <Button
-          onClick={handleDownloadPDF}
-          disabled={isDownloading}
-          className="bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20"
-        >
-          {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-          Download Report
-        </Button>
-      </div>
+      </section>
 
-      {/* Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <OverviewMetric label="Current Leader" value={totals.leader} helper={`${totals.leaderPoints} net points`} icon={Trophy} tone="gold" />
+        <OverviewMetric label="Earned Points" value={totals.earned} helper="Before penalties" icon={BarChart3} tone="navy" />
+        <OverviewMetric label="Individual Scorers" value={totals.students} helper="Non-group item performers" icon={Users} tone="blue" />
+        <OverviewMetric label="Awarded Positions" value={totals.awards} helper={`${totals.penalties} penalty points applied`} icon={Medal} tone="slate" />
+      </section>
 
-        {/* Main Team Chart - Spans 2 Columns on large screens, full on smaller */}
-        <div className="lg:col-span-2">
-           <TeamPerformance data={teamStats} />
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
+        <div className="space-y-5">
+          <TeamPerformance data={teamStats} />
+          <SectionAnalysis data={classStats} />
         </div>
+        <TopStudents data={studentStats} />
+      </section>
+    </div>
+  )
+}
 
-        {/* Top Students - Side column */}
-        <div className="lg:col-span-1 row-span-2 h-full">
-           <TopStudents data={studentStats} />
+function OverviewMetric({
+  label,
+  value,
+  helper,
+  icon: Icon,
+  tone,
+}: {
+  label: string
+  value: string | number
+  helper: string
+  icon: typeof PieChart
+  tone: "gold" | "navy" | "blue" | "slate"
+}) {
+  const toneClasses = {
+    gold: "bg-gold/12 text-gold",
+    navy: "bg-navy text-ivory",
+    blue: "bg-deepblue text-ivory",
+    slate: "bg-slatebrand text-ivory",
+  }
+
+  return (
+    <div className="surface-elevated rounded-[2rem] p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="eyebrow text-slatebrand">{label}</p>
+          <div className="mt-2 truncate text-2xl font-black text-navy">{value}</div>
+          <p className="mt-1 text-xs font-semibold text-slatebrand">{helper}</p>
         </div>
-
-        {/* Section Analysis - Bottom Left */}
-        <div className="lg:col-span-2">
-           <SectionAnalysis data={classStats} />
+        <div className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+          <Icon className="size-5" />
         </div>
-
       </div>
     </div>
   )

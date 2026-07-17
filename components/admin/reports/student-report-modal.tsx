@@ -94,33 +94,33 @@ export function StudentReportModal({ studentId, open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[800px] h-[85vh] flex flex-col p-0 overflow-hidden bg-white">
+      <DialogContent className="flex h-[85vh] max-w-[800px] flex-col overflow-hidden rounded-[2rem] border-navy/10 bg-ivory p-0">
 
         {/* Header Section */}
-        <DialogHeader className="p-6 pb-4 border-b bg-slate-50/80 shrink-0">
+        <DialogHeader className="shrink-0 border-b border-navy/10 bg-mist p-6 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center border border-indigo-100 text-indigo-600 shrink-0">
-                        <User className="w-6 h-6" />
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-gold/20 bg-gold/10 text-gold">
+                        <User className="size-6" />
                     </div>
                     <div>
-                        <DialogTitle className="text-xl font-bold text-slate-800">
+                        <DialogTitle className="text-xl font-black text-navy">
                             {loading ? "Loading..." : data?.student.name}
                         </DialogTitle>
                         {/* FIX: Changed div to span to avoid hydration error since DialogDescription is a p tag */}
                         <DialogDescription className="flex flex-wrap items-center gap-2 mt-1.5">
                             {!loading && data && (
                                 <>
-                                    <Badge variant="outline" className="font-mono text-xs bg-white text-slate-700 border-slate-300">
+                                    <Badge variant="outline" className="bg-ivory font-mono text-xs">
                                         {data.student.chest_no || 'N/A'}
                                     </Badge>
-                                    <span className="text-slate-300">|</span>
+                                    <span className="text-navy/20">|</span>
                                     <span className="inline-flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: data.student.teams.color_hex }}></span>
-                                        <span className="font-semibold text-sm text-slate-700">{data.student.teams.name}</span>
+                                        <span className="inline-block size-2 rounded-full" style={{ backgroundColor: data.student.teams.color_hex }}></span>
+                                        <span className="text-sm font-bold text-navy">{data.student.teams.name}</span>
                                     </span>
-                                    <span className="text-slate-300">|</span>
-                                    <span className="text-slate-600 text-sm">{data.student.section}</span>
+                                    <span className="text-navy/20">|</span>
+                                    <span className="text-sm font-semibold text-slatebrand">{data.student.section}</span>
                                 </>
                             )}
                         </DialogDescription>
@@ -128,15 +128,15 @@ export function StudentReportModal({ studentId, open, onOpenChange }: Props) {
                 </div>
 
                 {!loading && data && (
-                    <div className="flex items-center gap-4 bg-white p-2 rounded-lg border shadow-sm">
+                    <div className="flex items-center gap-4 rounded-2xl border border-navy/10 bg-ivory p-2 shadow-sm">
                         <div className="text-right px-2">
-                            <div className="text-2xl font-black text-indigo-600 leading-none">
+                            <div className="text-2xl font-black leading-none text-navy">
                                 {data.parts.reduce((acc: number, curr: any) => acc + (curr.points_earned || 0), 0)}
                             </div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Pts</div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slatebrand">Total Pts</div>
                         </div>
-                        <Button onClick={generatePDF} size="sm" className="h-9 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
-                            <FileDown className="w-4 h-4 mr-2" /> PDF
+                        <Button onClick={generatePDF} size="sm" className="h-9">
+                            <FileDown className="mr-2 size-4" /> PDF
                         </Button>
                     </div>
                 )}
@@ -144,82 +144,82 @@ export function StudentReportModal({ studentId, open, onOpenChange }: Props) {
         </DialogHeader>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/50 p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto bg-mist/50 p-4 sm:p-6">
             {loading ? (
                 <div className="h-full flex flex-col items-center justify-center gap-2">
-                    <Loader2 className="animate-spin text-indigo-600 w-8 h-8" />
-                    <p className="text-sm text-slate-400">Fetching student records...</p>
+                    <Loader2 className="size-8 animate-spin text-gold" />
+                    <p className="text-sm font-semibold text-slatebrand">Fetching student records...</p>
                 </div>
             ) : (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between px-1">
                         <div className="flex items-center gap-2">
-                            <Trophy className="w-4 h-4 text-amber-500" />
-                            <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                            <Trophy className="size-4 text-gold" />
+                            <h4 className="text-sm font-black uppercase tracking-[0.12em] text-navy">
                                 Participation History
                             </h4>
-                            <Badge className="bg-slate-200 text-slate-600 hover:bg-slate-200 ml-2">
+                            <Badge variant="outline" className="ml-2">
                                 {data?.parts.length} Events
                             </Badge>
                         </div>
                     </div>
 
                     {data?.parts.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-60 bg-white rounded-xl border border-dashed border-slate-200 text-slate-400">
-                            <Calendar className="w-12 h-12 mb-3 opacity-20" />
+                        <div className="flex h-60 flex-col items-center justify-center rounded-3xl border border-dashed border-navy/12 bg-ivory text-slatebrand">
+                            <Calendar className="mb-3 size-12 opacity-30" />
                             <p>No events registered for this student.</p>
                         </div>
                     ) : (
-                        <div className="border rounded-xl bg-white shadow-sm w-full">
+                        <div className="w-full rounded-3xl border border-navy/10 bg-ivory shadow-sm">
                             {/* Horizontal Scroll Wrapper - Explicitly defined with overflow-x-auto */}
                             <div className="w-full overflow-x-auto pb-2">
                                 <table className="w-full min-w-[800px] text-sm text-left">
-                                    <thead className="bg-slate-50 border-b border-slate-100">
+                                    <thead className="border-b border-navy/10 bg-mist">
                                         <tr>
-                                            <th className="py-3 px-4 font-bold text-slate-600 w-[30%] whitespace-nowrap">Event Name</th>
-                                            <th className="py-3 px-4 font-bold text-slate-600 whitespace-nowrap">Category</th>
-                                            <th className="py-3 px-4 font-bold text-slate-600 text-center whitespace-nowrap">Status</th>
-                                            <th className="py-3 px-4 font-bold text-slate-600 text-center whitespace-nowrap">Position</th>
-                                            <th className="py-3 px-4 font-bold text-slate-600 text-center whitespace-nowrap">Grade</th>
-                                            <th className="py-3 px-4 font-bold text-slate-600 text-right pr-6 whitespace-nowrap">Score</th>
+                                            <th className="w-[30%] whitespace-nowrap px-4 py-3 font-black text-slatebrand">Event Name</th>
+                                            <th className="whitespace-nowrap px-4 py-3 font-black text-slatebrand">Category</th>
+                                            <th className="whitespace-nowrap px-4 py-3 text-center font-black text-slatebrand">Status</th>
+                                            <th className="whitespace-nowrap px-4 py-3 text-center font-black text-slatebrand">Position</th>
+                                            <th className="whitespace-nowrap px-4 py-3 text-center font-black text-slatebrand">Grade</th>
+                                            <th className="whitespace-nowrap py-3 pl-4 pr-6 text-right font-black text-slatebrand">Score</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody className="divide-y divide-navy/8">
                                         {data.parts.map((p: any, idx: number) => (
-                                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                <td className="py-3 px-4 font-medium text-slate-700">
+                                            <tr key={idx} className="transition-colors hover:bg-gold/6">
+                                                <td className="px-4 py-3 font-bold text-navy">
                                                     {p.events.name}
                                                 </td>
                                                 <td className="py-3 px-4">
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">
+                                                    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-navy/10 bg-navy/6 px-2 py-1 text-xs font-bold text-slatebrand">
                                                         {p.events.category}
                                                     </span>
                                                 </td>
                                                 <td className="py-3 px-4 text-center">
                                                     {p.status === 'winner' ? (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 whitespace-nowrap">
-                                                            <Medal className="w-3 h-3 mr-1" />
+                                                        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-success/20 bg-success/10 px-2 py-1 text-xs font-bold text-success">
+                                                            <Medal className="mr-1 size-3" />
                                                             Completed
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500 whitespace-nowrap">
+                                                        <span className="inline-flex items-center whitespace-nowrap rounded-full bg-navy/6 px-2 py-1 text-xs font-semibold text-slatebrand">
                                                             Registered
                                                         </span>
                                                     )}
                                                 </td>
                                                 <td className="py-3 px-4 text-center">
                                                     {p.result_position ? (
-                                                        <span className="font-bold text-slate-800">{p.result_position}</span>
+                                                        <span className="font-bold text-navy">{p.result_position}</span>
                                                     ) : (
                                                         <span className="text-slate-300">-</span>
                                                     )}
                                                 </td>
-                                                <td className="py-3 px-4 text-center font-mono text-slate-600">
+                                                <td className="px-4 py-3 text-center font-mono text-slatebrand">
                                                     {p.performance_grade || '-'}
                                                 </td>
                                                 <td className="py-3 px-4 text-right pr-6">
                                                     {p.points_earned > 0 ? (
-                                                        <span className="font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded text-xs whitespace-nowrap">
+                                                        <span className="whitespace-nowrap rounded-full bg-gold/10 px-2 py-1 text-xs font-black text-navy">
                                                             {p.points_earned} pts
                                                         </span>
                                                     ) : (

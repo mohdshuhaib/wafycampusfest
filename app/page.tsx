@@ -2,92 +2,192 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ThemeSwitcher } from "@/components/theme-switcher"
-import { Trophy, ArrowRight, Sparkles, Heart } from "lucide-react"
+import {
+  ArrowRight,
+  CalendarDays,
+  ChevronRight,
+  Clock,
+  Crown,
+  Megaphone,
+  Music2,
+  ShieldCheck,
+  Sparkles,
+  Trophy,
+  Users,
+} from "lucide-react"
+
+const countdown = [
+  { label: "Days", value: "42" },
+  { label: "Hours", value: "18" },
+  { label: "Mins", value: "06" },
+  { label: "Secs", value: "24" },
+]
+
+const stats = [
+  { label: "Registered Students", value: "1.2k", icon: Users },
+  { label: "Stage & Off-stage Events", value: "86", icon: Music2 },
+  { label: "Prize Categories", value: "24", icon: Trophy },
+]
+
+const featuredEvents = [
+  { name: "Mappilappattu", category: "On Stage", time: "Main Auditorium" },
+  { name: "Arabic Calligraphy", category: "Off Stage", time: "Design Studio" },
+  { name: "Debate Championship", category: "Academic", time: "Seminar Hall" },
+]
 
 export default function LandingPage() {
   return (
-    // h-screen ensures it takes full viewport height without scrolling
-    <div className="h-screen w-full flex flex-col bg-background overflow-hidden relative selection:bg-primary/20">
-
-      {/* Background Ambience */}
-      <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-secondary/30 blur-[120px] pointer-events-none" />
-
-      {/* Navbar - Fixed height (4rem/64px) */}
-      <header className="px-6 h-16 flex items-center justify-between border-b border-border/40 bg-background/50 backdrop-blur-md z-50">
-        <div className="flex items-center gap-2 font-heading font-bold text-xl tracking-tight text-foreground">
-          {/* Logo with v4 Gradient Syntax */}
-          <div className="w-8 h-8 bg-linear-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
-            <Trophy className="w-4 h-4" />
-          </div>
-          <span>ArtsFest <span className="text-primary">2025</span></span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <ThemeSwitcher />
-          <Link href="/login">
-            <Button variant="outline" className="hidden sm:flex border-primary/20 hover:bg-primary/5">Admin Access</Button>
+    <main className="app-shell min-h-screen overflow-hidden text-navy">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-navy/10 bg-ivory/72 backdrop-blur-2xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex items-center">
+            <div>
+              <div className="text-title text-base">Wafy Campus Kalikkav</div>
+              <div className="hidden text-[10px] font-bold uppercase tracking-[0.18em] text-slatebrand sm:block">
+                Arts Fest Portal
+              </div>
+            </div>
           </Link>
+
+          <div className="flex items-center gap-2">
+            <Link href="/login">
+              <Button className="hidden sm:inline-flex">
+                Portal Login
+                <ArrowRight className="size-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* Main Content - Takes remaining height */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 relative z-10">
-
-        <div className="space-y-6 max-w-4xl">
-          {/* Badge */}
-          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Sparkles className="w-3 h-3 mr-2" />
-            The Ultimate Cultural Experience
+      <section className="relative mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 pb-16 pt-28 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
+        <div className="pointer-events-none absolute inset-0 premium-grid opacity-50" />
+        <div className="relative z-10 animate-premium-in">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/12 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-navy">
+            <Sparkles className="size-3.5 text-gold" />
+            Registration command center is live
           </div>
 
-          {/* Hero Text */}
-          <h1 className="font-heading text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-foreground animate-in fade-in slide-in-from-bottom-5 duration-700">
-            Manage. Compete.<br />
-            {/* v4 Gradient Syntax */}
-            <span className="text-transparent bg-clip-text bg-linear-to-r from-primary via-purple-500 to-pink-500">
-              Conquer the Stage.
-            </span>
+          <h1 className="text-display max-w-4xl text-5xl text-navy sm:text-6xl lg:text-7xl">
+            A premium festival portal for every stage, score, and team.
           </h1>
 
-          <p className="mx-auto max-w-[600px] text-muted-foreground text-lg md:text-xl font-light animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-            Welcome to the official portal for Arts Fest 2025.
-            Register participants, track live scores, and lead your house to victory.
+          <p className="mt-6 max-w-2xl text-base leading-8 text-slatebrand sm:text-lg">
+            Manage registrations, captains, live scoring, reports, finance, and event operations through one calm,
+            fast, campus-grade control system.
           </p>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8 animate-in fade-in zoom-in duration-700 delay-200">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/login">
-              <Button size="lg" className="h-14 px-8 text-lg rounded-full shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
-                Captain Login <ArrowRight className="w-5 h-5 ml-2" />
+              <Button size="lg" className="w-full sm:w-auto">
+                Open Dashboard
+                <ArrowRight className="size-5" />
               </Button>
             </Link>
+            <a href="#events">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                Explore Events
+                <ChevronRight className="size-5" />
+              </Button>
+            </a>
+          </div>
 
-            <Button variant="ghost" size="lg" className="h-14 px-8 text-lg rounded-full text-muted-foreground hover:text-foreground">
-              View Schedule
-            </Button>
+          <div id="stats" className="mt-10 grid gap-3 sm:grid-cols-3">
+            {stats.map((item) => {
+              const Icon = item.icon
+              return (
+                <div key={item.label} className="surface-panel rounded-2xl p-4">
+                  <div className="mb-4 grid size-9 place-items-center rounded-xl bg-navy/7 text-navy">
+                    <Icon className="size-4" />
+                  </div>
+                  <div className="text-title text-2xl">{item.value}</div>
+                  <div className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-slatebrand">{item.label}</div>
+                </div>
+              )
+            })}
           </div>
         </div>
-      </main>
 
-      {/* Footer - Credits */}
-      <footer className="py-6 text-center z-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
-        <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-1.5">
-          Made with
-          <Heart className="w-4 h-4 text-red-500 fill-red-500 animate-pulse" />
-          by
-          <a
-            href="https://shuhaibcv.vercel.app/" // Replace with your actual portfolio link
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-bold text-transparent bg-clip-text bg-linear-to-r from-primary to-purple-600 hover:from-purple-600 hover:to-primary transition-all duration-300 hover:scale-105 hover:underline decoration-primary/30 underline-offset-4"
-          >
-            Shuhaib
-          </a>
-        </p>
-        <p className="text-[10px] text-muted-foreground/60 mt-1">© 2025 Arts Fest Committee</p>
+        <div className="relative z-10 animate-premium-in lg:pl-6">
+          <div className="surface-dark relative overflow-hidden rounded-[2rem] p-5 sm:p-6">
+            <div className="relative flex items-start justify-between gap-4">
+              <div>
+                <div className="eyebrow text-gold">Live Fest Console</div>
+                <h2 className="text-title mt-3 text-3xl text-ivory">Arts Fest Portal</h2>
+                <p className="mt-3 max-w-sm text-sm leading-6 text-ivory/66">
+                  A curated operational view for organizers, captains, judges, and finance teams.
+                </p>
+              </div>
+              <div className="grid size-12 place-items-center rounded-2xl bg-gold text-navy shadow-gold">
+                <Crown className="size-5" />
+              </div>
+            </div>
+
+            <div className="relative mt-8 grid grid-cols-4 gap-2">
+              {countdown.map((item) => (
+                <div key={item.label} className="rounded-2xl border border-ivory/10 bg-ivory/8 p-3 text-center backdrop-blur">
+                  <div className="text-title text-2xl text-ivory">{item.value}</div>
+                  <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-ivory/50">{item.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div id="events" className="relative mt-6 space-y-3">
+              {featuredEvents.map((event, index) => (
+                <div
+                  key={event.name}
+                  className="flex items-center gap-3 rounded-2xl border border-ivory/10 bg-ivory/8 p-3 backdrop-blur transition hover:bg-ivory/12"
+                >
+                  <div className="grid size-10 place-items-center rounded-xl bg-ivory/10 text-gold">
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-bold text-ivory">{event.name}</div>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-ivory/50">
+                      <CalendarDays className="size-3" />
+                      {event.category}
+                    </div>
+                  </div>
+                  <div className="hidden rounded-full border border-gold/20 px-3 py-1 text-xs font-bold text-gold sm:block">
+                    {event.time}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="surface-panel rounded-3xl p-5">
+              <div className="mb-4 flex items-center gap-2 text-sm font-bold text-navy">
+                <Megaphone className="size-4 text-gold" />
+                Latest Announcement
+              </div>
+              <p className="text-sm leading-6 text-slatebrand">
+                Captains can review event participation and download admit cards from the portal.
+              </p>
+            </div>
+            <div id="management" className="surface-panel rounded-3xl p-5">
+              <div className="mb-4 flex items-center gap-2 text-sm font-bold text-navy">
+                <ShieldCheck className="size-4 text-gold" />
+                Verified Management
+              </div>
+              <p className="text-sm leading-6 text-slatebrand">
+                Role-based access keeps admin, captain, scoring, and finance workflows organized.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-navy/10 bg-ivory/60 px-4 py-8 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 text-sm text-slatebrand sm:flex-row sm:items-center sm:justify-between">
+          <div className="font-semibold">Wafy Campus Kalikkav Arts Fest Portal</div>
+          <div className="flex items-center gap-2">
+            <Clock className="size-4 text-gold" />
+            Built for live event operations
+          </div>
+        </div>
       </footer>
-    </div>
+    </main>
   )
 }

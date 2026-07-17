@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Loader2, Palette, Save } from "lucide-react"
 
 interface Team {
   id: string
@@ -29,17 +29,17 @@ export function TeamEditDialog({ team, open, onOpenChange, onSuccess }: TeamEdit
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
-    color_hex: ""
+    color_hex: "#0A1D2C"
   })
 
-  // Load initial data when team changes
-  if (team && formData.name === "" && open) {
+  useEffect(() => {
+    if (!team || !open) return
     setFormData({
       name: team.name,
       slug: team.slug,
       color_hex: team.color_hex
     })
-  }
+  }, [team, open])
 
   const supabase = createClient()
 
@@ -48,7 +48,6 @@ export function TeamEditDialog({ team, open, onOpenChange, onSuccess }: TeamEdit
     try {
       setLoading(true)
 
-      // FIX: Cast to 'any' to bypass strict TypeScript checking on update object
       const { error } = await (supabase.from('teams') as any)
         .update({
           name: formData.name,
@@ -71,53 +70,61 @@ export function TeamEditDialog({ team, open, onOpenChange, onSuccess }: TeamEdit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-white">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>Edit Team</DialogTitle>
-          <DialogDescription>
-            Make changes to the team profile here. Click save when you're done.
-          </DialogDescription>
+          <div className="mb-2 flex items-center gap-3">
+            <div className="grid size-11 place-items-center rounded-2xl text-ivory shadow-premium" style={{ backgroundColor: formData.color_hex }}>
+              <Palette className="size-5" />
+            </div>
+            <div>
+              <DialogTitle>Edit team identity</DialogTitle>
+              <DialogDescription>Update the public team label, slug, and color system.</DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">Name</Label>
+
+        <div className="grid gap-5 py-3">
+          <div className="space-y-2">
+            <Label htmlFor="team-name" className="text-xs font-bold uppercase tracking-[0.12em] text-slatebrand">Name</Label>
             <Input
-              id="name"
+              id="team-name"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="col-span-3"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="slug" className="text-right">Slug</Label>
+          <div className="space-y-2">
+            <Label htmlFor="team-slug" className="text-xs font-bold uppercase tracking-[0.12em] text-slatebrand">Slug</Label>
             <Input
-              id="slug"
+              id="team-slug"
               value={formData.slug}
               onChange={(e) => setFormData({...formData, slug: e.target.value})}
-              className="col-span-3"
+              className="font-mono"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="color" className="text-right">Color</Label>
-            <div className="col-span-3 flex gap-2">
+          <div className="space-y-2">
+            <Label htmlFor="team-color" className="text-xs font-bold uppercase tracking-[0.12em] text-slatebrand">Color</Label>
+            <div className="flex gap-3">
               <Input
-                id="color"
+                id="team-color"
                 type="color"
-                className="w-12 h-10 p-1"
+                className="h-11 w-14 shrink-0 p-1"
                 value={formData.color_hex}
                 onChange={(e) => setFormData({...formData, color_hex: e.target.value})}
               />
               <Input
                 value={formData.color_hex}
                 onChange={(e) => setFormData({...formData, color_hex: e.target.value})}
-                placeholder="#000000"
+                placeholder="#0A1D2C"
+                className="font-mono"
               />
             </div>
           </div>
         </div>
+
         <DialogFooter>
-          <Button type="submit" variant='outline' className="bg-green-600" onClick={handleSave} disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
             Save changes
           </Button>
         </DialogFooter>

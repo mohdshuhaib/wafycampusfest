@@ -128,23 +128,23 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-white">
+      <DialogContent className="rounded-[2rem] border-navy/10 bg-ivory sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>{student ? "Edit Student" : "Add New Student"}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-title text-xl text-navy">{student ? "Edit Student" : "Add New Student"}</DialogTitle>
+          <DialogDescription className="font-medium text-slatebrand">
             {student ? "Update student details below." : "Enter details for the new participant."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           {error && (
-            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" /> {error}
+            <div className="flex items-center gap-2 rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-sm font-bold text-destructive">
+              <AlertCircle className="size-4" /> {error}
             </div>
           )}
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Name <span className="text-red-500">*</span></Label>
+            <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Name <span className="text-destructive">*</span></Label>
             <Input
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})}
@@ -153,7 +153,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Chest No <span className="text-red-500">*</span></Label>
+            <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Chest No <span className="text-destructive">*</span></Label>
             <Input
               value={formData.chest_no}
               onChange={e => setFormData({...formData, chest_no: e.target.value})}
@@ -163,7 +163,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Section</Label>
+            <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Section</Label>
             <div className="col-span-3">
               <Select
                 value={formData.section}
@@ -172,7 +172,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="surface-elevated rounded-2xl border-navy/10">
                   {SECTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -180,7 +180,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Class</Label>
+            <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Class</Label>
             <div className="col-span-3">
               <Select
                 value={formData.class_grade}
@@ -189,7 +189,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="surface-elevated rounded-2xl border-navy/10">
                   {CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -197,7 +197,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Team <span className="text-red-500">*</span></Label>
+            <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Team <span className="text-destructive">*</span></Label>
             <div className="col-span-3">
               <Select
                 value={formData.team_id}
@@ -206,7 +206,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
                 <SelectTrigger>
                   <SelectValue placeholder="Select Team" />
                 </SelectTrigger>
-                <SelectContent  className="bg-white">
+                <SelectContent className="surface-elevated rounded-2xl border-navy/10">
                   {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -217,7 +217,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             {student ? "Save Changes" : "Add Student"}
           </Button>
         </DialogFooter>

@@ -24,6 +24,14 @@ const config = {
         heading: ["var(--font-outfit)", "sans-serif"],
       },
       colors: {
+        navy: "#0A1D2C",
+        deepblue: "#123B4F",
+        slatebrand: "#5A6D7E",
+        gold: "#D4AF37",
+        ivory: "#F6F2E8",
+        parchment: "#EDE7D9",
+        mist: "#F5F8FA",
+        charcoal: "#1B2127",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -40,6 +48,14 @@ const config = {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",

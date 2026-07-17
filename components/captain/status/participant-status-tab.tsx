@@ -1,14 +1,11 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from "@/components/ui/table"
-import { Card, CardContent } from "@/components/ui/card"
+import { useMemo, useState } from "react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, AlertCircle, CheckCircle2, XCircle, Filter, Trophy } from "lucide-react"
+import { AlertCircle, CheckCircle2, Filter, Search, Trophy, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Student {
@@ -21,7 +18,7 @@ interface Student {
     attendance_status: string
     events: {
       category: string
-      max_participants_per_team: number // Added to support the new logic
+      max_participants_per_team: number
     }
   }[]
 }
@@ -33,191 +30,112 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
   const processedData = useMemo(() => {
     let totalPenalty = 0
 
-    const rows = students.map(student => {
-      // 1. Filter valid participations (Ignore 'absent' records)
-      const validParts = student.participations.filter(p => p.attendance_status !== 'absent')
-
-      // 2. Filter for "Counting" Events (New Logic)
-      // Exclude events where max_participants_per_team > 5 (Group items)
-      // These do not count towards the individual On-Stage/Off-Stage requirements
-      const countingParts = validParts.filter(p => {
-         const maxP = p.events?.max_participants_per_team ?? 1; // Default to 1 if undefined
-         return maxP <= 5;
+    const rows = students.map((student) => {
+      const validParts = student.participations.filter((p) => p.attendance_status !== "absent")
+      const countingParts = validParts.filter((p) => {
+        const maxP = p.events?.max_participants_per_team ?? 1
+        return maxP <= 5
       })
 
-      // 3. Check Categories based on filtered Counting Parts
-      const hasOnStage = countingParts.some(p => p.events?.category === 'ON STAGE')
-      const hasOffStage = countingParts.some(p => p.events?.category === 'OFF STAGE')
-
-      // 4. Determine Compliance
+      const hasOnStage = countingParts.some((p) => p.events?.category === "ON STAGE")
+      const hasOffStage = countingParts.some((p) => p.events?.category === "OFF STAGE")
       const isCompliant = hasOnStage && hasOffStage
       const penalty = isCompliant ? 0 : 10
       totalPenalty += penalty
 
       let statusLabel = "Good"
-      let statusColor = "bg-emerald-100 text-emerald-700 border-emerald-200"
+      let statusColor = "border-success/20 bg-success/10 text-success"
 
       if (!hasOnStage && !hasOffStage) {
-          statusLabel = "No Valid Events"
-          statusColor = "bg-red-100 text-red-700 border-red-200"
+        statusLabel = "No Valid Events"
+        statusColor = "border-destructive/20 bg-destructive/10 text-destructive"
       } else if (!hasOnStage) {
-          statusLabel = "Missing On-Stage"
-          statusColor = "bg-orange-100 text-orange-700 border-orange-200"
+        statusLabel = "Missing On-Stage"
+        statusColor = "border-[#c98743]/25 bg-[#c98743]/10 text-[#a56529]"
       } else if (!hasOffStage) {
-          statusLabel = "Missing Off-Stage"
-          statusColor = "bg-blue-100 text-blue-700 border-blue-200"
+        statusLabel = "Missing Off-Stage"
+        statusColor = "border-deepblue/20 bg-deepblue/10 text-deepblue"
       }
 
-      return {
-        ...student,
-        hasOnStage,
-        hasOffStage,
-        isCompliant,
-        penalty,
-        statusLabel,
-        statusColor
-      }
+      return { ...student, hasOnStage, hasOffStage, isCompliant, penalty, statusLabel, statusColor }
     })
 
-    const filtered = rows.filter(row => {
+    const filtered = rows.filter((row) => {
       const matchesSearch = row.name.toLowerCase().includes(search.toLowerCase()) ||
-                            (row.chest_no && row.chest_no.includes(search))
-
-      const matchesFilter = filterStatus === 'all'
-        ? true
-        : filterStatus === 'good' ? row.isCompliant
-        : !row.isCompliant
-
+        (row.chest_no && row.chest_no.includes(search))
+      const matchesFilter = filterStatus === "all" ? true : filterStatus === "good" ? row.isCompliant : !row.isCompliant
       return matchesSearch && matchesFilter
     })
 
-    return { rows: filtered, totalPenalty }
+    return { rows: filtered, allRows: rows, totalPenalty }
   }, [students, search, filterStatus])
 
+  const compliantCount = processedData.allRows.filter((row) => row.isCompliant).length
+  const actionCount = processedData.allRows.length - compliantCount
+
   return (
-    <div className="space-y-6">
-      {/* Summary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-red-50 border-red-100 shadow-sm relative overflow-hidden">
-          <div className="absolute right-0 top-0 h-full w-1 bg-red-500"></div>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-red-100 rounded-full text-red-600 shadow-sm">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-red-600 uppercase tracking-wider">Compliance Penalty</p>
-              <div className="flex items-baseline gap-1">
-                <p className="text-3xl font-black text-slate-800">-{processedData.totalPenalty}</p>
-                <span className="text-xs text-red-500 font-medium">pts</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border-slate-200 shadow-sm">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-orange-50 rounded-full text-orange-600">
-              <XCircle className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Action Needed</p>
-              <p className="text-2xl font-bold text-slate-700">
-                {students.length - processedData.rows.filter(r => r.isCompliant).length} <span className="text-sm font-normal text-slate-400">Students</span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-emerald-50 border-emerald-100 shadow-sm">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-emerald-100 rounded-full text-emerald-600">
-              <Trophy className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Fully Completed</p>
-              <p className="text-2xl font-bold text-emerald-700">
-                 {processedData.rows.filter(r => r.isCompliant).length} <span className="text-sm font-normal text-emerald-600/60">Students</span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Metric label="Compliance Penalty" value={`-${processedData.totalPenalty}`} helper="Potential deduction" icon={AlertCircle} tone="danger" />
+        <Metric label="Action Needed" value={actionCount} helper="Students to review" icon={XCircle} tone="warning" />
+        <Metric label="Fully Completed" value={compliantCount} helper="Students compliant" icon={Trophy} tone="success" />
       </div>
 
-      {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border shadow-sm">
-        <div className="relative flex-1">
-           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-           <Input
-             placeholder="Search by name or chest no..."
-             className="pl-9 bg-slate-50 border-slate-200 focus-visible:ring-0 focus-visible:bg-white transition-all"
-             value={search}
-             onChange={(e) => setSearch(e.target.value)}
-           />
-        </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-           <SelectTrigger className="w-full sm:w-[200px] bg-slate-50 border-slate-200">
-              <div className="flex items-center text-slate-600">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Filter Status" />
-              </div>
-           </SelectTrigger>
-           <SelectContent className="bg-white">
+      <div className="surface-panel rounded-[2rem] p-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slatebrand" />
+            <Input
+              placeholder="Search by name or chest no"
+              className="h-11 rounded-2xl pl-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="h-11 w-full rounded-2xl bg-ivory sm:w-[210px]">
+              <Filter className="mr-2 size-4 text-slatebrand" />
+              <SelectValue placeholder="Filter Status" />
+            </SelectTrigger>
+            <SelectContent className="surface-elevated rounded-2xl border-navy/10">
               <SelectItem value="all">All Students</SelectItem>
               <SelectItem value="good">Compliant Only</SelectItem>
               <SelectItem value="bad">Non-Compliant Only</SelectItem>
-           </SelectContent>
-        </Select>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Data Table */}
-      <div className="border rounded-xl bg-white overflow-hidden shadow-sm">
+      <div className="surface-elevated overflow-hidden rounded-[2rem]">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-slate-50 border-b border-slate-200">
-              <TableRow>
-                <TableHead className="w-[100px] font-bold text-slate-700">Chest No</TableHead>
-                <TableHead className="font-bold text-slate-700">Student Name</TableHead>
-                <TableHead className="hidden md:table-cell text-slate-700">Class</TableHead>
-                <TableHead className="hidden md:table-cell text-slate-700">Section</TableHead>
-                <TableHead className="text-center font-bold text-slate-700">On-Stage</TableHead>
-                <TableHead className="text-center font-bold text-slate-700">Off-Stage</TableHead>
-                <TableHead className="text-right pr-6 font-bold text-slate-700">Status</TableHead>
+            <TableHeader className="bg-mist">
+              <TableRow className="border-navy/10">
+                <TableHead className="w-[110px] font-black text-slatebrand">Chest No</TableHead>
+                <TableHead className="font-black text-slatebrand">Student Name</TableHead>
+                <TableHead className="hidden font-black text-slatebrand md:table-cell">Class</TableHead>
+                <TableHead className="hidden font-black text-slatebrand md:table-cell">Section</TableHead>
+                <TableHead className="text-center font-black text-slatebrand">On-Stage</TableHead>
+                <TableHead className="text-center font-black text-slatebrand">Off-Stage</TableHead>
+                <TableHead className="pr-6 text-right font-black text-slatebrand">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {processedData.rows.map((student) => (
-                <TableRow key={student.id} className="hover:bg-slate-50 group transition-colors">
-                  <TableCell className="font-mono font-bold text-slate-600 bg-slate-50/50 group-hover:bg-transparent transition-colors">
-                    {student.chest_no || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium text-slate-900">{student.name}</div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-slate-500">{student.class_grade}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Badge variant="outline" className="font-normal text-slate-500">{student.section}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {student.hasOnStage
-                      ? <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" />
-                      : <div className="w-2 h-2 bg-slate-200 rounded-full mx-auto" />
-                    }
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {student.hasOffStage
-                      ? <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" />
-                      : <div className="w-2 h-2 bg-slate-200 rounded-full mx-auto" />
-                    }
-                  </TableCell>
-                  <TableCell className="text-right pr-6">
+                <TableRow key={student.id} className="border-navy/8 transition-colors hover:bg-gold/6">
+                  <TableCell className="bg-navy/4 font-mono font-black text-navy">{student.chest_no || "-"}</TableCell>
+                  <TableCell><div className="font-bold text-navy">{student.name}</div></TableCell>
+                  <TableCell className="hidden font-semibold text-slatebrand md:table-cell">{student.class_grade || "-"}</TableCell>
+                  <TableCell className="hidden md:table-cell"><Badge variant="outline">{student.section}</Badge></TableCell>
+                  <TableCell className="text-center">{student.hasOnStage ? <CheckCircle2 className="mx-auto size-5 text-success" /> : <div className="mx-auto size-2 rounded-full bg-navy/15" />}</TableCell>
+                  <TableCell className="text-center">{student.hasOffStage ? <CheckCircle2 className="mx-auto size-5 text-success" /> : <div className="mx-auto size-2 rounded-full bg-navy/15" />}</TableCell>
+                  <TableCell className="pr-6 text-right">
                     {student.isCompliant ? (
-                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 shadow-none">Good</Badge>
+                      <Badge className="border-success/20 bg-success/10 text-success">Good</Badge>
                     ) : (
                       <div className="flex flex-col items-end gap-1">
-                          <Badge variant="outline" className={cn("border font-medium shadow-none", student.statusColor)}>
-                            {student.statusLabel}
-                          </Badge>
-                          <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">-10 Pts</span>
+                        <Badge variant="outline" className={cn("border font-bold", student.statusColor)}>{student.statusLabel}</Badge>
+                        <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-black text-destructive">-10 pts</span>
                       </div>
                     )}
                   </TableCell>
@@ -225,9 +143,7 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
               ))}
               {processedData.rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-slate-400">
-                    No participants found matching your criteria.
-                  </TableCell>
+                  <TableCell colSpan={7} className="h-56 text-center text-sm font-bold text-slatebrand">No participants found matching your criteria.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -235,13 +151,34 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
         </div>
       </div>
 
-      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 flex gap-2 items-start">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          <p>
-              <strong>*Important Rule:</strong> To avoid the -10 point compliance penalty, a student must participate in at least one On-Stage and one Off-Stage event.
-              <br/>
-              <span className="opacity-80">Note: Large group events (Max Participants &gt; 5) are excluded from this specific requirement count.</span>
-          </p>
+      <div className="surface-panel flex items-start gap-3 rounded-2xl border-gold/20 bg-gold/10 p-4 text-xs font-semibold text-navy">
+        <AlertCircle className="mt-0.5 size-4 shrink-0 text-gold" />
+        <p>
+          <strong>Important Rule:</strong> To avoid the -10 point compliance penalty, a student must participate in at least one On-Stage and one Off-Stage event. Large group events with max participants above 5 are excluded from this requirement count.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function Metric({ label, value, helper, icon: Icon, tone }: { label: string; value: string | number; helper: string; icon: typeof Trophy; tone: "danger" | "warning" | "success" }) {
+  const toneClasses = {
+    danger: "bg-destructive/10 text-destructive",
+    warning: "bg-[#c98743]/10 text-[#a56529]",
+    success: "bg-success/10 text-success",
+  }
+
+  return (
+    <div className="surface-elevated rounded-[2rem] p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow text-slatebrand">{label}</p>
+          <div className="mt-2 text-3xl font-black text-navy">{value}</div>
+          <p className="mt-1 text-xs font-semibold text-slatebrand">{helper}</p>
+        </div>
+        <div className={`flex size-11 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+          <Icon className="size-5" />
+        </div>
       </div>
     </div>
   )

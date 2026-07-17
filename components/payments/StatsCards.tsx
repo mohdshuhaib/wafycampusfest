@@ -1,5 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowUpCircle, ArrowDownCircle, Wallet } from "lucide-react"
+import { ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react"
 
 interface StatsCardsProps {
   stats: {
@@ -12,40 +11,62 @@ interface StatsCardsProps {
 export function StatsCards({ stats }: StatsCardsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      <Card className="border-l-4 border-l-emerald-500 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Total Credited</CardTitle>
-          <ArrowUpCircle className="h-4 w-4 text-emerald-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-slate-800">₹ {stats.credit.toLocaleString()}</div>
-          <p className="text-xs text-muted-foreground mt-1">Income & Receivables</p>
-        </CardContent>
-      </Card>
+      <FinanceMetric
+        label="Total Credited"
+        value={stats.credit}
+        helper="Income and receivables"
+        icon={ArrowUpCircle}
+        tone="success"
+      />
+      <FinanceMetric
+        label="Total Debited"
+        value={stats.debit}
+        helper="Expenses and payments"
+        icon={ArrowDownCircle}
+        tone="danger"
+      />
+      <FinanceMetric
+        label="Net Balance"
+        value={stats.balance}
+        helper="Available funds"
+        icon={Wallet}
+        tone={stats.balance >= 0 ? "navy" : "danger"}
+      />
+    </div>
+  )
+}
 
-      <Card className="border-l-4 border-l-red-500 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Total Debited</CardTitle>
-          <ArrowDownCircle className="h-4 w-4 text-red-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-slate-800">₹ {stats.debit.toLocaleString()}</div>
-          <p className="text-xs text-muted-foreground mt-1">Expenses & Payments</p>
-        </CardContent>
-      </Card>
+function FinanceMetric({
+  label,
+  value,
+  helper,
+  icon: Icon,
+  tone,
+}: {
+  label: string
+  value: number
+  helper: string
+  icon: typeof Wallet
+  tone: "success" | "danger" | "navy"
+}) {
+  const toneClasses = {
+    success: "bg-success/10 text-success",
+    danger: "bg-destructive/10 text-destructive",
+    navy: "bg-navy text-gold",
+  }
 
-      <Card className="border-l-4 border-l-blue-500 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Net Balance</CardTitle>
-          <Wallet className="h-4 w-4 text-blue-500" />
-        </CardHeader>
-        <CardContent>
-          <div className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-            ₹ {stats.balance.toLocaleString()}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Available Funds</p>
-        </CardContent>
-      </Card>
+  return (
+    <div className="surface-elevated rounded-[2rem] p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow text-slatebrand">{label}</p>
+          <div className="mt-2 text-3xl font-black text-navy">Rs. {value.toLocaleString()}</div>
+          <p className="mt-1 text-xs font-semibold text-slatebrand">{helper}</p>
+        </div>
+        <div className={`flex size-11 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+          <Icon className="size-5" />
+        </div>
+      </div>
     </div>
   )
 }

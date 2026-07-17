@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation"
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { Sidebar, MobileSidebar } from "@/components/dashboard/sidebar"
-import { ThemeSwitcher } from "@/components/theme-switcher"
+import { Sidebar, MobileBottomNav, MobileSidebar } from "@/components/dashboard/sidebar"
 
 export default async function DashboardLayout({
   children,
@@ -36,43 +35,37 @@ export default async function DashboardLayout({
   if (!profile) { redirect("/login") }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background w-full">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:flex md:w-72 md:flex-col fixed inset-y-0 z-50">
+    <div className="app-shell flex h-screen w-full overflow-hidden">
+      <div className="fixed inset-y-0 z-50 hidden md:flex md:w-72 md:flex-col">
         <Sidebar role={profile.role} />
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex flex-col flex-1 md:pl-72 transition-all duration-300 w-full min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col transition-all duration-300 md:pl-72">
 
-        {/* Sticky Glass Header */}
-        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-border/40 bg-background/80 backdrop-blur-md supports-backdrop-filter:bg-background/60 px-4 sm:px-6 shadow-sm">
+        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-navy/10 bg-ivory/70 px-4 shadow-[0_12px_36px_rgb(10_29_44/0.06)] backdrop-blur-2xl sm:px-6">
 
           <div className="md:hidden flex items-center gap-2">
             <MobileSidebar role={profile.role} />
-            <span className="font-heading font-bold text-lg tracking-tight whitespace-nowrap">Arts Fest</span>
+            <span className="text-title whitespace-nowrap text-lg text-navy">Wafy Campus Kalikkav</span>
           </div>
 
           <div className="flex-1" />
 
           <div className="flex items-center gap-3">
              <div className="hidden md:flex flex-col items-end mr-2">
-                <span className="text-sm font-medium leading-none">{profile.full_name || 'User'}</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{profile.role}</span>
+                <span className="text-sm font-bold leading-none text-navy">{profile.full_name || 'User'}</span>
+                <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slatebrand">{profile.role}</span>
              </div>
-            <ThemeSwitcher />
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 relative w-full">
-          {/* Subtle background gradient blob for aesthetics */}
-          <div className="absolute top-0 left-0 w-full h-96 bg-primary/5 -z-10 blur-3xl rounded-b-full pointer-events-none" />
-
-          <div className="mx-auto max-w-6xl animate-fade-in-up w-full">
+        <main className="relative w-full flex-1 overflow-y-auto px-4 pb-28 pt-5 md:p-8">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-64 premium-grid opacity-50" />
+          <div className="relative mx-auto w-full max-w-7xl animate-premium-in">
             {children}
           </div>
         </main>
+        <MobileBottomNav role={profile.role} />
       </div>
     </div>
   )

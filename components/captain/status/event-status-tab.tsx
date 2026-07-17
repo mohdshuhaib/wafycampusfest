@@ -1,30 +1,17 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from "@/components/ui/table"
-import { Card, CardContent } from "@/components/ui/card"
+import { useMemo, useState } from "react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from "@/components/ui/select"
-import { Search, AlertTriangle, Clock, CheckCircle, UserMinus, UserX, Filter } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { CheckCircle, Clock, Filter, Search, UserMinus, UserX } from "lucide-react"
 
 interface Participation {
   id: string
   attendance_status: string | null
-  event: {
-    name: string
-    category: string
-    event_code: string
-  }
-  student: {
-    name: string
-    chest_no: string | null
-    class_grade: string | null
-  }
+  event: { name: string; category: string; event_code: string }
+  student: { name: string; chest_no: string | null; class_grade: string | null }
 }
 
 export function EventStatusTab({ participations }: { participations: Participation[] }) {
@@ -34,169 +21,145 @@ export function EventStatusTab({ participations }: { participations: Participati
   const processedData = useMemo(() => {
     let totalDeduction = 0
 
-    // 1. Map Data and Calculate Total Deduction
-    const rows = participations.map(p => {
-      const isAbsent = p.attendance_status === 'absent'
-      const isPresent = p.attendance_status === 'present'
-      // If null or 'pending', treat as pending
-      const isPending = !p.attendance_status || p.attendance_status === 'pending'
-
+    const rows = participations.map((participation) => {
+      const isAbsent = participation.attendance_status === "absent"
+      const isPresent = participation.attendance_status === "present"
       const penalty = isAbsent ? 5 : 0
       totalDeduction += penalty
 
       let statusDisplay = {
-          key: 'pending',
-          label: 'Pending',
-          subLabel: 'Not yet verified',
-          color: 'bg-slate-100 text-slate-500 border-slate-200',
-          icon: Clock
+        key: "pending",
+        label: "Pending",
+        subLabel: "Not yet verified",
+        color: "border-navy/10 bg-navy/6 text-slatebrand",
+        icon: Clock,
       }
 
       if (isAbsent) {
-          statusDisplay = {
-              key: 'absent',
-              label: 'Absent',
-              subLabel: '-5 Marks',
-              color: 'bg-red-50 text-red-700 border-red-200',
-              icon: UserX
-          }
+        statusDisplay = {
+          key: "absent",
+          label: "Absent",
+          subLabel: "-5 Marks",
+          color: "border-destructive/20 bg-destructive/10 text-destructive",
+          icon: UserX,
+        }
       }
       if (isPresent) {
-          statusDisplay = {
-              key: 'present',
-              label: 'Present',
-              subLabel: 'Good',
-              color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-              icon: CheckCircle
-          }
+        statusDisplay = {
+          key: "present",
+          label: "Present",
+          subLabel: "Good",
+          color: "border-success/20 bg-success/10 text-success",
+          icon: CheckCircle,
+        }
       }
 
-      return { ...p, penalty, statusDisplay }
+      return { ...participation, penalty, statusDisplay }
     })
 
-    // 2. Filter Rows based on Search and Dropdown Selection
-    const filtered = rows.filter(r => {
-       const matchesSearch =
-           r.event.name.toLowerCase().includes(search.toLowerCase()) ||
-           r.student.name.toLowerCase().includes(search.toLowerCase()) ||
-           (r.student.chest_no && r.student.chest_no.includes(search))
-
-       const matchesStatus = statusFilter === "all" || r.statusDisplay.key === statusFilter
-
-       return matchesSearch && matchesStatus
+    const filtered = rows.filter((row) => {
+      const matchesSearch = row.event.name.toLowerCase().includes(search.toLowerCase()) ||
+        row.student.name.toLowerCase().includes(search.toLowerCase()) ||
+        (row.student.chest_no && row.student.chest_no.includes(search))
+      const matchesStatus = statusFilter === "all" || row.statusDisplay.key === statusFilter
+      return matchesSearch && matchesStatus
     })
 
     return { rows: filtered, totalDeduction }
   }, [participations, search, statusFilter])
 
   return (
-    <div className="space-y-6">
-       {/* Stats Card */}
-       <Card className="bg-red-50 border-red-100 shadow-sm relative overflow-hidden">
-          <div className="absolute left-0 top-0 h-full w-1 bg-red-500"></div>
-          <CardContent className="p-4 flex items-center justify-between">
-             <div className="flex items-center gap-4">
-                <div className="p-3 bg-red-100 rounded-full text-red-600 shadow-sm">
-                   <UserMinus className="w-6 h-6" />
-                </div>
-                <div>
-                   <p className="text-xs font-bold text-red-600 uppercase tracking-wider">Attendance Penalty</p>
-                   <p className="text-sm text-red-600/80">Total deduction for absent students</p>
-                </div>
-             </div>
-             <div className="flex items-baseline gap-1">
-                <p className="text-4xl font-black text-slate-800">-{processedData.totalDeduction}</p>
-                <span className="text-sm font-bold text-red-500">pts</span>
-             </div>
-          </CardContent>
-       </Card>
-
-       {/* Filters */}
-       <div className="flex flex-col sm:flex-row gap-3">
-           <div className="relative flex-1">
-               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-               <Input
-                 placeholder="Search by event name or student..."
-                 className="pl-9 h-10 bg-white border-slate-200 focus-visible:ring-0 focus-visible:border-primary"
-                 value={search}
-                 onChange={(e) => setSearch(e.target.value)}
-               />
-           </div>
-
-           <Select value={statusFilter} onValueChange={setStatusFilter}>
-               <SelectTrigger className="w-full sm:w-[200px] h-10 bg-white border-slate-200 text-slate-600">
-                   <div className="flex items-center gap-2">
-                       <Filter className="w-4 h-4" />
-                       <SelectValue placeholder="Filter Status" />
-                   </div>
-               </SelectTrigger>
-               <SelectContent className="bg-white">
-                   <SelectItem value="all">All Status</SelectItem>
-                   <SelectItem value="pending">Pending</SelectItem>
-                   <SelectItem value="present">Present</SelectItem>
-                   <SelectItem value="absent">Absent</SelectItem>
-               </SelectContent>
-           </Select>
-       </div>
-
-       {/* List */}
-       <div className="border rounded-xl bg-white overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-             <Table>
-                <TableHeader className="bg-slate-50 border-b border-slate-200">
-                   <TableRow>
-                      <TableHead className="w-[35%] font-bold text-slate-700">Event Details</TableHead>
-                      <TableHead className="w-[30%] font-bold text-slate-700">Participant</TableHead>
-                      <TableHead className="hidden md:table-cell text-slate-700">Class</TableHead>
-                      <TableHead className="text-right pr-6 font-bold text-slate-700">Status</TableHead>
-                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                   {processedData.rows.map((row) => {
-                      const Icon = row.statusDisplay.icon
-                      return (
-                         <TableRow key={row.id} className="hover:bg-slate-50 transition-colors">
-                            <TableCell>
-                               <div className="font-semibold text-slate-900">{row.event.name}</div>
-                               <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="outline" className="text-[10px] font-normal border-slate-300 text-slate-500 bg-white">{row.event.category}</Badge>
-                                  <span className="text-xs text-slate-400 font-mono bg-slate-100 px-1 rounded">{row.event.event_code}</span>
-                               </div>
-                            </TableCell>
-                            <TableCell>
-                               <div className="font-medium text-slate-700">{row.student.name}</div>
-                               <div className="text-xs text-slate-500 font-mono mt-0.5">#{row.student.chest_no || 'N/A'}</div>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell text-slate-500">
-                               {row.student.class_grade || '-'}
-                            </TableCell>
-                            <TableCell className="text-right pr-6">
-                               <div className="flex flex-col items-end gap-1">
-                                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold gap-1.5 border ${row.statusDisplay.color}`}>
-                                      <Icon className="w-3.5 h-3.5" />
-                                      {row.statusDisplay.label}
-                                   </span>
-                                   {row.statusDisplay.subLabel && (
-                                       <span className="text-[10px] font-medium text-slate-400">{row.statusDisplay.subLabel}</span>
-                                   )}
-                               </div>
-                            </TableCell>
-                         </TableRow>
-                      )
-                   })}
-                   {processedData.rows.length === 0 && (
-                      <TableRow>
-                         <TableCell colSpan={4} className="text-center py-16 text-slate-400 italic">
-                             {statusFilter !== 'all'
-                                ? `No ${statusFilter} records found.`
-                                : "No attendance records found."}
-                         </TableCell>
-                      </TableRow>
-                   )}
-                </TableBody>
-             </Table>
+    <div className="space-y-5">
+      <div className="surface-elevated rounded-[2rem] p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+              <UserMinus className="size-6" />
+            </div>
+            <div>
+              <p className="eyebrow text-destructive">Attendance Penalty</p>
+              <p className="text-sm font-semibold text-slatebrand">Total deduction for absent students</p>
+            </div>
           </div>
-       </div>
+          <div className="flex items-baseline gap-1">
+            <p className="text-4xl font-black text-navy">-{processedData.totalDeduction}</p>
+            <span className="text-sm font-black text-destructive">pts</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="surface-panel rounded-[2rem] p-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slatebrand" />
+            <Input placeholder="Search by event name or student" className="h-11 rounded-2xl pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-11 w-full rounded-2xl bg-ivory sm:w-[210px]">
+              <Filter className="mr-2 size-4 text-slatebrand" />
+              <SelectValue placeholder="Filter Status" />
+            </SelectTrigger>
+            <SelectContent className="surface-elevated rounded-2xl border-navy/10">
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="present">Present</SelectItem>
+              <SelectItem value="absent">Absent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="surface-elevated overflow-hidden rounded-[2rem]">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-mist">
+              <TableRow className="border-navy/10">
+                <TableHead className="w-[35%] font-black text-slatebrand">Event Details</TableHead>
+                <TableHead className="w-[30%] font-black text-slatebrand">Participant</TableHead>
+                <TableHead className="hidden font-black text-slatebrand md:table-cell">Class</TableHead>
+                <TableHead className="pr-6 text-right font-black text-slatebrand">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {processedData.rows.map((row) => {
+                const Icon = row.statusDisplay.icon
+                return (
+                  <TableRow key={row.id} className="border-navy/8 transition-colors hover:bg-gold/6">
+                    <TableCell>
+                      <div className="font-bold text-navy">{row.event.name}</div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Badge variant={row.event.category === "ON STAGE" ? "gold" : "outline"}>{row.event.category}</Badge>
+                        <span className="rounded-full bg-navy/7 px-2 py-0.5 font-mono text-xs font-bold text-slatebrand">{row.event.event_code}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-bold text-navy">{row.student.name}</div>
+                      <div className="mt-0.5 font-mono text-xs font-semibold text-slatebrand">#{row.student.chest_no || "N/A"}</div>
+                    </TableCell>
+                    <TableCell className="hidden font-semibold text-slatebrand md:table-cell">{row.student.class_grade || "-"}</TableCell>
+                    <TableCell className="pr-6 text-right">
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-black ${row.statusDisplay.color}`}>
+                          <Icon className="size-3.5" />
+                          {row.statusDisplay.label}
+                        </span>
+                        {row.statusDisplay.subLabel && <span className="text-[10px] font-semibold text-slatebrand">{row.statusDisplay.subLabel}</span>}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+              {processedData.rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-56 text-center text-sm font-bold text-slatebrand">
+                    {statusFilter !== "all" ? `No ${statusFilter} records found.` : "No attendance records found."}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </div>
   )
 }

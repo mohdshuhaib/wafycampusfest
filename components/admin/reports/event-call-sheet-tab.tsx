@@ -12,7 +12,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
-import { Loader2, FileText, Printer, FileDown, ChevronDown, Check, UserCheck, UserX, Clock, FileSpreadsheet, Download } from "lucide-react"
+import { Loader2, FileText, Printer, FileDown, ChevronDown, Check, UserCheck, UserX, Clock, FileSpreadsheet, Download, ClipboardCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
@@ -554,25 +554,29 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white border rounded-lg shadow-sm">
+    <div className="surface-elevated flex h-full flex-col overflow-hidden rounded-[2rem]">
         {/* Toolbar */}
-        <div className="shrink-0 p-4 border-b bg-slate-50/50 flex flex-col sm:flex-row gap-4 justify-between items-end">
+        <div className="shrink-0 border-b border-navy/10 bg-ivory/70 p-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="w-full sm:w-[400px] space-y-1.5">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Event Sheet</label>
+                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-slatebrand">
+                    <ClipboardCheck className="size-3.5 text-gold" />
+                    Select Event Sheet
+                </label>
                 <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                    <SelectTrigger className="w-full bg-white h-10 shadow-sm border-slate-200">
+                    <SelectTrigger className="h-11 w-full rounded-2xl bg-ivory shadow-sm">
                         <SelectValue placeholder="Choose an event to mark..." />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px] bg-white">
+                    <SelectContent className="surface-elevated max-h-[300px] rounded-2xl border-navy/10">
                         {events.map(e => (
                             <SelectItem key={e.id} value={e.id} className="cursor-pointer">
                                 <div className="flex items-center justify-between w-full gap-4">
-                                    <span className={cn("font-medium", completedEventIds.has(e.id) ? "text-green-700" : "text-slate-700")}>
+                                    <span className={cn("font-semibold", completedEventIds.has(e.id) ? "text-success" : "text-navy")}>
                                         {e.name}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                        {completedEventIds.has(e.id) && <Check className="w-3 h-3 text-green-600" />}
-                                        <span className={cn("ml-auto text-xs font-mono border px-1 rounded", completedEventIds.has(e.id) ? "border-green-200 bg-green-50 text-green-700" : "text-slate-400 border-slate-200")}>
+                                        {completedEventIds.has(e.id) && <Check className="size-3 text-success" />}
+                                        <span className={cn("ml-auto rounded-full border px-2 py-0.5 text-xs font-mono", completedEventIds.has(e.id) ? "border-success/20 bg-success/10 text-success" : "border-navy/10 text-slatebrand")}>
                                             {e.event_code || '---'}
                                         </span>
                                     </div>
@@ -583,15 +587,15 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
                 </Select>
             </div>
 
-            <div className="flex gap-2 flex-wrap items-center">
+            <div className="flex flex-wrap items-center gap-2">
                 {/* EXCEL BUTTON */}
                 <Button
                     variant="outline"
                     onClick={generateExcel}
                     disabled={generatingExcel}
-                    className="gap-2 bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800"
+                    className="gap-2 border-success/20 bg-success/10 text-success hover:bg-success/15 hover:text-success"
                 >
-                    {generatingExcel ? <Loader2 className="w-4 h-4 animate-spin"/> : <FileSpreadsheet className="w-4 h-4" />}
+                    {generatingExcel ? <Loader2 className="size-4 animate-spin"/> : <FileSpreadsheet className="size-4" />}
                     Export Excel
                 </Button>
 
@@ -600,20 +604,20 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
                     variant="outline"
                     disabled={!selectedEventId || generatingPdf}
                     onClick={() => { const e = events.find(ev => ev.id === selectedEventId); if(e) generateScoreSheetPDF([e]) }}
-                    className="gap-2 bg-white hover:bg-slate-50"
+                    className="gap-2"
                 >
-                    {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin"/> : <FileDown className="w-4 h-4" />}
+                    {generatingPdf ? <Loader2 className="size-4 animate-spin"/> : <FileDown className="size-4" />}
                     Score Sheet
                 </Button>
 
                 {/* BULK SCORE SHEET EXPORT */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button className="gap-2 bg-slate-900 text-white hover:bg-slate-800">
-                            <Printer className="w-4 h-4" /> Bulk Score Sheets <ChevronDown className="w-3 h-3 opacity-50"/>
+                        <Button className="gap-2">
+                            <Printer className="size-4" /> Bulk Score Sheets <ChevronDown className="size-3 opacity-50"/>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-white">
+                    <DropdownMenuContent align="end" className="surface-elevated rounded-2xl border-navy/10 p-2">
                         <DropdownMenuItem onClick={() => generateScoreSheetPDF(events.filter(e => e.category === 'ON STAGE'))}>
                             All ON STAGE
                         </DropdownMenuItem>
@@ -626,12 +630,12 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
                  {/* NEW: BULK PARTICIPANT LIST EXPORT */}
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2 border-slate-300">
-                            {generatingList ? <Loader2 className="w-4 h-4 animate-spin"/> : <Download className="w-4 h-4" />}
-                            Participants List <ChevronDown className="w-3 h-3 opacity-50"/>
+                        <Button variant="outline" className="gap-2">
+                            {generatingList ? <Loader2 className="size-4 animate-spin"/> : <Download className="size-4" />}
+                            Participants List <ChevronDown className="size-3 opacity-50"/>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-white">
+                    <DropdownMenuContent align="end" className="surface-elevated rounded-2xl border-navy/10 p-2">
                         <DropdownMenuItem onClick={() => generateParticipantListPDF('ON STAGE')}>
                             ON STAGE List
                         </DropdownMenuItem>
@@ -641,44 +645,45 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
+          </div>
         </div>
 
         {/* Table */}
-        <div className="flex-1 overflow-auto bg-white">
+        <div className="min-h-0 flex-1 overflow-auto bg-ivory">
             {!selectedEventId ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300">
-                    <div className="p-6 rounded-full bg-slate-50 mb-4"><FileText className="w-10 h-10" /></div>
-                    <p className="font-medium text-slate-500">Select an event above to mark participation</p>
+                <div className="flex h-full flex-col items-center justify-center text-slatebrand">
+                    <div className="mb-4 rounded-3xl bg-navy/6 p-6"><FileText className="size-10" /></div>
+                    <p className="font-bold text-navy">Select an event above to mark participation.</p>
                 </div>
             ) : loadingEvent ? (
-                <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>
+                <div className="flex h-full items-center justify-center"><Loader2 className="size-8 animate-spin text-gold" /></div>
             ) : (
                 <Table>
-                    <TableHeader className="bg-slate-50 sticky top-0 z-20 shadow-sm border-b">
-                        <TableRow>
-                            <TableHead className="w-20 font-bold text-slate-700">Chest No</TableHead>
-                            <TableHead className="font-bold text-slate-700">Student Name</TableHead>
-                            <TableHead className="font-bold text-slate-700 hidden md:table-cell">Class</TableHead>
-                            <TableHead className="font-bold text-slate-700">Team</TableHead>
-                            <TableHead className="w-[180px] text-right font-bold text-slate-700 pr-6">Participation</TableHead>
+                    <TableHeader className="sticky top-0 z-20 border-b border-navy/10 bg-mist shadow-sm">
+                        <TableRow className="border-navy/10">
+                            <TableHead className="w-24 font-black text-slatebrand">Chest No</TableHead>
+                            <TableHead className="font-black text-slatebrand">Student Name</TableHead>
+                            <TableHead className="hidden font-black text-slatebrand md:table-cell">Class</TableHead>
+                            <TableHead className="font-black text-slatebrand">Team</TableHead>
+                            <TableHead className="w-[180px] pr-6 text-right font-black text-slatebrand">Participation</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {participants.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="text-center py-16 text-muted-foreground italic">No participants found.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={5} className="py-16 text-center text-sm font-bold text-slatebrand">No participants found.</TableCell></TableRow>
                         ) : (
                             participants.map((p, idx) => (
-                                <TableRow key={p.id} className={cn("hover:bg-slate-50 transition-colors", idx % 2 === 0 ? "bg-white" : "bg-slate-50/30")}>
-                                    <TableCell className="font-bold font-mono text-base text-slate-700 bg-slate-50/50 border-r">{p.students.chest_no}</TableCell>
+                                <TableRow key={p.id} className="border-navy/8 transition-colors hover:bg-gold/6">
+                                    <TableCell className="border-r border-navy/10 bg-navy/4 font-mono text-base font-black text-navy">{p.students.chest_no}</TableCell>
                                     <TableCell>
-                                        <div className="font-medium text-slate-900">{p.students.name}</div>
-                                        <div className="text-xs text-slate-500">{p.students.section}</div>
+                                        <div className="font-bold text-navy">{p.students.name}</div>
+                                        <div className="text-xs font-semibold text-slatebrand">{p.students.section}</div>
                                     </TableCell>
-                                    <TableCell className="hidden md:table-cell text-slate-600">{p.students.class_grade}</TableCell>
+                                    <TableCell className="hidden font-semibold text-slatebrand md:table-cell">{p.students.class_grade}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.students.team.color_hex }}></div>
-                                            <span className="font-medium text-sm text-slate-700">{p.students.team.name}</span>
+                                            <div className="size-2.5 rounded-full" style={{ backgroundColor: p.students.team.color_hex }}></div>
+                                            <span className="text-sm font-bold text-navy">{p.students.team.name}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right pr-4">
@@ -688,20 +693,20 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
                                         >
                                             <SelectTrigger
                                                 className={cn(
-                                                    "w-40 h-8 ml-auto border transition-colors focus:ring-0",
-                                                    p.attendance_status === 'present' ? "bg-green-50 border-green-200 text-green-700 font-medium" :
-                                                    p.attendance_status === 'absent' ? "bg-red-50 border-red-200 text-red-700 font-medium" :
-                                                    "bg-white border-slate-200 text-slate-500"
+                                                    "ml-auto h-9 w-40 rounded-2xl border transition-colors focus:ring-0",
+                                                    p.attendance_status === 'present' ? "border-success/20 bg-success/10 font-bold text-success" :
+                                                    p.attendance_status === 'absent' ? "border-destructive/20 bg-destructive/10 font-bold text-destructive" :
+                                                    "border-navy/10 bg-ivory text-slatebrand"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    {p.attendance_status === 'present' && <UserCheck className="w-3.5 h-3.5"/>}
-                                                    {p.attendance_status === 'absent' && <UserX className="w-3.5 h-3.5"/>}
-                                                    {(p.attendance_status === 'pending' || !p.attendance_status) && <Clock className="w-3.5 h-3.5"/>}
+                                                    {p.attendance_status === 'present' && <UserCheck className="size-3.5"/>}
+                                                    {p.attendance_status === 'absent' && <UserX className="size-3.5"/>}
+                                                    {(p.attendance_status === 'pending' || !p.attendance_status) && <Clock className="size-3.5"/>}
                                                     <SelectValue />
                                                 </div>
                                             </SelectTrigger>
-                                            <SelectContent align="end" className="bg-white">
+                                            <SelectContent align="end" className="surface-elevated rounded-2xl border-navy/10">
                                                 <SelectItem value="pending" className="text-slate-500">
                                                     <div className="flex items-center gap-2"><Clock className="w-4 h-4"/> Pending</div>
                                                 </SelectItem>
