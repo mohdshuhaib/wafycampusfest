@@ -46,15 +46,13 @@ interface Student {
   name: string
   chest_no: string | null
   class_grade: string | null
-  section: 'Senior' | 'Junior' | 'Sub-Junior'
+  section: 'Senior'
   team_id: string
   teams?: { name: string; color_hex: string }
 }
 
 function sectionTone(section: Student["section"]) {
-  if (section === "Senior") return "border-gold/35 bg-gold/16 text-navy"
-  if (section === "Junior") return "border-deepblue/15 bg-deepblue/10 text-deepblue"
-  return "border-navy/12 bg-navy/7 text-navy"
+  return "border-gold/35 bg-gold/16 text-navy"
 }
 
 function initials(name: string) {
@@ -73,7 +71,6 @@ export default function AdminStudents() {
 
   const [search, setSearch] = useState("")
   const [filterTeam, setFilterTeam] = useState<string>("all")
-  const [filterSection, setFilterSection] = useState<string>("all")
   const [filterClass, setFilterClass] = useState<string>("all")
 
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -150,23 +147,19 @@ export default function AdminStudents() {
       const matchesSearch = s.name.toLowerCase().includes(query) ||
         (s.chest_no && s.chest_no.toLowerCase().includes(query))
       const matchesTeam = filterTeam === "all" || s.team_id === filterTeam
-      const matchesSection = filterSection === "all" || s.section === filterSection
       const matchesClass = filterClass === "all" || s.class_grade === filterClass
-      return matchesSearch && matchesTeam && matchesSection && matchesClass
+      return matchesSearch && matchesTeam && matchesClass
     })
-  }, [students, search, filterTeam, filterSection, filterClass])
+  }, [students, search, filterTeam, filterClass])
 
   const clearFilters = () => {
     setSearch("")
     setFilterTeam("all")
-    setFilterSection("all")
     setFilterClass("all")
   }
 
-  const hasActiveFilters = search !== "" || filterTeam !== "all" || filterSection !== "all" || filterClass !== "all"
+  const hasActiveFilters = search !== "" || filterTeam !== "all" || filterClass !== "all"
   const seniorCount = students.filter(s => s.section === "Senior").length
-  const juniorCount = students.filter(s => s.section === "Junior").length
-  const subJuniorCount = students.filter(s => s.section === "Sub-Junior").length
   const assignedTeams = new Set(students.map(s => s.team_id)).size
 
   if (loading) {
@@ -191,7 +184,7 @@ export default function AdminStudents() {
             </div>
             <h1 className="text-display mt-5 text-4xl text-ivory sm:text-5xl">Organize every participant.</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-ivory/62 sm:text-base">
-              Search, import, classify, and manage student profiles across teams, sections, classes, and chest numbers.
+              Search, import, classify, and manage Senior student profiles across teams, classes, and chest numbers.
             </p>
           </div>
 
@@ -237,19 +230,6 @@ export default function AdminStudents() {
                 </SelectContent>
               </Select>
 
-              <Select value={filterSection} onValueChange={setFilterSection}>
-                <SelectTrigger className="h-12 w-[10rem] rounded-xl border-navy/12 bg-ivory/70">
-                  <Filter className="mr-2 size-4 text-slatebrand" />
-                  <SelectValue placeholder="All Sections" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sections</SelectItem>
-                  <SelectItem value="Senior">Senior</SelectItem>
-                  <SelectItem value="Junior">Junior</SelectItem>
-                  <SelectItem value="Sub-Junior">Sub-Junior</SelectItem>
-                </SelectContent>
-              </Select>
-
               <Select value={filterClass} onValueChange={setFilterClass}>
                 <SelectTrigger className="h-12 w-[10rem] rounded-xl border-navy/12 bg-ivory/70">
                   <Filter className="mr-2 size-4 text-slatebrand" />
@@ -292,7 +272,7 @@ export default function AdminStudents() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-3">
         <div className="surface-panel rounded-3xl p-5">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
             <Users className="size-4 text-gold" />
@@ -303,23 +283,23 @@ export default function AdminStudents() {
         <div className="surface-panel rounded-3xl p-5">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
             <GraduationCap className="size-4 text-gold" />
-            Senior
+            Senior Students
           </div>
           <div className="text-title text-3xl text-navy">{seniorCount}</div>
         </div>
         <div className="surface-panel rounded-3xl p-5">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
-            <GraduationCap className="size-4 text-gold" />
-            Junior
+            <Users className="size-4 text-gold" />
+            Teams
           </div>
-          <div className="text-title text-3xl text-navy">{juniorCount}</div>
+          <div className="text-title text-3xl text-navy">{assignedTeams}</div>
         </div>
         <div className="surface-panel rounded-3xl p-5">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
             <GraduationCap className="size-4 text-gold" />
-            Sub-Junior
+            Classes
           </div>
-          <div className="text-title text-3xl text-navy">{subJuniorCount}</div>
+          <div className="text-title text-3xl text-navy">{availableClasses.length}</div>
         </div>
       </section>
 

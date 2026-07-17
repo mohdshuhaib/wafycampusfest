@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronRight, Loader2, Medal, UserRound } from "lucide-react"
 import { StudentDetailsModal } from "./student-details-modal"
 
@@ -16,16 +15,8 @@ interface StudentScore {
   total: number
 }
 
-const SECTIONS = ["Senior", "Junior", "Sub-Junior", "Foundation", "General"]
-
 export function IndividualLeaderboard({ refreshTrigger }: { refreshTrigger: number }) {
-  const [rankings, setRankings] = useState<Record<string, StudentScore[]>>({
-    Senior: [],
-    Junior: [],
-    "Sub-Junior": [],
-    Foundation: [],
-    General: [],
-  })
+  const [rankings, setRankings] = useState<StudentScore[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
 
@@ -72,16 +63,11 @@ export function IndividualLeaderboard({ refreshTrigger }: { refreshTrigger: numb
       })
 
       const allStudents = Array.from(studentMap.values())
-      const getTop = (sec: string) =>
-        allStudents.filter((s) => s.section === sec).sort((a, b) => b.total - a.total).slice(0, 10)
+        .filter((s) => s.section === "Senior")
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 15)
 
-      setRankings({
-        Senior: getTop("Senior"),
-        Junior: getTop("Junior"),
-        "Sub-Junior": getTop("Sub-Junior"),
-        Foundation: getTop("Foundation"),
-        General: getTop("General"),
-      })
+      setRankings(allStudents)
 
       setLoading(false)
     }
@@ -106,33 +92,14 @@ export function IndividualLeaderboard({ refreshTrigger }: { refreshTrigger: numb
           </div>
           <div>
             <h3 className="text-title text-lg text-navy">Individual Leaders</h3>
-            <p className="text-xs font-semibold text-slatebrand">Top scorers by academic section.</p>
+            <p className="text-xs font-semibold text-slatebrand">Top Senior individual scorers.</p>
           </div>
         </div>
       </div>
 
-      <Tabs defaultValue="Senior" className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 border-b border-navy/10 bg-mist/60 px-3 py-3">
-          <div className="overflow-x-auto scrollbar-none">
-            <TabsList className="h-auto w-max gap-1 rounded-2xl bg-navy/6 p-1">
-              {SECTIONS.map((section) => (
-                <TabsTrigger
-                  key={section}
-                  value={section}
-                  className="rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand data-[state=active]:bg-navy data-[state=active]:text-ivory"
-                >
-                  {section}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-        </div>
-
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          {SECTIONS.map((section) => (
-            <TabsContent key={section} value={section} className="m-0 data-[state=inactive]:hidden">
               <div className="space-y-2">
-                {rankings[section]?.map((student, idx) => (
+                {rankings.map((student, idx) => (
                   <button
                     key={student.id}
                     type="button"
@@ -168,18 +135,15 @@ export function IndividualLeaderboard({ refreshTrigger }: { refreshTrigger: numb
                   </button>
                 ))}
 
-                {rankings[section]?.length === 0 && (
+                {rankings.length === 0 && (
                   <div className="flex h-64 flex-col items-center justify-center rounded-3xl border border-dashed border-navy/12 bg-ivory/45 text-center">
                     <Badge variant="outline" className="mb-3">Awaiting Scores</Badge>
-                    <p className="text-sm font-bold text-navy">No entries for {section} yet.</p>
+                    <p className="text-sm font-bold text-navy">No Senior entries yet.</p>
                     <p className="mt-1 text-xs font-medium text-slatebrand">Students appear here after individual events are scored.</p>
                   </div>
                 )}
               </div>
-            </TabsContent>
-          ))}
         </div>
-      </Tabs>
 
       <StudentDetailsModal
         studentId={selectedStudentId}

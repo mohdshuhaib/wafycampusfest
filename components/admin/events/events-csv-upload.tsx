@@ -37,7 +37,7 @@ export function EventsCsvUpload({ open, onOpenChange, onSuccess }: CsvUploadDial
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
 
     // Required headers
-    const required = ['name', 'event_code', 'category', 'limit', 'grade', 'section']
+    const required = ['name', 'event_code', 'category', 'limit', 'grade']
     const missing = required.filter(r => !headers.includes(r))
 
     if (missing.length > 0) {
@@ -67,7 +67,7 @@ export function EventsCsvUpload({ open, onOpenChange, onSuccess }: CsvUploadDial
         category: rowData['category'].toUpperCase(),
         max_participants_per_team: parseInt(rowData['limit']) || 1,
         grade_type: rowData['grade']?.toUpperCase() || 'A',
-        applicable_section: [rowData['section']], // Convert single section to array
+        applicable_section: ["Senior"],
         description: rowData['description'] || ''
       })
     }
@@ -158,7 +158,7 @@ export function EventsCsvUpload({ open, onOpenChange, onSuccess }: CsvUploadDial
           )}
 
           <div className="rounded-2xl border border-navy/10 bg-mist p-3 text-xs font-semibold text-slatebrand">
-            <strong>Headers:</strong> name, event_code, category, limit, grade, section, description
+            <strong>Headers:</strong> name, event_code, category, limit, grade, description. Section is always Senior.
           </div>
         </div>
 

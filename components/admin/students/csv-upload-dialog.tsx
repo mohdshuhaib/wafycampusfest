@@ -40,7 +40,7 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
 
     // Valid headers check
-    const required = ['name', 'chest_no', 'class', 'section', 'team_name']
+    const required = ['name', 'chest_no', 'class', 'team_name']
     const missing = required.filter(r => !headers.includes(r))
 
     if (missing.length > 0) {
@@ -71,7 +71,7 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
         name: rowData['name'],
         chest_no: rowData['chest_no'],
         class_grade: rowData['class'],
-        section: rowData['section'],
+        section: "Senior",
         team_id: team.id
       })
     }
@@ -171,7 +171,7 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
           )}
 
           <div className="rounded-2xl border border-navy/10 bg-mist p-3 text-xs font-semibold text-slatebrand">
-            <strong>Required Headers:</strong> name, chest_no, class, section, team_name
+            <strong>Required Headers:</strong> name, chest_no, class, team_name. Section is always Senior.
           </div>
         </div>
 

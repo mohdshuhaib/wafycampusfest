@@ -30,7 +30,6 @@ interface StudentFormDialogProps {
 }
 
 const CLASSES = ['FOUNDATION', 'TH-1', 'TH-2', 'AL-1', 'AL-2', 'AL-3', 'AL-4']
-const SECTIONS = ['Senior', 'Junior', 'Sub-Junior']
 
 export function StudentFormDialog({ open, onOpenChange, student, teams, onSuccess }: StudentFormDialogProps) {
   const [loading, setLoading] = useState(false)
@@ -52,7 +51,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
         name: student.name,
         chest_no: student.chest_no || "",
         class_grade: student.class_grade || "FOUNDATION",
-        section: student.section,
+        section: "Senior",
         team_id: student.team_id
       })
     } else if (!student && open) {
@@ -99,7 +98,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
             name: formData.name,
             chest_no: formData.chest_no,
             class_grade: formData.class_grade,
-            section: formData.section,
+            section: "Senior",
             team_id: formData.team_id
           })
           .eq('id', student.id)
@@ -110,7 +109,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
           name: formData.name,
           chest_no: formData.chest_no,
           class_grade: formData.class_grade,
-          section: formData.section,
+          section: "Senior",
           team_id: formData.team_id
         })
         if (insertError) throw insertError
@@ -164,18 +163,8 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Section</Label>
-            <div className="col-span-3">
-              <Select
-                value={formData.section}
-                onValueChange={v => setFormData({...formData, section: v})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="surface-elevated rounded-2xl border-navy/10">
-                  {SECTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="col-span-3 flex h-10 items-center rounded-2xl border border-navy/12 bg-navy/6 px-3 text-sm font-bold text-navy">
+              Senior
             </div>
           </div>
 

@@ -9,7 +9,6 @@ interface Winner {
   name: string
   team: string
   total: number
-  section: string
   type: "KALA" | "SARGGA"
 }
 
@@ -58,13 +57,9 @@ export function ChampionsBoard({ refreshTrigger }: { refreshTrigger: number }) {
         const s = students[sid]
         s.total += p.points_earned
 
-        const isGeneral = Array.isArray(p.events?.applicable_section)
-          ? p.events.applicable_section.includes("General")
-          : p.events?.applicable_section === "General"
-
         const isCategoryAEvent = p.events.grade_type === "A"
 
-        if (!isGeneral && isCategoryAEvent && p.result_position === "FIRST" && p.performance_grade === "A") {
+        if (isCategoryAEvent && p.result_position === "FIRST" && p.performance_grade === "A") {
           s.a_grade_count++
           if (p.events.category === "ON STAGE") s.has_on_stage_A_win = true
           if (p.events.category === "OFF STAGE") s.has_off_stage_A_win = true
@@ -72,47 +67,35 @@ export function ChampionsBoard({ refreshTrigger }: { refreshTrigger: number }) {
       })
 
       const results: Winner[] = []
-      const sections = ["Senior", "Junior", "Sub-Junior"]
+      const seniorStudents = Object.values(students).filter((s: any) => s.section === "Senior")
+      const byTotalThenAGrades = (a: any, b: any) =>
+        b.total !== a.total ? b.total - a.total : b.a_grade_count - a.a_grade_count
 
-      sections.forEach((sectionName) => {
-        const sectionStudents = Object.values(students).filter((s: any) => s.section === sectionName)
-        const kalaCandidates = sectionStudents.filter((s: any) => s.has_on_stage_A_win && s.has_off_stage_A_win)
-        let kalaWinner: any = null
+      const kalaCandidates = seniorStudents.filter((s: any) => s.has_on_stage_A_win && s.has_off_stage_A_win)
+      kalaCandidates.sort(byTotalThenAGrades)
+      const kalaWinner: any = kalaCandidates[0]
 
-        if (kalaCandidates.length > 0) {
-          kalaCandidates.sort((a: any, b: any) => {
-            if (b.total !== a.total) return b.total - a.total
-            return b.a_grade_count - a.a_grade_count
-          })
-          kalaWinner = kalaCandidates[0]
+      if (kalaWinner) {
+        results.push({
+          name: kalaWinner.name,
+          team: kalaWinner.team,
+          total: kalaWinner.total,
+          type: "KALA",
+        })
+      }
 
-          results.push({
-            name: kalaWinner.name,
-            team: kalaWinner.team,
-            total: kalaWinner.total,
-            section: sectionName,
-            type: "KALA",
-          })
-        }
+      const sarggaCandidates = seniorStudents.filter((s: any) => s.id !== kalaWinner?.id)
+      sarggaCandidates.sort(byTotalThenAGrades)
+      const sarggaWinner: any = sarggaCandidates[0]
 
-        const sarggaCandidates = sectionStudents.filter((s: any) => s.id !== kalaWinner?.id)
-
-        if (sarggaCandidates.length > 0) {
-          sarggaCandidates.sort((a: any, b: any) => {
-            if (b.total !== a.total) return b.total - a.total
-            return b.a_grade_count - a.a_grade_count
-          })
-
-          const sarggaWinner = sarggaCandidates[0]
-          results.push({
-            name: sarggaWinner.name,
-            team: sarggaWinner.team,
-            total: sarggaWinner.total,
-            section: sectionName,
-            type: "SARGGA",
-          })
-        }
-      })
+      if (sarggaWinner) {
+        results.push({
+          name: sarggaWinner.name,
+          team: sarggaWinner.team,
+          total: sarggaWinner.total,
+          type: "SARGGA",
+        })
+      }
 
       setChampions(results)
       setLoading(false)
@@ -124,7 +107,7 @@ export function ChampionsBoard({ refreshTrigger }: { refreshTrigger: number }) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {[1, 2, 3].map((i) => (
+        {[1].map((i) => (
           <div key={i} className="h-36 animate-pulse rounded-[2rem] border border-navy/8 bg-ivory/50" />
         ))}
       </div>
@@ -132,16 +115,11 @@ export function ChampionsBoard({ refreshTrigger }: { refreshTrigger: number }) {
   }
 
   return (
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      {["Senior", "Junior", "Sub-Junior"].map((section) => {
-        const kala = champions.find((c) => c.section === section && c.type === "KALA")
-        const sargga = champions.find((c) => c.section === section && c.type === "SARGGA")
-
-        return (
-          <div key={section} className="surface-dark group relative overflow-hidden rounded-[2rem] p-4 shadow-premium">
+    <section className="grid grid-cols-1 gap-4">
+      <div className="surface-dark group relative overflow-hidden rounded-[2rem] p-4 shadow-premium">
             <div className="relative mb-4 flex items-center justify-between">
               <div>
-                <p className="eyebrow text-gold/80">{section}</p>
+                <p className="eyebrow text-gold/80">Senior</p>
                 <h2 className="text-title mt-1 text-xl text-ivory">Championship</h2>
               </div>
               <div className="flex size-10 items-center justify-center rounded-2xl border border-gold/20 bg-gold/10 text-gold">
@@ -149,23 +127,21 @@ export function ChampionsBoard({ refreshTrigger }: { refreshTrigger: number }) {
               </div>
             </div>
 
-            <div className="relative grid grid-cols-2 gap-3">
+            <div className="relative grid grid-cols-1 gap-3 sm:grid-cols-2">
               <ChampionSlot
                 icon="kala"
                 label="Kala Prathibha"
-                winner={kala}
+                winner={champions.find((c) => c.type === "KALA")}
                 emptyLabel="Not declared"
               />
               <ChampionSlot
                 icon="sargga"
                 label="Sargga Prathibha"
-                winner={sargga}
+                winner={champions.find((c) => c.type === "SARGGA")}
                 emptyLabel="Awaiting leader"
               />
             </div>
           </div>
-        )
-      })}
     </section>
   )
 }

@@ -71,7 +71,7 @@ export function LimitSettingsDialog({ open, onOpenChange }: Props) {
   }, {} as Record<string, SectionLimit[]>)
 
   // Custom sort order
-  const order = ['Senior', 'Junior', 'Sub-Junior', 'General', 'Foundation']
+  const order = ['Senior']
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

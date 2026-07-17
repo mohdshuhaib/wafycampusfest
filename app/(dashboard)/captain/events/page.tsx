@@ -39,14 +39,6 @@ interface SectionLimit { section: string; category: string; limit_count: number 
 const TABS = [
   { id: "SENIOR_ON", label: "Senior On", section: "Senior", cat: "ON STAGE" },
   { id: "SENIOR_OFF", label: "Senior Off", section: "Senior", cat: "OFF STAGE" },
-  { id: "JUNIOR_ON", label: "Junior On", section: "Junior", cat: "ON STAGE" },
-  { id: "JUNIOR_OFF", label: "Junior Off", section: "Junior", cat: "OFF STAGE" },
-  { id: "SUB_ON", label: "Sub-Jr On", section: "Sub-Junior", cat: "ON STAGE" },
-  { id: "SUB_OFF", label: "Sub-Jr Off", section: "Sub-Junior", cat: "OFF STAGE" },
-  { id: "GENERAL_ON", label: "General On", section: "General", cat: "ON STAGE" },
-  { id: "GENERAL_OFF", label: "General Off", section: "General", cat: "OFF STAGE" },
-  { id: "FOUNDATION_ON", label: "Foundation On", section: "Foundation", cat: "ON STAGE" },
-  { id: "FOUNDATION_OFF", label: "Foundation Off", section: "Foundation", cat: "OFF STAGE" },
 ]
 
 export default function MatrixRegistration() {
@@ -125,13 +117,7 @@ export default function MatrixRegistration() {
       )
     }
 
-    if (activeTab.section === "General") {
-      return list.filter((student) => student.section === "Senior" || student.section === "Junior")
-    }
-    if (activeTab.section === "Foundation") {
-      return list.filter((student) => student.section === "Sub-Junior")
-    }
-    return list.filter((student) => student.section === activeTab.section)
+    return list.filter((student) => student.section === "Senior")
   }, [students, activeTab, searchQuery])
 
   const filteredEvents = useMemo(() => {
@@ -184,6 +170,7 @@ export default function MatrixRegistration() {
     const eventTeamCount = participations.filter((p) => p.event_id === eventId).length
     if (eventTeamCount >= event.max_participants_per_team) {
       alert(`Event Limit Reached! Max ${event.max_participants_per_team} participants allowed.`)
+      return
     }
 
     const tempId = Math.random().toString()
@@ -248,7 +235,7 @@ export default function MatrixRegistration() {
             </Badge>
             <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Build your team entries.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
-              Search students, move between sections, and select event cells while staying inside programme limits.
+              Search Senior students and select event cells while staying inside programme limits.
             </p>
           </div>
 

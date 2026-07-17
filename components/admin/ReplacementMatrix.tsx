@@ -45,14 +45,6 @@ interface Props {
 const TABS = [
   { id: "SENIOR_ON", label: "Senior On", section: "Senior", cat: "ON STAGE" },
   { id: "SENIOR_OFF", label: "Senior Off", section: "Senior", cat: "OFF STAGE" },
-  { id: "JUNIOR_ON", label: "Junior On", section: "Junior", cat: "ON STAGE" },
-  { id: "JUNIOR_OFF", label: "Junior Off", section: "Junior", cat: "OFF STAGE" },
-  { id: "SUB_ON", label: "Sub-Jr On", section: "Sub-Junior", cat: "ON STAGE" },
-  { id: "SUB_OFF", label: "Sub-Jr Off", section: "Sub-Junior", cat: "OFF STAGE" },
-  { id: "GENERAL_ON", label: "General On", section: "General", cat: "ON STAGE" },
-  { id: "GENERAL_OFF", label: "General Off", section: "General", cat: "OFF STAGE" },
-  { id: "FOUNDATION_ON", label: "Foundation On", section: "Foundation", cat: "ON STAGE" },
-  { id: "FOUNDATION_OFF", label: "Foundation Off", section: "Foundation", cat: "OFF STAGE" },
 ]
 
 export function ReplacementMatrix({ teamId, teamName }: Props) {
@@ -104,13 +96,7 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
       )
     }
 
-    if (activeTab.section === "General") {
-      return list.filter((s) => s.section === "Senior" || s.section === "Junior")
-    }
-    if (activeTab.section === "Foundation") {
-      return list.filter((s) => s.section === "Sub-Junior")
-    }
-    return list.filter((s) => s.section === activeTab.section)
+    return list.filter((s) => s.section === "Senior")
   }, [students, activeTab, searchQuery])
 
   const filteredEvents = useMemo(() => {
@@ -156,14 +142,14 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
     const { isFull, limit } = getLimitStatus(student)
 
     if (isFull) {
-      const confirm = window.confirm(`Limit reached. This student has hit the max of ${limit}. Proceed anyway?`)
-      if (!confirm) return
+      alert(`Limit Reached! Maximum ${limit} events allowed for Senior ${activeTab.cat}.`)
+      return
     }
 
     const eventTeamCount = participations.filter((p) => p.event_id === eventId).length
     if (eventTeamCount >= event.max_participants_per_team) {
-      const confirm = window.confirm(`Event full. This event already has ${event.max_participants_per_team} participants. Add anyway?`)
-      if (!confirm) return
+      alert(`Event Limit Reached! Max ${event.max_participants_per_team} participants allowed.`)
+      return
     }
 
     const tempId = Math.random().toString()
@@ -230,7 +216,7 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
 
           <div className="flex items-center gap-2 rounded-2xl border border-gold/20 bg-gold/10 px-3 py-2 text-xs font-bold text-navy">
             <AlertCircle className="size-4 text-gold" />
-            <span>Admin mode allows overrides after confirmation.</span>
+            <span>Committee mode follows the same participant limits as captain registration.</span>
           </div>
         </div>
 

@@ -26,8 +26,7 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
       .select(`
           points_earned,
           teams ( id, name, color_hex ),
-          events ( category, applicable_section ),
-          students ( section )
+          events ( category )
         `)
       .gt("points_earned", 0)
 
@@ -44,23 +43,6 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
       const earnedTotal = teamParts.reduce((sum: number, p: any) => sum + (p.points_earned || 0), 0)
       const penalty = team.penalty_points || 0
       const total = Math.max(0, earnedTotal - penalty)
-
-      const checkSection = (p: any, section: string) => {
-        const appSection = p.events?.applicable_section
-        return Array.isArray(appSection) && appSection.includes(section)
-      }
-      const isGen = (p: any) => checkSection(p, "General")
-      const isFnd = (p: any) => checkSection(p, "Foundation")
-      const isSen = (p: any) => checkSection(p, "Senior")
-      const isJun = (p: any) => checkSection(p, "Junior")
-      const isSub = (p: any) => checkSection(p, "Sub-Junior")
-
-      const general = teamParts.filter(isGen).reduce((s: number, p: any) => s + (p.points_earned || 0), 0)
-      const foundation = teamParts.filter(isFnd).reduce((s: number, p: any) => s + (p.points_earned || 0), 0)
-      const senior = teamParts.filter((p: any) => isSen(p) && !isGen(p)).reduce((s: number, p: any) => s + (p.points_earned || 0), 0)
-      const junior = teamParts.filter((p: any) => isJun(p) && !isGen(p)).reduce((s: number, p: any) => s + (p.points_earned || 0), 0)
-      const subJunior = teamParts.filter((p: any) => isSub(p) && !isGen(p) && !isFnd(p)).reduce((s: number, p: any) => s + (p.points_earned || 0), 0)
-
       return {
         id: team.id,
         name: team.name,
@@ -68,11 +50,6 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
         total,
         rawTotal: earnedTotal,
         penalty,
-        senior,
-        junior,
-        subJunior,
-        general,
-        foundation,
       }
     })
 
@@ -106,7 +83,7 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
               </div>
               <div>
                 <h3 className="text-title text-lg text-navy">Team Standings</h3>
-                <p className="text-xs font-semibold text-slatebrand">Live aggregate points by section.</p>
+                <p className="text-xs font-semibold text-slatebrand">Senior-only championship standings.</p>
               </div>
             </div>
 
@@ -143,12 +120,7 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
                   <TableRow className="h-10 border-navy/10 hover:bg-transparent">
                     <TableHead className="h-10 w-[70px] pl-4 text-[10px] font-black uppercase tracking-[0.12em] text-slatebrand">Rank</TableHead>
                     <TableHead className="sticky left-0 z-10 h-10 min-w-[210px] border-r border-navy/10 bg-mist text-[10px] font-black uppercase tracking-[0.12em] text-slatebrand">Team</TableHead>
-                    <TableHead className="h-10 w-24 border-x border-gold/20 bg-gold/10 text-center text-[10px] font-black uppercase tracking-[0.12em] text-navy">Total</TableHead>
-                    <TableHead className="h-10 w-[72px] text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">Senior</TableHead>
-                    <TableHead className="h-10 w-[72px] text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">Junior</TableHead>
-                    <TableHead className="h-10 w-[72px] text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">Sub-Jr</TableHead>
-                    <TableHead className="h-10 w-[78px] text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">General</TableHead>
-                    <TableHead className="h-10 w-[88px] pr-4 text-center text-[10px] font-black uppercase tracking-[0.08em] text-slatebrand">Foundation</TableHead>
+                    <TableHead className="h-10 w-28 border-x border-gold/20 bg-gold/10 text-center text-[10px] font-black uppercase tracking-[0.12em] text-navy">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -193,11 +165,6 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
                         <TableCell className="border-x border-gold/20 bg-gold/10 py-2 text-center text-2xl font-black text-navy">
                           {team.total}
                         </TableCell>
-                        <TableCell className="py-2 text-center text-sm font-bold text-slatebrand">{team.senior}</TableCell>
-                        <TableCell className="py-2 text-center text-sm font-bold text-slatebrand">{team.junior}</TableCell>
-                        <TableCell className="py-2 text-center text-sm font-bold text-slatebrand">{team.subJunior}</TableCell>
-                        <TableCell className="py-2 text-center text-sm font-bold text-slatebrand">{team.general}</TableCell>
-                        <TableCell className="py-2 pr-4 text-center text-sm font-bold text-slatebrand">{team.foundation}</TableCell>
                       </TableRow>
                     )
                   })}

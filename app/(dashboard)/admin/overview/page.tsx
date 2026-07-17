@@ -52,6 +52,10 @@ export default function OverviewPage() {
         `)
         .gt("points_earned", 0)
 
+      const { data: allStudents } = await supabase
+        .from("students")
+        .select("id, class_grade, section")
+
       if (partError || !participations) {
         console.error("Error fetching participations", partError)
         setLoading(false)
@@ -93,23 +97,60 @@ export default function OverviewPage() {
       setTeamStats(Array.from(teamsMap.values()).sort((a, b) => b.totalPoints - a.totalPoints))
 
       const classMap = new Map()
+      ;(allStudents || []).forEach((student: any) => {
+        if (!student.class_grade || student.section !== "Senior") return
+        if (!classMap.has(student.class_grade)) {
+          classMap.set(student.class_grade, {
+            className: student.class_grade,
+            section: "Senior",
+            studentCount: 0,
+            totalPoints: 0,
+            first: 0,
+            second: 0,
+            third: 0,
+            positionCount: 0,
+            pointsPerStudent: 0,
+            positionsPerStudent: 0,
+          })
+        }
+        classMap.get(student.class_grade).studentCount++
+      })
+
       participations.forEach((p: any) => {
         if (!p.student || !p.student.class_grade) return
-        const key = `${p.student.section}-${p.student.class_grade}`
+        if (p.student.section !== "Senior") return
+        const key = p.student.class_grade
         if (!classMap.has(key)) {
           classMap.set(key, {
             className: p.student.class_grade,
-            section: p.student.section,
+            section: "Senior",
+            studentCount: 0,
             totalPoints: 0,
+            first: 0,
+            second: 0,
+            third: 0,
+            positionCount: 0,
+            pointsPerStudent: 0,
+            positionsPerStudent: 0,
           })
         }
-        classMap.get(key).totalPoints += p.points_earned
+        const row = classMap.get(key)
+        row.totalPoints += p.points_earned
+        if (p.result_position === "FIRST") row.first++
+        if (p.result_position === "SECOND") row.second++
+        if (p.result_position === "THIRD") row.third++
       })
-      setClassStats(Array.from(classMap.values()))
+      const classes = Array.from(classMap.values()).map((row) => ({
+        ...row,
+        positionCount: row.first + row.second + row.third,
+        pointsPerStudent: row.studentCount > 0 ? Number((row.totalPoints / row.studentCount).toFixed(2)) : 0,
+        positionsPerStudent: row.studentCount > 0 ? Number(((row.first + row.second + row.third) / row.studentCount).toFixed(2)) : 0,
+      }))
+      setClassStats(classes)
 
       const studentMap = new Map()
       participations.forEach((p: any) => {
-        if (!p.student) return
+        if (!p.student || p.student.section !== "Senior") return
         if (p.event?.grade_type === "C") return
 
         const sid = p.student.id
@@ -219,12 +260,12 @@ export default function OverviewPage() {
       doc.text("3. CLASS-WISE PERFORMANCE LEADERBOARD", 14, yPos)
       yPos += 5
 
-      const topClasses = [...classStats].sort((a, b) => b.totalPoints - a.totalPoints).slice(0, 15)
+      const topClasses = [...classStats].sort((a, b) => b.totalPoints - a.totalPoints)
 
       autoTable(doc, {
         startY: yPos,
-        head: [["Rank", "Class", "Section", "Total Points"]],
-        body: topClasses.map((c, i) => [i + 1, c.className, c.section, c.totalPoints]),
+        head: [["Rank", "Class", "Students", "Points", "Pts/Student", "Positions", "Pos/Student"]],
+        body: topClasses.map((c, i) => [i + 1, c.className, c.studentCount, c.totalPoints, c.pointsPerStudent, c.positionCount, c.positionsPerStudent]),
         theme: "striped",
         headStyles: { fillColor: [10, 29, 44] },
       })

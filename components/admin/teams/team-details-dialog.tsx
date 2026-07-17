@@ -57,7 +57,7 @@ interface EventStatus extends Event {
   status: 'FULL' | 'EMPTY' | 'PARTIAL';
 }
 
-const SECTIONS = ['Senior', 'Junior', 'Sub-Junior', 'General', 'Foundation']
+const SECTIONS = ['Senior']
 
 export function TeamDetailsDialog({ team, open, onOpenChange }: { team: Team | null, open: boolean, onOpenChange: (open: boolean) => void }) {
   const [loading, setLoading] = useState(true)
@@ -264,7 +264,7 @@ export function TeamDetailsDialog({ team, open, onOpenChange }: { team: Team | n
                                 value={sec}
                                 className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-bold text-slatebrand transition-all hover:text-navy data-[state=active]:border-gold data-[state=active]:bg-transparent data-[state=active]:text-navy md:text-sm"
                             >
-                                {sec}
+                                Senior
                             </TabsTrigger>
                         ))}
                     </TabsList>
@@ -322,7 +322,7 @@ export function TeamDetailsDialog({ team, open, onOpenChange }: { team: Team | n
                         {stats.onStage.length === 0 && stats.offStage.length === 0 && (
                             <div className="flex h-40 flex-col items-center justify-center text-slatebrand">
                                 <Circle className="mb-2 size-10 opacity-20" />
-                                <p className="text-sm">No events found for {activeSection} section.</p>
+                                <p className="text-sm">No Senior events found.</p>
                             </div>
                         )}
 

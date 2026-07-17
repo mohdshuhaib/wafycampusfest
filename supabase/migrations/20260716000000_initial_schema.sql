@@ -9,7 +9,7 @@ exception when duplicate_object then null;
 end $$;
 
 do $$ begin
-  create type public.student_section as enum ('Senior', 'Junior', 'Sub-Junior');
+  create type public.student_section as enum ('Senior');
 exception when duplicate_object then null;
 end $$;
 
@@ -51,6 +51,8 @@ create table if not exists public.students (
   section public.student_section not null,
   team_id uuid not null references public.teams(id) on delete cascade,
   created_at timestamptz not null default now()
+  ,
+  constraint students_senior_only check (section = 'Senior'::public.student_section)
 );
 
 create table if not exists public.events (
@@ -64,7 +66,7 @@ create table if not exists public.events (
   applicable_section text[] not null default array[]::text[],
   created_at timestamptz not null default now(),
   constraint events_applicable_section_values check (
-    applicable_section <@ array['Senior', 'Junior', 'Sub-Junior', 'General', 'Foundation']::text[]
+    applicable_section = array['Senior']::text[]
   )
 );
 
@@ -99,7 +101,7 @@ create table if not exists public.grade_settings (
 
 create table if not exists public.section_limits (
   id uuid primary key default gen_random_uuid(),
-  section text not null check (section in ('Senior', 'Junior', 'Sub-Junior', 'General', 'Foundation')),
+  section text not null check (section = 'Senior'),
   category text not null check (category in ('ON STAGE', 'OFF STAGE')),
   limit_count integer not null default 100 check (limit_count >= 0),
   unique (section, category)
@@ -386,11 +388,7 @@ on conflict (grade_type) do nothing;
 insert into public.section_limits (section, category, limit_count)
 values
   ('Senior', 'ON STAGE', 100),
-  ('Senior', 'OFF STAGE', 100),
-  ('Junior', 'ON STAGE', 100),
-  ('Junior', 'OFF STAGE', 100),
-  ('Sub-Junior', 'ON STAGE', 100),
-  ('Sub-Junior', 'OFF STAGE', 100)
+  ('Senior', 'OFF STAGE', 100)
 on conflict (section, category) do nothing;
 
 insert into public.site_assets (key, label, type, value, description)

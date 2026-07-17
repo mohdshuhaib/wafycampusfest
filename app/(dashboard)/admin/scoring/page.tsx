@@ -20,28 +20,14 @@ import autoTable from "jspdf-autotable"
 const SECTIONS = [
   { id: 'SENIOR_ON', label: 'Senior On-Stage', section: 'Senior', cat: 'ON STAGE' },
   { id: 'SENIOR_OFF', label: 'Senior Off-Stage', section: 'Senior', cat: 'OFF STAGE' },
-  { id: 'JUNIOR_ON', label: 'Junior On-Stage', section: 'Junior', cat: 'ON STAGE' },
-  { id: 'JUNIOR_OFF', label: 'Junior Off-Stage', section: 'Junior', cat: 'OFF STAGE' },
-  { id: 'SUB_ON', label: 'Sub-Jr On-Stage', section: 'Sub-Junior', cat: 'ON STAGE' },
-  { id: 'SUB_OFF', label: 'Sub-Jr Off-Stage', section: 'Sub-Junior', cat: 'OFF STAGE' },
-  { id: 'GENERAL_ON', label: 'General On-Stage', section: 'General', cat: 'ON STAGE' },
-  { id: 'GENERAL_OFF', label: 'General Off-Stage', section: 'General', cat: 'OFF STAGE' },
-  { id: 'FOUNDATION_ON', label: 'Foundation On-Stage', section: 'Foundation', cat: 'ON STAGE' },
-  { id: 'FOUNDATION_OFF', label: 'Foundation Off-Stage', section: 'Foundation', cat: 'OFF STAGE' },
 ]
 
 const EXPORT_CATEGORIES = [
   { label: 'Senior', value: 'Senior' },
-  { label: 'Junior', value: 'Junior' },
-  { label: 'Sub-Junior', value: 'Sub-Junior' },
-  { label: 'General', value: 'General' },
-  { label: 'Foundation', value: 'Foundation' },
 ]
 
 const PERFORMANCE_CATEGORIES = [
   { label: 'Senior', value: 'Senior' },
-  { label: 'Junior', value: 'Junior' },
-  { label: 'Sub-Junior', value: 'Sub-Junior' },
 ]
 
 export default function ScoringPage() {
@@ -108,7 +94,7 @@ export default function ScoringPage() {
           // Title
           doc.setFontSize(18);
           doc.setFont("helvetica", "bold");
-          doc.text(`${sectionLabel.toUpperCase()} SECTION - FINAL RESULTS`, 105, 20, { align: "center" });
+          doc.text(`SENIOR SECTION - FINAL RESULTS`, 105, 20, { align: "center" });
           doc.setFontSize(12);
           doc.setFont("helvetica", "normal");
           doc.text("PMSA ARTS FEST 2025-26", 105, 28, { align: "center" });
@@ -167,7 +153,7 @@ export default function ScoringPage() {
               }
           });
 
-          doc.save(`${sectionLabel}_Results.pdf`);
+          doc.save(`Senior_Results.pdf`);
 
       } catch (err) {
           console.error("PDF Generation Error:", err);
@@ -371,7 +357,7 @@ export default function ScoringPage() {
             </div>
             <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Register winners with confidence.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
-              Select a section, choose an event, rank winners, apply performance grades, and export official reports.
+              Choose a Senior event, rank winners, apply performance grades, and export official reports.
             </p>
           </div>
 
@@ -387,7 +373,7 @@ export default function ScoringPage() {
               <DropdownMenuContent align="end" className="surface-elevated z-50 w-52 rounded-2xl border-navy/10 p-2">
                 {PERFORMANCE_CATEGORIES.map((cat) => (
                   <DropdownMenuItem key={cat.value} onClick={() => generatePerformanceReport(cat.value)} className="cursor-pointer rounded-xl px-3 py-2 font-semibold text-navy focus:bg-navy/7">
-                    {cat.label} Section
+                    {cat.label}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -409,7 +395,7 @@ export default function ScoringPage() {
               <DropdownMenuContent align="end" className="surface-elevated z-50 w-52 rounded-2xl border-navy/10 p-2">
                 {EXPORT_CATEGORIES.map((cat) => (
                   <DropdownMenuItem key={cat.value} onClick={() => generateResultsPDF(cat.label, cat.value)} className="cursor-pointer rounded-xl px-3 py-2 font-semibold text-navy focus:bg-navy/7">
-                    {cat.label} Section
+                    {cat.label}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

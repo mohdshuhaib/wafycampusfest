@@ -30,7 +30,6 @@ interface EventFormDialogProps {
   onSuccess: () => void
 }
 
-const SECTIONS = ['Senior', 'Junior', 'Sub-Junior', 'General']
 const GRADES = ['A', 'B', 'C']
 const CATEGORIES = ['ON STAGE', 'OFF STAGE']
 
@@ -58,8 +57,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
         category: event.category,
         max_participants_per_team: event.max_participants_per_team,
         grade_type: event.grade_type || "A",
-        // Take the first section if array exists, else default
-        applicable_section: event.applicable_section?.[0] || "Senior",
+        applicable_section: "Senior",
         description: event.description || ""
       })
     } else if (!event && open) {
@@ -106,7 +104,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
         category: formData.category,
         max_participants_per_team: formData.max_participants_per_team,
         grade_type: formData.grade_type,
-        applicable_section: [formData.applicable_section], // Store as array
+        applicable_section: ["Senior"],
         description: formData.description
       }
 
@@ -184,18 +182,10 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                 </Select>
             </div>
             <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Applicable Section</Label>
-                <Select
-                    value={formData.applicable_section}
-                    onValueChange={v => setFormData({...formData, applicable_section: v})}
-                >
-                    <SelectTrigger>
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="surface-elevated rounded-2xl border-navy/10">
-                        {SECTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+                <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Section</Label>
+                <div className="flex h-10 items-center rounded-2xl border border-navy/12 bg-navy/6 px-3 text-sm font-bold text-navy">
+                  Senior
+                </div>
             </div>
           </div>
 

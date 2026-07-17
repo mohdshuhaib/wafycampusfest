@@ -48,8 +48,6 @@ interface Event {
   applicable_section: string[]
 }
 
-const SECTIONS_LIST = ['Senior', 'Junior', 'Sub-Junior', 'General', 'Foundation']
-
 function categoryClass(category: Event["category"]) {
   return category === "ON STAGE"
     ? "border-gold/35 bg-gold/16 text-navy"
@@ -67,7 +65,6 @@ export default function AdminEvents() {
   const [events, setEvents] = useState<Event[]>([])
 
   const [filterCategory, setFilterCategory] = useState<string>("all")
-  const [filterSection, setFilterSection] = useState<string>("all")
   const [filterGrade, setFilterGrade] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -133,23 +130,22 @@ export default function AdminEvents() {
   const filteredEvents = useMemo(() => {
     return events.filter(e => {
       const matchesCategory = filterCategory === "all" || e.category === filterCategory
-      const matchesSection = filterSection === "all" || (e.applicable_section && e.applicable_section.includes(filterSection))
+      const matchesSection = !e.applicable_section || e.applicable_section.length === 0 || e.applicable_section.includes("Senior")
       const matchesGrade = filterGrade === "all" || e.grade_type === filterGrade
       const search = searchQuery.toLowerCase()
       const matchesSearch = e.name.toLowerCase().includes(search) || e.event_code?.toLowerCase().includes(search)
 
       return matchesCategory && matchesSection && matchesGrade && matchesSearch
     })
-  }, [events, filterCategory, filterSection, filterGrade, searchQuery])
+  }, [events, filterCategory, filterGrade, searchQuery])
 
   const clearFilters = () => {
     setFilterCategory("all")
-    setFilterSection("all")
     setFilterGrade("all")
     setSearchQuery("")
   }
 
-  const hasActiveFilters = filterCategory !== "all" || filterSection !== "all" || filterGrade !== "all" || searchQuery !== ""
+  const hasActiveFilters = filterCategory !== "all" || filterGrade !== "all" || searchQuery !== ""
   const onStageCount = events.filter(event => event.category === "ON STAGE").length
   const offStageCount = events.filter(event => event.category === "OFF STAGE").length
   const totalCapacity = events.reduce((sum, event) => sum + (event.max_participants_per_team || 0), 0)
@@ -176,7 +172,7 @@ export default function AdminEvents() {
             </div>
             <h1 className="text-display mt-5 text-4xl text-ivory sm:text-5xl">Curate every competition.</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-ivory/62 sm:text-base">
-              Create event codes, sections, grade types, and participant limits while keeping the full event catalogue searchable.
+              Create Senior event codes, grade types, and participant limits while keeping the full event catalogue searchable.
             </p>
           </div>
 
@@ -220,19 +216,6 @@ export default function AdminEvents() {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="ON STAGE">On Stage</SelectItem>
                   <SelectItem value="OFF STAGE">Off Stage</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterSection} onValueChange={setFilterSection}>
-                <SelectTrigger className="h-12 w-[10rem] rounded-xl border-navy/12 bg-ivory/70">
-                  <Filter className="mr-2 size-4 text-slatebrand" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sections</SelectItem>
-                  {SECTIONS_LIST.map(sec => (
-                    <SelectItem key={sec} value={sec}>{sec}</SelectItem>
-                  ))}
                 </SelectContent>
               </Select>
 

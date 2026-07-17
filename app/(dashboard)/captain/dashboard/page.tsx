@@ -63,7 +63,7 @@ export default function CaptainOverview() {
         const team = teamData as unknown as Team
 
         const [studentsRes, partsRes, assetRes] = await Promise.all([
-          supabase.from("students").select("section").eq("team_id", profile.team_id),
+          supabase.from("students").select("class_grade, section").eq("team_id", profile.team_id),
           supabase.from("participations")
             .select("created_at, events ( name, category, applicable_section )")
             .eq("team_id", profile.team_id)
@@ -75,37 +75,32 @@ export default function CaptainOverview() {
         const participations = partsRes.data || []
         const handbookUrl = (assetRes.data as { value: string } | null)?.value || null
 
-        const sections = { Senior: 0, Junior: 0, "Sub-Junior": 0 }
+        const classes: Record<string, number> = {}
         students.forEach((student: any) => {
-          if (sections[student.section as keyof typeof sections] !== undefined) {
-            sections[student.section as keyof typeof sections]++
-          }
+          if (student.section !== "Senior") return
+          const className = student.class_grade || "Unassigned"
+          classes[className] = (classes[className] || 0) + 1
         })
-        const sectionData = Object.entries(sections).map(([name, count]) => ({
+        const sectionData = Object.entries(classes).map(([name, count]) => ({
           name,
           students: count,
         }))
 
-        const categories = { "ON STAGE": 0, "OFF STAGE": 0, GENERAL: 0 }
+        const categories = { "ON STAGE": 0, "OFF STAGE": 0 }
 
         participations.forEach((participation: any) => {
           const event = participation.events
           if (!event) return
 
-          if (Array.isArray(event.applicable_section) && event.applicable_section.includes("General")) {
-            categories.GENERAL++
-          } else {
-            const cat = event.category
-            if (cat && categories[cat as keyof typeof categories] !== undefined) {
-              categories[cat as keyof typeof categories]++
-            }
+          const cat = event.category
+          if (cat && categories[cat as keyof typeof categories] !== undefined) {
+            categories[cat as keyof typeof categories]++
           }
         })
 
         const categoryData = [
           { name: "On Stage", value: categories["ON STAGE"], color: "#D4AF37" },
           { name: "Off Stage", value: categories["OFF STAGE"], color: "#123B4F" },
-          { name: "General", value: categories.GENERAL, color: "#5A6D7E" },
         ]
 
         setData({
@@ -187,7 +182,7 @@ export default function CaptainOverview() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
-        <ChartPanel title="Team Composition" helper="Student distribution by section">
+          <ChartPanel title="Team Composition" helper="Senior student distribution by class">
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={data.sectionData} layout="vertical" margin={{ left: 20, right: 20 }}>
               <CartesianGrid stroke="#0A1D2C14" horizontal={false} />

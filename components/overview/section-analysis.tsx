@@ -1,24 +1,25 @@
 "use client"
 
-import { useState } from "react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Layers3 } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 interface ClassStats {
   className: string
-  section: string
+  studentCount: number
   totalPoints: number
+  first: number
+  second: number
+  third: number
+  positionCount: number
+  pointsPerStudent: number
+  positionsPerStudent: number
 }
 
-const COLORS = ["#0A1D2C", "#123B4F", "#D4AF37", "#5A6D7E", "#8E6F22"]
-
 export function SectionAnalysis({ data }: { data: ClassStats[] }) {
-  const [filter, setFilter] = useState("Senior")
-
-  const filteredData = data
-    .filter((d) => d.section === filter)
-    .sort((a, b) => b.totalPoints - a.totalPoints)
+  const byPoints = [...data].sort((a, b) => b.totalPoints - a.totalPoints)
+  const byPositions = [...data].sort((a, b) => b.positionCount - a.positionCount)
+  const totalPoints = data.reduce((sum, row) => sum + row.totalPoints, 0)
+  const totalPositions = data.reduce((sum, row) => sum + row.positionCount, 0)
 
   return (
     <div className="surface-elevated overflow-hidden rounded-[2rem]">
@@ -28,45 +29,75 @@ export function SectionAnalysis({ data }: { data: ClassStats[] }) {
             <Layers3 className="size-5 text-gold" />
           </div>
           <div>
-            <h2 className="text-title text-lg text-navy">Class-wise Analysis</h2>
-            <p className="text-xs font-semibold text-slatebrand">Compare classroom momentum by section.</p>
+            <h2 className="text-title text-lg text-navy">Class Performance</h2>
+            <p className="text-xs font-semibold text-slatebrand">Senior classes compared by totals and student strength.</p>
           </div>
         </div>
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="h-10 w-full rounded-2xl border-navy/10 bg-ivory text-xs font-bold sm:w-[150px]">
-            <SelectValue placeholder="Section" />
-          </SelectTrigger>
-          <SelectContent className="surface-elevated rounded-2xl border-navy/10">
-            <SelectItem value="Senior">Senior</SelectItem>
-            <SelectItem value="Junior">Junior</SelectItem>
-            <SelectItem value="Sub-Junior">Sub-Junior</SelectItem>
-            <SelectItem value="Foundation">Foundation</SelectItem>
-            <SelectItem value="General">General</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      <div className="h-[320px] min-h-[320px] min-w-0 w-full p-4">
-        {filteredData.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <BarChart data={filteredData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-              <CartesianGrid stroke="#0A1D2C14" horizontal vertical={false} />
-              <XAxis type="number" hide />
-              <YAxis dataKey="className" type="category" width={70} tick={{ fontSize: 11, fontWeight: 800, fill: "#5A6D7E" }} axisLine={false} tickLine={false} />
-              <Tooltip cursor={{ fill: "transparent" }} contentStyle={{ borderRadius: "16px", border: "1px solid #0A1D2C14", background: "#F6F2E8", boxShadow: "0 18px 50px rgba(10,29,44,.14)" }} />
-              <Bar dataKey="totalPoints" name="Points" radius={[0, 10, 10, 0]} barSize={24}>
-                {filteredData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex h-full items-center justify-center rounded-3xl border border-dashed border-navy/12 bg-mist/55 text-sm font-bold text-slatebrand">
-            No data for this section yet.
-          </div>
-        )}
+      <Tabs defaultValue="points" className="p-4">
+        <TabsList className="mb-4 grid h-auto w-full grid-cols-2 rounded-2xl bg-navy/6 p-1">
+          <TabsTrigger value="points" className="rounded-xl py-2 text-xs font-black data-[state=active]:bg-navy data-[state=active]:text-ivory">Total Points</TabsTrigger>
+          <TabsTrigger value="positions" className="rounded-xl py-2 text-xs font-black data-[state=active]:bg-navy data-[state=active]:text-ivory">Total Positions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="points" className="m-0 space-y-3">
+          <ClassRows data={byPoints} total={totalPoints} mode="points" />
+        </TabsContent>
+
+        <TabsContent value="positions" className="m-0 space-y-3">
+          <ClassRows data={byPositions} total={totalPositions} mode="positions" />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+function ClassRows({ data, total, mode }: { data: ClassStats[]; total: number; mode: "points" | "positions" }) {
+  if (data.length === 0) {
+    return (
+      <div className="flex h-40 items-center justify-center rounded-3xl border border-dashed border-navy/12 bg-mist/55 text-sm font-bold text-slatebrand">
+        No class data yet.
       </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {data.map((row, index) => {
+        const value = mode === "points" ? row.totalPoints : row.positionCount
+        const normalized = mode === "points" ? row.pointsPerStudent : row.positionsPerStudent
+        const percentage = total > 0 ? Math.round((value / total) * 100) : 0
+
+        return (
+          <div key={row.className} className="rounded-2xl border border-navy/8 bg-ivory/70 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="grid size-7 place-items-center rounded-xl bg-navy/7 text-xs font-black text-navy">{index + 1}</span>
+                  <h3 className="text-title text-lg text-navy">{row.className}</h3>
+                </div>
+                <p className="mt-1 text-xs font-semibold text-slatebrand">{row.studentCount} students</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-black text-navy">{value}</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slatebrand">{mode === "points" ? "points" : "positions"}</div>
+              </div>
+            </div>
+
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-navy/8">
+              <div className="h-full rounded-full bg-gold" style={{ width: `${Math.max(3, percentage)}%` }} />
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold text-slatebrand sm:grid-cols-4">
+              <div className="rounded-xl bg-navy/5 px-3 py-2">{percentage}% share</div>
+              <div className="rounded-xl bg-navy/5 px-3 py-2">{normalized} per student</div>
+              <div className="rounded-xl bg-navy/5 px-3 py-2">1st {row.first}</div>
+              <div className="rounded-xl bg-navy/5 px-3 py-2">2nd {row.second} · 3rd {row.third}</div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
