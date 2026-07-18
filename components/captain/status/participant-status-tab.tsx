@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertCircle, CheckCircle2, Filter, Search, Trophy, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { StudentPhoto } from "@/components/student-photo"
 
 interface Student {
   id: string
   name: string
   chest_no: string | null
+  image_link: string | null
   section: string
   class_grade: string | null
   participations: {
@@ -124,7 +126,15 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
               {processedData.rows.map((student) => (
                 <TableRow key={student.id} className="border-navy/8 transition-colors hover:bg-gold/6">
                   <TableCell className="bg-navy/4 font-mono font-black text-navy">{student.chest_no || "-"}</TableCell>
-                  <TableCell><div className="font-bold text-navy">{student.name}</div></TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <StudentPhoto imageLink={student.image_link} name={student.name} className="size-12" />
+                      <div className="min-w-0">
+                        <div className="truncate font-bold text-navy">{student.name}</div>
+                        <div className="mt-0.5 text-xs font-semibold text-slatebrand md:hidden">{student.class_grade || "-"}</div>
+                      </div>
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden font-semibold text-slatebrand md:table-cell">{student.class_grade || "-"}</TableCell>
                   <TableCell className="hidden md:table-cell"><Badge variant="outline">{student.section}</Badge></TableCell>
                   <TableCell className="text-center">{student.hasOnStage ? <CheckCircle2 className="mx-auto size-5 text-success" /> : <div className="mx-auto size-2 rounded-full bg-navy/15" />}</TableCell>

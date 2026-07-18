@@ -57,6 +57,7 @@ export default function CaptainStatusPage() {
           .from("students")
           .select(`
                 id, name, chest_no, section, class_grade,
+                image_link,
                 participations (
                     attendance_status,
                     events (
@@ -75,7 +76,7 @@ export default function CaptainStatusPage() {
           .select(`
                 id, attendance_status,
                 event:events ( name, category, event_code ),
-                student:students ( name, chest_no, class_grade )
+                student:students ( name, chest_no, class_grade, image_link )
             `)
           .eq("team_id", currentTeamId)
           .order("created_at")

@@ -71,6 +71,7 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
         name: rowData['name'],
         chest_no: rowData['chest_no'],
         class_grade: rowData['class'],
+        image_link: rowData['image_link'] || null,
         section: "Senior",
         team_id: team.id
       })
@@ -171,7 +172,7 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
           )}
 
           <div className="rounded-2xl border border-navy/10 bg-mist p-3 text-xs font-semibold text-slatebrand">
-            <strong>Required Headers:</strong> name, chest_no, class, team_name. Section is always Senior.
+            <strong>Required Headers:</strong> name, chest_no, class, team_name. Optional: image_link. Section is always Senior.
           </div>
         </div>
 

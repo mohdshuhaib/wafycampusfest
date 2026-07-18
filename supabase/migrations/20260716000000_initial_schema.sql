@@ -48,10 +48,16 @@ create table if not exists public.students (
   name text not null,
   chest_no text unique,
   class_grade text,
+  image_link text,
   section public.student_section not null,
   team_id uuid not null references public.teams(id) on delete cascade,
   created_at timestamptz not null default now()
   ,
+  constraint students_image_link_url check (
+    image_link is null
+    or image_link = ''
+    or image_link ~* '^https?://'
+  ),
   constraint students_senior_only check (section = 'Senior'::public.student_section)
 );
 

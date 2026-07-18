@@ -17,6 +17,7 @@ interface Student {
   name: string
   chest_no: string | null
   class_grade: string | null
+  image_link: string | null
   section: string
   team_id: string
 }
@@ -40,6 +41,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
     name: "",
     chest_no: "",
     class_grade: "FOUNDATION",
+    image_link: "",
     section: "Senior",
     team_id: ""
   })
@@ -51,6 +53,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
         name: student.name,
         chest_no: student.chest_no || "",
         class_grade: student.class_grade || "FOUNDATION",
+        image_link: student.image_link || "",
         section: "Senior",
         team_id: student.team_id
       })
@@ -60,6 +63,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
         name: "",
         chest_no: "",
         class_grade: "FOUNDATION",
+        image_link: "",
         section: "Senior",
         team_id: ""
       })
@@ -98,6 +102,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
             name: formData.name,
             chest_no: formData.chest_no,
             class_grade: formData.class_grade,
+            image_link: formData.image_link.trim() || null,
             section: "Senior",
             team_id: formData.team_id
           })
@@ -109,6 +114,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
           name: formData.name,
           chest_no: formData.chest_no,
           class_grade: formData.class_grade,
+          image_link: formData.image_link.trim() || null,
           section: "Senior",
           team_id: formData.team_id
         })
@@ -166,6 +172,16 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
             <div className="col-span-3 flex h-10 items-center rounded-2xl border border-navy/12 bg-navy/6 px-3 text-sm font-bold text-navy">
               Senior
             </div>
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Image Link</Label>
+            <Input
+              value={formData.image_link}
+              onChange={e => setFormData({...formData, image_link: e.target.value})}
+              className="col-span-3"
+              placeholder="Public Google Drive image link"
+            />
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">

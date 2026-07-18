@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { StudentPhoto } from "@/components/student-photo"
+import { getImageFormatFromDataUrl, imageUrlToDataUrl } from "@/lib/student-images"
 import { Loader2, User, Calendar, FileDown, Trophy, Medal } from "lucide-react"
 
 interface Props {
@@ -56,12 +58,17 @@ export function StudentReportModal({ studentId, open, onOpenChange }: Props) {
     fetchDetails()
   }, [studentId, open])
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
      if(!data) return
      const doc = new jsPDF()
+     const photoData = await imageUrlToDataUrl(data.student.image_link)
 
      doc.setFontSize(18)
      doc.text(`Student Report: ${data.student.name}`, 14, 20)
+
+     if (photoData) {
+        doc.addImage(photoData, getImageFormatFromDataUrl(photoData), 162, 14, 28, 28)
+     }
 
      doc.setFontSize(10)
      doc.text(`Chest No: ${data.student.chest_no || 'N/A'}`, 14, 28)
@@ -101,7 +108,11 @@ export function StudentReportModal({ studentId, open, onOpenChange }: Props) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-gold/20 bg-gold/10 text-gold">
-                        <User className="size-6" />
+                        {loading || !data ? (
+                            <User className="size-6" />
+                        ) : (
+                            <StudentPhoto imageLink={data.student.image_link} name={data.student.name} className="size-12" />
+                        )}
                     </div>
                     <div>
                         <DialogTitle className="text-xl font-black text-navy">

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Loader2, FileText, Printer, FileDown, ChevronDown, Check, UserCheck, UserX, Clock, FileSpreadsheet, Download, ClipboardCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { StudentPhoto } from "@/components/student-photo"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import * as XLSX from 'xlsx'
@@ -36,6 +37,7 @@ interface ParticipationRecord {
         name: string
         chest_no: string | null
         class_grade: string | null
+        image_link: string | null
         section: string
         team: {
             name: string
@@ -131,7 +133,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         .select(`
           id, event_id, status, attendance_status,
           teams ( name, color_hex ),
-          students!inner ( name, chest_no, class_grade, section )
+          students!inner ( name, chest_no, class_grade, section, image_link )
         `)
         .eq('event_id', selectedEventId)
         .order('created_at', { ascending: true })
@@ -147,6 +149,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
             name: p.students?.name || "Unknown",
             chest_no: p.students?.chest_no || 'N/A',
             class_grade: p.students?.class_grade || '-',
+            image_link: p.students?.image_link || null,
             section: p.students?.section || '-',
             team: {
                 name: p.teams?.name || "Unknown Team",
@@ -487,7 +490,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
           const { data } = await supabase
             .from('participations')
             .select(`
-               students ( name, chest_no, class_grade, section ),
+               students ( name, chest_no, class_grade, section, image_link ),
                teams ( name )
             `)
             .eq('event_id', event.id);
@@ -661,6 +664,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
                 <Table>
                     <TableHeader className="sticky top-0 z-20 border-b border-navy/10 bg-mist shadow-sm">
                         <TableRow className="border-navy/10">
+                            <TableHead className="w-24 font-black text-slatebrand">Photo</TableHead>
                             <TableHead className="w-24 font-black text-slatebrand">Chest No</TableHead>
                             <TableHead className="font-black text-slatebrand">Student Name</TableHead>
                             <TableHead className="hidden font-black text-slatebrand md:table-cell">Class</TableHead>
@@ -670,10 +674,13 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
                     </TableHeader>
                     <TableBody>
                         {participants.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="py-16 text-center text-sm font-bold text-slatebrand">No participants found.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="py-16 text-center text-sm font-bold text-slatebrand">No participants found.</TableCell></TableRow>
                         ) : (
                             participants.map((p, idx) => (
                                 <TableRow key={p.id} className="border-navy/8 transition-colors hover:bg-gold/6">
+                                    <TableCell className="bg-navy/4">
+                                        <StudentPhoto imageLink={p.students.image_link} name={p.students.name} className="size-16" />
+                                    </TableCell>
                                     <TableCell className="border-r border-navy/10 bg-navy/4 font-mono text-base font-black text-navy">{p.students.chest_no}</TableCell>
                                     <TableCell>
                                         <div className="font-bold text-navy">{p.students.name}</div>

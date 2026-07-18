@@ -33,6 +33,7 @@ import {
   Users,
   X,
 } from "lucide-react"
+import { StudentPhoto } from "@/components/student-photo"
 
 interface Team {
   id: string
@@ -46,6 +47,7 @@ interface Student {
   name: string
   chest_no: string | null
   class_grade: string | null
+  image_link: string | null
   section: 'Senior'
   team_id: string
   teams?: { name: string; color_hex: string }
@@ -53,15 +55,6 @@ interface Student {
 
 function sectionTone(section: Student["section"]) {
   return "border-gold/35 bg-gold/16 text-navy"
-}
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase())
-    .join("") || "ST"
 }
 
 export default function AdminStudents() {
@@ -332,12 +325,7 @@ export default function AdminStudents() {
                   <TableCell className="pl-5 font-mono text-sm font-black text-navy">{student.chest_no || '-'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div
-                        className="grid size-10 place-items-center rounded-2xl text-sm font-black text-ivory shadow-premium"
-                        style={{ backgroundColor: student.teams?.color_hex || "#0A1D2C" }}
-                      >
-                        {initials(student.name)}
-                      </div>
+                      <StudentPhoto imageLink={student.image_link} name={student.name} className="size-10" />
                       <div className="min-w-0">
                         <div className="truncate font-bold text-navy">{student.name}</div>
                         <div className="mt-1 text-xs font-semibold text-slatebrand">ID {student.id.slice(0, 8)}</div>
@@ -388,12 +376,7 @@ export default function AdminStudents() {
           filteredStudents.map((student) => (
             <article key={student.id} className="surface-elevated rounded-3xl p-5">
               <div className="flex items-start gap-4">
-                <div
-                  className="grid size-12 shrink-0 place-items-center rounded-2xl text-sm font-black text-ivory shadow-premium"
-                  style={{ backgroundColor: student.teams?.color_hex || "#0A1D2C" }}
-                >
-                  {initials(student.name)}
-                </div>
+                <StudentPhoto imageLink={student.image_link} name={student.name} className="size-12" />
                 <div className="min-w-0 flex-1">
                   <div className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-slatebrand">
                     Chest {student.chest_no || '-'}

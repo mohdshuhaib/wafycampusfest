@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { AlertCircle, Check, Info, Loader2, Lock, Search, Sparkles, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { StudentPhoto } from "@/components/student-photo"
 
 interface Student {
   id: string
   name: string
   section: string
   chest_no: string | null
+  image_link: string | null
   team_id: string
 }
 
@@ -344,15 +346,18 @@ export default function MatrixRegistration() {
                   return (
                     <tr key={student.id} className="group border-b border-navy/8 hover:bg-gold/6">
                       <td className="sticky left-0 z-10 border-r border-navy/10 bg-ivory p-3 shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] group-hover:bg-[#f3ead8]">
-                        <div className="min-w-0">
-                          <div className="truncate text-xs font-black text-navy sm:text-sm">{student.name}</div>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slatebrand">
-                            <span className="rounded-full bg-navy/7 px-2 py-0.5 font-mono text-navy">{student.chest_no || "-"}</span>
-                            <span className="hidden sm:inline">{student.section}</span>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <StudentPhoto imageLink={student.image_link} name={student.name} className="size-11" />
+                          <div className="min-w-0">
+                            <div className="truncate text-xs font-black text-navy sm:text-sm">{student.name}</div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slatebrand">
+                              <span className="rounded-full bg-navy/7 px-2 py-0.5 font-mono text-navy">{student.chest_no || "-"}</span>
+                              <span className="hidden sm:inline">{student.section}</span>
+                            </div>
+                            <Badge variant="outline" className={cn("mt-2 h-5 border px-2 text-[9px]", getLimitBadgeColor(isFull))}>
+                              {isFull ? "Maxed" : `${remaining} left`}
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className={cn("mt-2 h-5 border px-2 text-[9px]", getLimitBadgeColor(isFull))}>
-                            {isFull ? "Maxed" : `${remaining} left`}
-                          </Badge>
                         </div>
                       </td>
 

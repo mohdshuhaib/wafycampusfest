@@ -136,6 +136,7 @@ export interface Database {
           name: string
           chest_no: string | null
           class_grade: string | null
+          image_link: string | null
           section: 'Senior' | 'Junior' | 'Sub-Junior'
           team_id: string
           created_at: string
@@ -145,6 +146,7 @@ export interface Database {
           name: string
           chest_no?: string | null
           class_grade?: string | null
+          image_link?: string | null
           section: 'Senior' | 'Junior' | 'Sub-Junior'
           team_id: string
           created_at?: string
@@ -154,6 +156,7 @@ export interface Database {
           name?: string
           chest_no?: string | null
           class_grade?: string | null
+          image_link?: string | null
           section?: 'Senior' | 'Junior' | 'Sub-Junior'
           team_id?: string
           created_at?: string

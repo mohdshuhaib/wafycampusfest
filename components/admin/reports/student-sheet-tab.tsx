@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Eye, Filter, Search, Users } from "lucide-react"
 import { StudentReportModal } from "./student-report-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { StudentPhoto } from "@/components/student-photo"
 
 interface Student {
   id: string
   name: string
   chest_no: string | null
   class_grade: string | null
+  image_link: string | null
   section: string
   team_id: string
   teams: { name: string; color_hex: string }
@@ -82,6 +84,7 @@ export function StudentSheetTab({ students, teams }: Props) {
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-mist shadow-sm">
             <TableRow className="border-navy/10">
+              <TableHead className="w-[88px] font-black text-slatebrand">Photo</TableHead>
               <TableHead className="w-[110px] font-black text-slatebrand">Chest No</TableHead>
               <TableHead className="font-black text-slatebrand">Name</TableHead>
               <TableHead className="font-black text-slatebrand">Class</TableHead>
@@ -94,13 +97,16 @@ export function StudentSheetTab({ students, teams }: Props) {
           <TableBody>
             {filteredStudents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-56 text-center text-sm font-bold text-slatebrand">
+                <TableCell colSpan={8} className="h-56 text-center text-sm font-bold text-slatebrand">
                   No students found matching your criteria.
                 </TableCell>
               </TableRow>
             ) : (
               filteredStudents.map((student) => (
                 <TableRow key={student.id} className="border-navy/8 hover:bg-gold/6">
+                  <TableCell>
+                    <StudentPhoto imageLink={student.image_link} name={student.name} className="size-12" />
+                  </TableCell>
                   <TableCell className="bg-navy/4 font-mono font-black text-navy">{student.chest_no || "-"}</TableCell>
                   <TableCell className="font-bold text-navy">{student.name}</TableCell>
                   <TableCell className="font-semibold text-slatebrand">{student.class_grade || "-"}</TableCell>

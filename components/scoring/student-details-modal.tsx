@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, FileDown, Trophy, User } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { StudentPhoto } from "@/components/student-photo"
+import { getImageFormatFromDataUrl, imageUrlToDataUrl } from "@/lib/student-images"
 
 interface Props {
     studentId: string | null
@@ -58,12 +60,16 @@ export function StudentDetailsModal({ studentId, open, onOpenChange }: Props) {
     fetchDetails()
   }, [studentId, open])
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
      if(!data) return
      const doc = new jsPDF()
+     const photoData = await imageUrlToDataUrl(data.student.image_link)
 
      doc.setFontSize(20)
      doc.text(`Performance Report: ${data.student.name}`, 14, 20)
+     if (photoData) {
+       doc.addImage(photoData, getImageFormatFromDataUrl(photoData), 162, 14, 28, 28)
+     }
      doc.setFontSize(10)
      doc.text(`Chest No: ${data.student.chest_no} | Team: ${data.student.teams.name}`, 14, 30)
      const total = data.parts.reduce((s:number, p:any) => s + p.points_earned, 0)
@@ -106,7 +112,9 @@ export function StudentDetailsModal({ studentId, open, onOpenChange }: Props) {
                 <div className="flex h-20 items-center justify-center"><Loader2 className="animate-spin text-gold" /></div>
             ) : data && (
                 <div className="relative z-10 flex justify-between items-end">
-                    <div>
+                    <div className="flex items-end gap-4">
+                      <StudentPhoto imageLink={data.student.image_link} name={data.student.name} className="size-16 rounded-3xl" fallbackClassName="bg-ivory/10 text-ivory" />
+                      <div>
                         <div className="flex items-center gap-2 mb-2">
                              <Badge variant="gold">
                                 {data.student.section}
@@ -121,6 +129,7 @@ export function StudentDetailsModal({ studentId, open, onOpenChange }: Props) {
                         <div className="flex items-center gap-2 mt-1">
                              <p className="text-sm font-bold" style={{ color: data.student.teams.color_hex }}>{data.student.teams.name}</p>
                         </div>
+                      </div>
                     </div>
                     <div className="text-right">
                         <div className="text-4xl font-black text-ivory">{data.parts.reduce((s:number, p:any) => s + p.points_earned, 0)}</div>
