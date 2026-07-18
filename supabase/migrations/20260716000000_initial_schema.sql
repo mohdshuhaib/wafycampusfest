@@ -345,7 +345,7 @@ with check (public.is_admin());
 
 drop policy if exists "Authenticated users can read site assets" on public.site_assets;
 create policy "Authenticated users can read site assets"
-on public.site_assets for select to authenticated
+on public.site_assets for select to public
 using (true);
 
 drop policy if exists "Admins manage site assets" on public.site_assets;

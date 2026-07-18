@@ -17,15 +17,18 @@ import {
   Save,
   Settings2,
   Sparkles,
+  Trash2,
   Upload,
   XCircle,
 } from "lucide-react"
 import { toast } from "sonner"
 
 interface SiteAsset {
+  id: string
   key: string
   value: string
   label: string
+  updated_at: string
 }
 
 export default function AssetsManagePage() {
@@ -38,9 +41,14 @@ export default function AssetsManagePage() {
   const [uploadingScoreSheetImage, setUploadingScoreSheetImage] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [scoreSheetUploadError, setScoreSheetUploadError] = useState<string | null>(null)
+  const [highlightImages, setHighlightImages] = useState<SiteAsset[]>([])
+  const [uploadingHighlights, setUploadingHighlights] = useState(false)
+  const [highlightUploadError, setHighlightUploadError] = useState<string | null>(null)
+  const [deletingHighlightId, setDeletingHighlightId] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const scoreSheetInputRef = useRef<HTMLInputElement>(null)
+  const highlightInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -64,6 +72,15 @@ export default function AssetsManagePage() {
           if (imageAsset) setHeaderImageUrl(imageAsset.value)
           if (scoreSheetAsset) setScoreSheetHeaderUrl(scoreSheetAsset.value)
         }
+
+        const { data: highlights, error: highlightsError } = await (supabase.from("site_assets") as any)
+          .select("*")
+          .like("key", "landing_highlight_%")
+          .eq("type", "image")
+          .order("updated_at", { ascending: false })
+
+        if (highlightsError) throw highlightsError
+        setHighlightImages((highlights || []) as SiteAsset[])
       } catch (error) {
         console.error("Error fetching assets:", error)
         toast.error("Failed to load assets")
@@ -91,6 +108,115 @@ export default function AssetsManagePage() {
       toast.error("Failed to update link")
     } finally {
       setUpdatingLink(false)
+    }
+  }
+
+  const getStoragePathFromPublicUrl = (url: string) => {
+    const marker = "/storage/v1/object/public/site-assets/"
+    const index = url.indexOf(marker)
+    if (index === -1) return null
+    return decodeURIComponent(url.slice(index + marker.length).split("?")[0])
+  }
+
+  const handleHighlightUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    setHighlightUploadError(null)
+
+    if (files.length === 0) return
+
+    const invalid = files.find((file) => !file.type.startsWith("image/"))
+    if (invalid) {
+      const msg = "Please upload image files only."
+      setHighlightUploadError(msg)
+      toast.error(msg)
+      return
+    }
+
+    const tooLarge = files.find((file) => file.size > 5 * 1024 * 1024)
+    if (tooLarge) {
+      const msg = `${tooLarge.name} is too large. Max size is 5MB.`
+      setHighlightUploadError(msg)
+      toast.error(msg)
+      return
+    }
+
+    try {
+      setUploadingHighlights(true)
+      const insertedAssets: SiteAsset[] = []
+
+      for (const [index, file] of files.entries()) {
+        const fileExt = file.name.split(".").pop()
+        const safeBaseName = file.name
+          .replace(/\.[^/.]+$/, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
+          .slice(0, 42) || "highlight"
+        const fileName = `landing-highlights/${Date.now()}-${index}-${safeBaseName}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from("site-assets")
+          .upload(fileName, file)
+
+        if (uploadError) throw uploadError
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("site-assets")
+          .getPublicUrl(fileName)
+
+        const { data: asset, error: dbError } = await (supabase.from("site_assets") as any)
+          .insert({
+            key: `landing_highlight_${Date.now()}_${index}`,
+            label: file.name,
+            type: "image",
+            value: publicUrl,
+            description: "Landing page highlight carousel image",
+          })
+          .select("*")
+          .single()
+
+        if (dbError) throw dbError
+        if (asset) insertedAssets.push(asset as SiteAsset)
+      }
+
+      setHighlightImages((prev) => [...insertedAssets, ...prev])
+      toast.success(`${insertedAssets.length} highlight image${insertedAssets.length === 1 ? "" : "s"} uploaded`)
+    } catch (error: any) {
+      console.error("Highlight upload failed:", error)
+      setHighlightUploadError(error.message || "Failed to upload highlight images")
+      toast.error("Failed to upload highlight images")
+    } finally {
+      setUploadingHighlights(false)
+      if (highlightInputRef.current) highlightInputRef.current.value = ""
+    }
+  }
+
+  const handleDeleteHighlight = async (asset: SiteAsset) => {
+    try {
+      setDeletingHighlightId(asset.id)
+
+      const storagePath = getStoragePathFromPublicUrl(asset.value)
+      if (storagePath) {
+        const { error: storageError } = await supabase.storage
+          .from("site-assets")
+          .remove([storagePath])
+
+        if (storageError) throw storageError
+      }
+
+      const { error: dbError } = await (supabase.from("site_assets") as any)
+        .delete()
+        .eq("id", asset.id)
+
+      if (dbError) throw dbError
+
+      setHighlightImages((prev) => prev.filter((item) => item.id !== asset.id))
+      toast.success("Highlight image deleted")
+    } catch (error: any) {
+      console.error("Delete failed:", error)
+      toast.error(error.message || "Failed to delete highlight image")
+    } finally {
+      setDeletingHighlightId(null)
     }
   }
 
@@ -241,7 +367,7 @@ export default function AssetsManagePage() {
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(320px,0.75fr)_minmax(0,1fr)]">
+      <section className="grid gap-5 2xl:grid-cols-[minmax(320px,0.75fr)_minmax(0,1fr)]">
         <div className="surface-elevated rounded-[2rem] p-5">
           <div className="mb-6 flex items-center gap-3">
             <div className="flex size-11 items-center justify-center rounded-2xl bg-navy text-gold">
@@ -283,7 +409,7 @@ export default function AssetsManagePage() {
           </Button>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 xl:grid-cols-2">
           <ImageAssetPanel
             title="Admit Card Header"
             helper="Banner displayed on generated admit cards."
@@ -310,6 +436,79 @@ export default function AssetsManagePage() {
             accent="blue"
           />
         </div>
+      </section>
+
+      <section className="surface-elevated rounded-[2rem] p-5">
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-navy text-gold">
+              <ImageIcon className="size-5" />
+            </div>
+            <div>
+              <h2 className="text-title text-xl text-navy">Landing Highlights</h2>
+              <p className="mt-1 max-w-2xl text-xs font-semibold leading-5 text-slatebrand">
+                Upload fest highlight photos for the public landing carousel. The landing page displays the latest 10 images automatically.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="h-8 px-3">{highlightImages.length} Images</Badge>
+            <input type="file" accept="image/*" multiple ref={highlightInputRef} onChange={handleHighlightUpload} className="hidden" />
+            <Button onClick={() => highlightInputRef.current?.click()} disabled={uploadingHighlights}>
+              {uploadingHighlights ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Upload className="mr-2 size-4" />}
+              Upload Highlights
+            </Button>
+          </div>
+        </div>
+
+        {highlightUploadError && (
+          <div className="mb-5 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/10 p-3">
+            <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
+            <div>
+              <p className="text-sm font-bold text-destructive">Upload failed</p>
+              <p className="mt-1 text-xs font-semibold text-destructive/80">{highlightUploadError}</p>
+            </div>
+          </div>
+        )}
+
+        {highlightImages.length === 0 ? (
+          <div className="grid min-h-60 place-items-center rounded-3xl border border-dashed border-navy/15 bg-mist/60 p-8 text-center">
+            <div className="text-slatebrand">
+              <ImageIcon className="mx-auto mb-3 size-10 opacity-40" />
+              <p className="text-sm font-bold text-navy">No landing highlights uploaded yet.</p>
+              <p className="mt-1 text-xs font-semibold">Add images here to activate the public carousel.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {highlightImages.map((asset, index) => (
+              <article key={asset.id} className="group overflow-hidden rounded-3xl border border-navy/10 bg-mist shadow-sm">
+                <div className="relative aspect-[4/5] overflow-hidden bg-navy/8">
+                  <img src={asset.value} alt={asset.label} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  {index < 10 && (
+                    <div className="absolute left-3 top-3 rounded-full bg-gold px-2.5 py-1 text-[10px] font-black text-navy shadow-gold">
+                      Top {index + 1}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-3 p-3">
+                  <div className="truncate text-xs font-bold text-navy" title={asset.label}>{asset.label}</div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-full border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => handleDeleteHighlight(asset)}
+                    disabled={deletingHighlightId === asset.id}
+                  >
+                    {deletingHighlightId === asset.id ? <Loader2 className="mr-2 size-3.5 animate-spin" /> : <Trash2 className="mr-2 size-3.5" />}
+                    Delete
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )
@@ -342,17 +541,17 @@ function ImageAssetPanel({
 
   return (
     <div className="surface-elevated flex min-h-[520px] flex-col rounded-[2rem] p-5">
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="mb-5 flex flex-col gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           <div className={`flex size-11 items-center justify-center rounded-2xl ${accentClass}`}>
             <Icon className="size-5" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-title text-lg text-navy">{title}</h2>
-            <p className="text-xs font-semibold text-slatebrand">{helper}</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-slatebrand">{helper}</p>
           </div>
         </div>
-        <Badge variant="outline" className="shrink-0 text-[10px]">{recommendation}</Badge>
+        <Badge variant="outline" className="w-fit text-[10px]">{recommendation}</Badge>
       </div>
 
       <div className="relative flex min-h-56 flex-1 items-center justify-center overflow-hidden rounded-3xl border border-navy/10 bg-mist p-3">

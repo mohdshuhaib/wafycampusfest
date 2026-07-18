@@ -9,16 +9,11 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  CalendarCheck,
   Eye,
   EyeOff,
   Loader2,
   LockKeyhole,
   Mail,
-  ShieldCheck,
-  Sparkles,
-  Trophy,
-  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,12 +23,6 @@ interface UserProfile {
   team_id: string | null;
   full_name: string | null;
 }
-
-const highlights = [
-  { label: "Teams Managed", value: "12", icon: Users },
-  { label: "Events Live", value: "86", icon: CalendarCheck },
-  { label: "Secure Roles", value: "2", icon: ShieldCheck },
-]
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -97,63 +86,8 @@ export default function LoginPage() {
         </Link>
       </header>
 
-      <section className="relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center gap-8 px-4 pb-10 sm:px-6 lg:grid-cols-[1fr_0.88fr] lg:px-8">
-        <div className="order-2 animate-premium-in lg:order-1">
-          <div className="surface-dark relative overflow-hidden rounded-[2rem] p-6 sm:p-8 lg:min-h-[660px]">
-            <div className="relative flex h-full flex-col justify-between gap-12">
-              <div>
-                <div className="flex items-center">
-                  <div>
-                    <div className="text-title text-xl text-ivory">Wafy Campus Kalikkav</div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-ivory/50">Arts Fest Portal</div>
-                  </div>
-                </div>
-
-                <div className="mt-14 max-w-xl">
-                  <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-gold">
-                    <Sparkles className="size-3.5" />
-                    Festival operations suite
-                  </div>
-                  <h1 className="text-display text-4xl text-ivory sm:text-5xl lg:text-6xl">
-                    Sign in to command the fest with clarity.
-                  </h1>
-                  <p className="mt-6 max-w-lg text-base leading-8 text-ivory/64">
-                    One controlled workspace for registrations, scoring, reports, finance, assets, and captain workflows.
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {highlights.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <div key={item.label} className="rounded-2xl border border-ivory/10 bg-ivory/8 p-4 backdrop-blur">
-                        <div className="mb-4 grid size-9 place-items-center rounded-xl bg-ivory/10 text-gold">
-                          <Icon className="size-4" />
-                        </div>
-                        <div className="text-title text-2xl text-ivory">{item.value}</div>
-                        <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ivory/48">{item.label}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <div className="mt-5 rounded-2xl border border-gold/20 bg-gold/10 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-bold text-gold">
-                    <Trophy className="size-4" />
-                    Login guidance
-                  </div>
-                  <p className="text-sm leading-6 text-ivory/60">
-                    Admins are routed to the management console. Captains are routed to team registration and reports.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="order-1 animate-premium-in lg:order-2">
+      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-2xl items-center justify-center px-4 pb-10 sm:px-6 lg:px-8">
+        <div className="w-full animate-premium-in">
           <div className="surface-elevated mx-auto w-full max-w-xl rounded-[2rem] p-5 sm:p-7">
             <div className="rounded-[1.5rem] border border-navy/10 bg-ivory/72 p-5 sm:p-7">
               <div className="mb-8 flex items-start justify-between gap-4">

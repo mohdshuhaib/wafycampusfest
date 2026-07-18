@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase"
 import { TeamCard } from "@/components/admin/teams/team-card"
 import { TeamEditDialog } from "@/components/admin/teams/team-edit-dialog"
 import { TeamDetailsDialog } from "@/components/admin/teams/team-details-dialog"
-import { Switch } from "@/components/ui/switch"
 import { Loader2, Lock, Unlock, Globe, ShieldCheck, Sparkles, Trophy, Users, Gauge, Settings2 } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
@@ -187,17 +186,32 @@ export default function AdminTeams() {
             </div>
           </div>
 
-          <div className="mt-8 flex items-center justify-between rounded-3xl border border-navy/10 bg-ivory/70 p-4">
+          <div className="mt-8 flex flex-col gap-4 rounded-3xl border border-navy/10 bg-ivory/70 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-bold text-navy">Main registration gate</div>
               <div className={`mt-1 text-[11px] font-black uppercase tracking-[0.14em] ${globalOpen ? "text-success" : "text-destructive"}`}>
                 {globalOpen ? "Accepting registrations" : "Registration closed"}
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {updatingGlobal && <Loader2 className="size-4 animate-spin text-slatebrand" />}
-              <Switch id="global-lock" checked={globalOpen} onCheckedChange={handleGlobalToggle} />
-            </div>
+            <Button
+              type="button"
+              onClick={() => handleGlobalToggle(!globalOpen)}
+              disabled={updatingGlobal}
+              className={`h-11 min-w-36 rounded-2xl font-black shadow-none ${
+                globalOpen
+                  ? "bg-success text-ivory hover:bg-success/90"
+                  : "bg-destructive text-ivory hover:bg-destructive/90"
+              }`}
+            >
+              {updatingGlobal ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : globalOpen ? (
+                <Unlock className="size-4" />
+              ) : (
+                <Lock className="size-4" />
+              )}
+              {globalOpen ? "Unlocked" : "Locked"}
+            </Button>
           </div>
         </div>
       </section>
