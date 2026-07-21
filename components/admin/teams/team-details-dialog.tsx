@@ -15,7 +15,6 @@ import {
   LayoutGrid,
   Users,
   AlertCircle,
-  UserMinus
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -119,48 +118,35 @@ export function TeamDetailsDialog({ team, open, onOpenChange }: { team: Team | n
     fetchData()
   }, [team, open])
 
-  // --- PENALTY CALCULATIONS (UPDATED LOGIC) ---
-  const penalties = useMemo(() => {
-      let compliancePenalty = 0
-      let attendancePenalty = 0
+  const registrationReview = useMemo(() => {
       let nonCompliantCount = 0
       let absentCount = 0
 
       students.forEach(student => {
-          // Filter valid participations (not absent)
           const validParts = student.participations.filter(p => p.attendance_status !== 'absent')
 
-          // --- NEW LOGIC: Filter for "Counting" Events ---
-          // Exclude events where max_participants_per_team > 5 (Group items)
           const countingParts = validParts.filter(p => {
-             const maxP = p.events?.max_participants_per_team ?? 1; // Default to 1 if null
+             const maxP = p.events?.max_participants_per_team ?? 1;
              return maxP <= 5;
           })
 
-          // Compliance Check (Must have 1 On Stage AND 1 Off Stage from the filtered list)
           const hasOnStage = countingParts.some(p => p.events?.category === 'ON STAGE')
           const hasOffStage = countingParts.some(p => p.events?.category === 'OFF STAGE')
 
           if (!hasOnStage || !hasOffStage) {
-              compliancePenalty += 10
               nonCompliantCount++
           }
 
-          // Attendance Check (look at ALL participations, valid or not)
           student.participations.forEach(p => {
               if (p.attendance_status === 'absent') {
-                  attendancePenalty += 5
                   absentCount++
               }
           })
       })
 
       return {
-          compliance: compliancePenalty,
-          attendance: attendancePenalty,
           nonCompliantCount,
           absentCount,
-          total: compliancePenalty + attendancePenalty
       }
   }, [students])
 
@@ -205,18 +191,18 @@ export function TeamDetailsDialog({ team, open, onOpenChange }: { team: Team | n
                     <DialogTitle className="text-title text-2xl text-ivory">{team.name}</DialogTitle>
                   </div>
                   <DialogDescription className="mt-2 text-ivory/60">
-                    Registration and Penalty Report
+                    Registration Review
                   </DialogDescription>
               </div>
 
               <div className="text-right mt-2.5">
-                  <div className="text-display text-4xl leading-none text-gold">-{penalties.total}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-ivory/45">Total Minus</div>
+                  <div className="text-display text-4xl leading-none text-gold">{registrationReview.nonCompliantCount + registrationReview.absentCount}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-ivory/45">Review Items</div>
               </div>
           </div>
         </DialogHeader>
 
-        {/* Penalty Summary Section */}
+        {/* Review Summary Section */}
         <div className="grid shrink-0 grid-cols-2 gap-4 border-b border-navy/10 bg-ivory/70 p-4">
             <div className="flex items-center justify-between rounded-2xl border border-gold/20 bg-gold/10 p-3">
                 <div className="flex items-center gap-3">
@@ -225,28 +211,28 @@ export function TeamDetailsDialog({ team, open, onOpenChange }: { team: Team | n
                     </div>
                     <div>
                         <div className="text-xs font-bold uppercase tracking-[0.12em] text-navy">Non Completed</div>
-                        <div className="text-sm text-slatebrand">{penalties.nonCompliantCount} Students</div>
+                        <div className="text-sm text-slatebrand">{registrationReview.nonCompliantCount} Students</div>
                     </div>
                 </div>
                 <div className="text-right">
-                    <div className="text-title text-xl text-navy">-{penalties.compliance}</div>
-                    <div className="text-[10px] font-bold uppercase text-slatebrand">pts</div>
+                    <div className="text-title text-xl text-navy">{registrationReview.nonCompliantCount}</div>
+                    <div className="text-[10px] font-bold uppercase text-slatebrand">items</div>
                 </div>
             </div>
 
             <div className="flex items-center justify-between rounded-2xl border border-destructive/20 bg-destructive/10 p-3">
                 <div className="flex items-center gap-3">
                     <div className="hidden rounded-2xl bg-destructive/12 p-2 text-destructive md:flex">
-                        <UserMinus className="size-5" />
+                        <AlertCircle className="size-5" />
                     </div>
                     <div>
                         <div className="text-xs font-bold uppercase tracking-[0.12em] text-destructive">Absents</div>
-                        <div className="text-sm text-slatebrand">{penalties.absentCount} Events</div>
+                        <div className="text-sm text-slatebrand">{registrationReview.absentCount} Events</div>
                     </div>
                 </div>
                 <div className="text-right">
-                    <div className="text-title text-xl text-destructive">-{penalties.attendance}</div>
-                    <div className="text-[10px] font-bold uppercase text-slatebrand">pts</div>
+                    <div className="text-title text-xl text-destructive">{registrationReview.absentCount}</div>
+                    <div className="text-[10px] font-bold uppercase text-slatebrand">items</div>
                 </div>
             </div>
         </div>
@@ -329,8 +315,7 @@ export function TeamDetailsDialog({ team, open, onOpenChange }: { team: Team | n
                         <div className="mt-8 flex gap-2 rounded-2xl border border-gold/25 bg-gold/10 p-4 text-xs leading-5 text-navy">
                             <AlertCircle className="mt-0.5 size-4 shrink-0 text-gold" />
                             <p>
-                                <strong>Penalty Rule:</strong> Students must participate in at least 1 On-Stage AND 1 Off-Stage event to avoid the -10 point compliance penalty.
-                                <br/>Note: Group events (Max Participants &gt; 5) are <strong>excluded</strong> from this count.
+                                <strong>Review Note:</strong> Missing On/Off participation and absences are shown for committee awareness only. They do not create automatic minus points.
                             </p>
                         </div>
                       </>

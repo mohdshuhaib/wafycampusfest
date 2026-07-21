@@ -34,7 +34,7 @@ export async function imageUrlToDataUrl(url?: string | null): Promise<string> {
   if (!viewUrl || typeof window === "undefined") return ""
 
   try {
-    const response = await fetch(viewUrl)
+    const response = await fetch(`/api/image-proxy?url=${encodeURIComponent(viewUrl)}`)
     if (!response.ok) return ""
 
     const blob = await response.blob()

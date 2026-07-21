@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertCircle, CheckCircle2, Filter, Search, Trophy, XCircle } from "lucide-react"
+import { CheckCircle2, Filter, Search, Trophy, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { StudentPhoto } from "@/components/student-photo"
 
@@ -30,8 +30,6 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
   const [filterStatus, setFilterStatus] = useState("all")
 
   const processedData = useMemo(() => {
-    let totalPenalty = 0
-
     const rows = students.map((student) => {
       const validParts = student.participations.filter((p) => p.attendance_status !== "absent")
       const countingParts = validParts.filter((p) => {
@@ -42,8 +40,6 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
       const hasOnStage = countingParts.some((p) => p.events?.category === "ON STAGE")
       const hasOffStage = countingParts.some((p) => p.events?.category === "OFF STAGE")
       const isCompliant = hasOnStage && hasOffStage
-      const penalty = isCompliant ? 0 : 10
-      totalPenalty += penalty
 
       let statusLabel = "Good"
       let statusColor = "border-success/20 bg-success/10 text-success"
@@ -59,7 +55,7 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
         statusColor = "border-deepblue/20 bg-deepblue/10 text-deepblue"
       }
 
-      return { ...student, hasOnStage, hasOffStage, isCompliant, penalty, statusLabel, statusColor }
+      return { ...student, hasOnStage, hasOffStage, isCompliant, statusLabel, statusColor }
     })
 
     const filtered = rows.filter((row) => {
@@ -69,7 +65,7 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
       return matchesSearch && matchesFilter
     })
 
-    return { rows: filtered, allRows: rows, totalPenalty }
+    return { rows: filtered, allRows: rows }
   }, [students, search, filterStatus])
 
   const compliantCount = processedData.allRows.filter((row) => row.isCompliant).length
@@ -78,9 +74,9 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Metric label="Compliance Penalty" value={`-${processedData.totalPenalty}`} helper="Potential deduction" icon={AlertCircle} tone="danger" />
-        <Metric label="Action Needed" value={actionCount} helper="Students to review" icon={XCircle} tone="warning" />
-        <Metric label="Fully Completed" value={compliantCount} helper="Students compliant" icon={Trophy} tone="success" />
+        <Metric label="Total Students" value={processedData.allRows.length} helper="Registered students" icon={Trophy} tone="success" />
+        <Metric label="Needs Review" value={actionCount} helper="Missing On/Off mix" icon={XCircle} tone="warning" />
+        <Metric label="Balanced Entries" value={compliantCount} helper="Has On and Off stage" icon={CheckCircle2} tone="success" />
       </div>
 
       <div className="surface-panel rounded-[2rem] p-3">
@@ -145,7 +141,6 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
                     ) : (
                       <div className="flex flex-col items-end gap-1">
                         <Badge variant="outline" className={cn("border font-bold", student.statusColor)}>{student.statusLabel}</Badge>
-                        <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-black text-destructive">-10 pts</span>
                       </div>
                     )}
                   </TableCell>
@@ -161,12 +156,6 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
         </div>
       </div>
 
-      <div className="surface-panel flex items-start gap-3 rounded-2xl border-gold/20 bg-gold/10 p-4 text-xs font-semibold text-navy">
-        <AlertCircle className="mt-0.5 size-4 shrink-0 text-gold" />
-        <p>
-          <strong>Important Rule:</strong> To avoid the -10 point compliance penalty, a student must participate in at least one On-Stage and one Off-Stage event. Large group events with max participants above 5 are excluded from this requirement count.
-        </p>
-      </div>
     </div>
   )
 }

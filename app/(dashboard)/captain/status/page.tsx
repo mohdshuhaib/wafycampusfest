@@ -74,7 +74,7 @@ export default function CaptainStatusPage() {
         const { data: participationData } = await supabase
           .from("participations")
           .select(`
-                id, attendance_status, points_earned,
+                id, attendance_status,
                 event:events ( name, category, event_code, grade_type ),
                 student:students ( name, chest_no, class_grade, image_link )
             `)
@@ -197,7 +197,7 @@ export default function CaptainStatusPage() {
             </Badge>
             <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">{teamName} reports.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
-              Monitor compliance, attendance, and deduction risks across your team entries.
+              Monitor attendance and registration balance across your team entries.
             </p>
           </div>
 

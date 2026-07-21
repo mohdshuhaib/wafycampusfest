@@ -5,12 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle, Clock, Filter, Search, UserMinus, UserX } from "lucide-react"
+import { CheckCircle, Clock, Filter, Search, UserCheck, UserX } from "lucide-react"
 
 interface Participation {
   id: string
   attendance_status: string | null
-  points_earned?: number | null
   event: { name: string; category: string; event_code: string; grade_type?: string | null }
   student: { name: string; chest_no: string | null; class_grade: string | null }
 }
@@ -20,13 +19,9 @@ export function EventStatusTab({ participations }: { participations: Participati
   const [statusFilter, setStatusFilter] = useState("all")
 
   const processedData = useMemo(() => {
-    let totalDeduction = 0
-
     const rows = participations.map((participation) => {
       const isAbsent = participation.attendance_status === "absent"
       const isPresent = participation.attendance_status === "present"
-      const penalty = isAbsent ? Math.abs(participation.points_earned || 0) : 0
-      totalDeduction += penalty
 
       let statusDisplay = {
         key: "pending",
@@ -40,7 +35,7 @@ export function EventStatusTab({ participations }: { participations: Participati
         statusDisplay = {
           key: "absent",
           label: "Absent",
-          subLabel: `-${penalty} Marks`,
+          subLabel: "Did not attend",
           color: "border-destructive/20 bg-destructive/10 text-destructive",
           icon: UserX,
         }
@@ -55,7 +50,7 @@ export function EventStatusTab({ participations }: { participations: Participati
         }
       }
 
-      return { ...participation, penalty, statusDisplay }
+      return { ...participation, statusDisplay }
     })
 
     const filtered = rows.filter((row) => {
@@ -66,27 +61,19 @@ export function EventStatusTab({ participations }: { participations: Participati
       return matchesSearch && matchesStatus
     })
 
-    return { rows: filtered, totalDeduction }
+    return { rows: filtered }
   }, [participations, search, statusFilter])
+
+  const presentCount = participations.filter((participation) => participation.attendance_status === "present").length
+  const absentCount = participations.filter((participation) => participation.attendance_status === "absent").length
+  const pendingCount = participations.length - presentCount - absentCount
 
   return (
     <div className="space-y-5">
-      <div className="surface-elevated rounded-[2rem] p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-              <UserMinus className="size-6" />
-            </div>
-            <div>
-              <p className="eyebrow text-destructive">Attendance Penalty</p>
-              <p className="text-sm font-semibold text-slatebrand">Total deduction for absent students</p>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <p className="text-4xl font-black text-navy">-{processedData.totalDeduction}</p>
-            <span className="text-sm font-black text-destructive">pts</span>
-          </div>
-        </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatusMetric label="Present" value={presentCount} icon={UserCheck} tone="success" />
+        <StatusMetric label="Absent" value={absentCount} icon={UserX} tone="danger" />
+        <StatusMetric label="Pending" value={pendingCount} icon={Clock} tone="slate" />
       </div>
 
       <div className="surface-panel rounded-[2rem] p-3">
@@ -159,6 +146,28 @@ export function EventStatusTab({ participations }: { participations: Participati
               )}
             </TableBody>
           </Table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StatusMetric({ label, value, icon: Icon, tone }: { label: string; value: number; icon: typeof Clock; tone: "success" | "danger" | "slate" }) {
+  const toneClasses = {
+    success: "bg-success/10 text-success",
+    danger: "bg-destructive/10 text-destructive",
+    slate: "bg-navy/7 text-slatebrand",
+  }
+
+  return (
+    <div className="surface-elevated rounded-[2rem] p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="eyebrow text-slatebrand">{label}</p>
+          <div className="mt-2 text-3xl font-black text-navy">{value}</div>
+        </div>
+        <div className={`flex size-11 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+          <Icon className="size-5" />
         </div>
       </div>
     </div>

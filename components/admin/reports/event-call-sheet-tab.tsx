@@ -34,7 +34,6 @@ interface ParticipationRecord {
     event_id: string
     status: string
     attendance_status: string | null
-    points_earned: number | null
     students: {
         name: string
         chest_no: string | null
@@ -135,7 +134,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
       const { data } = await supabase
         .from('participations')
         .select(`
-          id, team_id, event_id, status, attendance_status, points_earned,
+          id, team_id, event_id, status, attendance_status,
           teams ( name, color_hex ),
           students!inner ( name, chest_no, class_grade, section, image_link )
         `)
@@ -150,7 +149,6 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
           event_id: p.event_id,
           status: p.status,
           attendance_status: p.attendance_status || 'pending',
-          points_earned: p.points_earned || 0,
           students: {
             name: p.students?.name || "Unknown",
             chest_no: p.students?.chest_no || 'N/A',
@@ -179,24 +177,13 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
 
   // 4. Handle Status Change
   const updateAttendance = async (participationId: string, newStatus: string) => {
-      const current = participants.find(p => p.id === participationId)
-      const selectedEvent = events.find(e => e.id === selectedEventId)
-      const { data: gradeRows } = await supabase.from('grade_settings').select('grade_type, first_place')
-      const firstPlace = (gradeRows as any[] | null)?.find(row => row.grade_type === (selectedEvent?.grade_type || 'A'))?.first_place || 0
-      const absentPenalty = Math.ceil(firstPlace / 2)
-      const nextPoints = newStatus === 'absent'
-        ? -absentPenalty
-        : current && (current.points_earned || 0) < 0
-          ? 0
-          : current?.points_earned || 0
-
       setParticipants(prev => prev.map(p =>
-          p.id === participationId ? { ...p, attendance_status: newStatus, points_earned: nextPoints } : p
+          p.id === participationId ? { ...p, attendance_status: newStatus } : p
       ))
 
       try {
           const { error } = await (supabase.from('participations') as any)
-            .update({ attendance_status: newStatus, points_earned: nextPoints })
+            .update({ attendance_status: newStatus })
             .eq('id', participationId)
 
           if (error) throw error
