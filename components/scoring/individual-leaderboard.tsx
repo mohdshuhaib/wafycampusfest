@@ -44,7 +44,7 @@ export function IndividualLeaderboard({ refreshTrigger }: { refreshTrigger: numb
       const studentMap = new Map<string, StudentScore>()
 
       data.forEach((p: any) => {
-        if (p.events?.grade_type === "C") return
+        if (p.events?.grade_type === "D") return
 
         const sid = p.student_id
         if (!studentMap.has(sid)) {

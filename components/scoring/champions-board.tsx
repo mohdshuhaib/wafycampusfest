@@ -38,7 +38,7 @@ export function ChampionsBoard({ refreshTrigger }: { refreshTrigger: number }) {
       const students: Record<string, any> = {}
 
       data.forEach((p: any) => {
-        if (p.events?.grade_type === "C") return
+        if (p.events?.grade_type === "D" || p.events?.category === "SPECIAL") return
 
         const sid = p.student_id
         if (!students[sid]) {

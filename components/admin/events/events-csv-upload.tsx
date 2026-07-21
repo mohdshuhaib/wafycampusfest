@@ -57,16 +57,21 @@ export function EventsCsvUpload({ open, onOpenChange, onSuccess }: CsvUploadDial
       headers.forEach((h, index) => rowData[h] = cols[index])
 
       // Validation
-      if (!['ON STAGE', 'OFF STAGE'].includes(rowData['category'].toUpperCase())) {
-         throw new Error(`Row ${i+2}: Invalid category '${rowData['category']}'. Must be ON STAGE or OFF STAGE.`)
+      const category = rowData['category'].toUpperCase()
+      if (!['ON STAGE', 'OFF STAGE', 'GENERAL', 'SPECIAL'].includes(category)) {
+         throw new Error(`Row ${i+2}: Invalid category '${rowData['category']}'. Must be ON STAGE, OFF STAGE, GENERAL, or SPECIAL.`)
+      }
+      const grade = category === 'GENERAL' ? 'C' : category === 'SPECIAL' ? 'D' : (rowData['grade']?.toUpperCase() || 'A')
+      if (!['A', 'B', 'C', 'D'].includes(grade)) {
+         throw new Error(`Row ${i+2}: Invalid grade '${rowData['grade']}'. Must be A, B, C, or D.`)
       }
 
       parsedData.push({
         name: rowData['name'],
         event_code: rowData['event_code'],
-        category: rowData['category'].toUpperCase(),
-        max_participants_per_team: parseInt(rowData['limit']) || 1,
-        grade_type: rowData['grade']?.toUpperCase() || 'A',
+        category,
+        max_participants_per_team: category === 'SPECIAL' ? 1 : parseInt(rowData['limit']) || 1,
+        grade_type: grade,
         applicable_section: ["Senior"],
         description: rowData['description'] || ''
       })

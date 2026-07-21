@@ -26,7 +26,7 @@ interface Event {
   id: string
   name: string
   event_code: string
-  grade_type: 'A' | 'B' | 'C'
+  grade_type: 'A' | 'B' | 'C' | 'D'
   category: string
   applicable_section: string[]
 }
@@ -39,10 +39,11 @@ interface Participant {
   student?: { id: string; name: string; chest_no: string } | null
   team: { id: string; name: string; color_hex: string }
   result_position: 'FIRST' | 'SECOND' | 'THIRD' | null
-  performance_grade: 'A' | 'B' | 'C' | 'NONE' | null
+  performance_grade: 'A+' | 'A' | 'B' | 'C' | 'NONE' | null
 }
 
-const PERF_POINTS = { 'A': 5, 'B': 3, 'C': 1, 'NONE': 0 }
+const DEFAULT_PERF_POINTS = { 'A+': 0, 'A': 5, 'B': 3, 'C': 1, 'NONE': 0 }
+const PERFORMANCE_GRADES = ['A+', 'A', 'B', 'C', 'NONE']
 
 interface EventScorerProps {
   section: string
@@ -66,6 +67,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
 
   const [participants, setParticipants] = useState<Participant[]>([])
   const [pointsTable, setPointsTable] = useState<any>({})
+  const [perfPoints, setPerfPoints] = useState<Record<string, number>>(DEFAULT_PERF_POINTS)
 
   // Winners State (Top 3)
   const [winners, setWinners] = useState<{
@@ -87,10 +89,11 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
   useEffect(() => {
     async function loadData() {
       setLoading(true)
-      const [evtRes, teamRes, gradeRes] = await Promise.all([
+      const [evtRes, teamRes, gradeRes, perfRes] = await Promise.all([
         supabase.from('events').select('*').eq('category', category).contains('applicable_section', [section]).order('name'),
         supabase.from('teams').select('*').order('name'),
-        supabase.from('grade_settings').select('*')
+        supabase.from('grade_settings').select('*'),
+        supabase.from('performance_grade_settings').select('*')
       ])
 
       if (evtRes.data) {
@@ -121,6 +124,13 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
         })
         setPointsTable(pt)
       }
+      if (perfRes.data) {
+        const next: Record<string, number> = { ...DEFAULT_PERF_POINTS }
+        ;(perfRes.data as any[]).forEach((g) => {
+          next[g.grade_label] = g.points
+        })
+        setPerfPoints(next)
+      }
       setLoading(false)
     }
     loadData()
@@ -136,7 +146,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
     }
 
     const event = events.find(e => e.id === selectedEventId)
-    setMode(event?.grade_type === 'C' ? 'TEAM' : 'INDIVIDUAL')
+    setMode(event?.category === 'SPECIAL' || event?.grade_type === 'D' ? 'TEAM' : 'INDIVIDUAL')
 
     async function loadParts() {
       setLoading(true)
@@ -264,30 +274,30 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                   pos = 'FIRST';
                   perf = winners.FIRST.get(p.id);
                   hasWinners = true;
-                  const key = (perf || 'NONE') as keyof typeof PERF_POINTS;
-                  pts = basePoints.FIRST + PERF_POINTS[key];
+                  const key = (perf || 'NONE');
+                  pts = basePoints.FIRST + (perfPoints[key] || 0);
               }
               else if (winners.SECOND.has(p.id)) {
                   pos = 'SECOND';
                   perf = winners.SECOND.get(p.id);
                   hasWinners = true;
-                  const key = (perf || 'NONE') as keyof typeof PERF_POINTS;
-                  pts = basePoints.SECOND + PERF_POINTS[key];
+                  const key = (perf || 'NONE');
+                  pts = basePoints.SECOND + (perfPoints[key] || 0);
               }
               else if (winners.THIRD.has(p.id)) {
                   pos = 'THIRD';
                   perf = winners.THIRD.get(p.id);
                   hasWinners = true;
-                  const key = (perf || 'NONE') as keyof typeof PERF_POINTS;
-                  pts = basePoints.THIRD + PERF_POINTS[key];
+                  const key = (perf || 'NONE');
+                  pts = basePoints.THIRD + (perfPoints[key] || 0);
               }
               else if (otherGrades.has(p.id)) {
                   // Not a winner, but has a grade
                   pos = null;
                   perf = otherGrades.get(p.id);
-                  const key = (perf || 'NONE') as keyof typeof PERF_POINTS;
+                  const key = (perf || 'NONE');
                   // No base points for non-winners, only grade points
-                  pts = 0 + PERF_POINTS[key];
+                  pts = perfPoints[key] || 0;
               }
 
               return {
@@ -316,8 +326,8 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
           // Helper to add results
           const addResult = (teamId: string, pos: string | null, grade: string | null, basePts: number) => {
               if (pos) hasWinners = true
-              const key = (grade || 'NONE') as keyof typeof PERF_POINTS;
-              const total = basePts + PERF_POINTS[key]
+              const key = (grade || 'NONE');
+              const total = basePts + (perfPoints[key] || 0)
 
               newResults.push({
                   event_id: selectedEventId,
@@ -445,7 +455,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
             {selectedEvent && (
                 <div className="ml-auto flex items-center gap-2">
                     <Badge variant={mode === 'TEAM' ? 'gold' : 'outline'} className="h-9 px-3 text-xs">
-                       {mode === 'TEAM' ? <><Users className="mr-1 size-3"/> Team Event - Grade C</> : <><User className="mr-1 size-3"/> Individual - Grade {selectedEvent.grade_type}</>}
+                       {mode === 'TEAM' ? <><Users className="mr-1 size-3"/> Team Event - Grade {selectedEvent.grade_type}</> : <><User className="mr-1 size-3"/> Individual - Grade {selectedEvent.grade_type}</>}
                     </Badge>
                 </div>
             )}
@@ -517,7 +527,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                                     <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-navy/10 pt-2 animate-in fade-in zoom-in-95 duration-200">
                                                         <span className="text-[9px] font-black uppercase tracking-[0.12em] text-slatebrand">Perf.</span>
                                                         <div className="flex gap-0.5">
-                                                            {['A', 'B', 'C', 'NONE'].map(g => (
+                                                            {PERFORMANCE_GRADES.map(g => (
                                                                 <button
                                                                     key={g}
                                                                     onClick={(e) => { e.stopPropagation(); updateWinnerGrade(pos as any, id, g) }}
@@ -574,13 +584,13 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                                         <span className="truncate max-w-[100px]">{mode === 'INDIVIDUAL' ? item.team.name : 'Team'}</span>
                                                     </div>
                                                 </div>
-                                                {hasGrade && <Badge variant="gold" className="h-5 px-1.5 text-[10px]">+{PERF_POINTS[grade as keyof typeof PERF_POINTS]} pts</Badge>}
+                                                {hasGrade && <Badge variant="gold" className="h-5 px-1.5 text-[10px]">+{perfPoints[grade] || 0} pts</Badge>}
                                             </div>
 
                                             <div className="mt-auto flex items-center justify-between gap-2 border-t border-navy/8 pt-2">
                                                 <span className="text-[9px] font-black uppercase tracking-[0.12em] text-slatebrand">Grade</span>
                                                 <div className="flex gap-1">
-                                                     {['A', 'B', 'C'].map(g => (
+                                                     {['A+', 'A', 'B', 'C'].map(g => (
                                                         <button
                                                             key={g}
                                                             onClick={() => updateOtherGrade(id, g)}

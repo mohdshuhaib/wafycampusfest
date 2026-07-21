@@ -21,13 +21,14 @@ interface Event {
   id: string
   name: string
   category: string
+  grade_type: string | null
   max_participants_per_team: number
   applicable_section: string[] | null
 }
 
 interface Participation {
   id: string
-  student_id: string
+  student_id: string | null
   event_id: string
   team_id: string
   status: string
@@ -35,20 +36,30 @@ interface Participation {
 
 interface Profile { team_id: string | null }
 interface Team { id: string; access_override: boolean | null }
-interface AppConfig { registration_open: boolean }
+interface AppConfig {
+  registration_open: boolean
+  on_stage_registration_open: boolean
+  off_stage_registration_open: boolean
+}
 interface SectionLimit { section: string; category: string; limit_count: number }
 
 const TABS = [
   { id: "SENIOR_ON", label: "Senior On", section: "Senior", cat: "ON STAGE" },
   { id: "SENIOR_OFF", label: "Senior Off", section: "Senior", cat: "OFF STAGE" },
+  { id: "GENERAL", label: "General", section: "Senior", cat: "GENERAL" },
+  { id: "SPECIAL", label: "Special", section: "Senior", cat: "SPECIAL" },
 ]
 
 export default function MatrixRegistration() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(TABS[0])
   const [teamId, setTeamId] = useState<string | null>(null)
-  const [isLocked, setIsLocked] = useState(false)
-  const [lockReason, setLockReason] = useState("")
+  const [teamOverride, setTeamOverride] = useState<boolean | null>(null)
+  const [appConfig, setAppConfig] = useState<AppConfig>({
+    registration_open: false,
+    on_stage_registration_open: false,
+    off_stage_registration_open: false,
+  })
   const [students, setStudents] = useState<Student[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [participations, setParticipations] = useState<Participation[]>([])
@@ -83,22 +94,14 @@ export default function MatrixRegistration() {
         if (partRes.data) setParticipations(partRes.data as unknown as Participation[])
         if (limitRes.data) setLimits(limitRes.data as unknown as SectionLimit[])
 
-        const config = configRes.data as unknown as AppConfig
         const team = teamRes.data as unknown as Team
-        const globalOpen = config?.registration_open ?? false
-        const teamOverride = team?.access_override
-
-        let access = false
-        if (teamOverride === true) access = true
-        else if (teamOverride === false) access = false
-        else access = globalOpen
-
-        if (!access) {
-          setIsLocked(true)
-          setLockReason(teamOverride === false ? "Your team's registration has been locked by Admin." : "Registration is currently closed.")
-        } else {
-          setIsLocked(false)
-        }
+        const config = configRes.data as unknown as AppConfig
+        setTeamOverride(team?.access_override ?? null)
+        setAppConfig({
+          registration_open: config?.registration_open ?? false,
+          on_stage_registration_open: config?.on_stage_registration_open ?? config?.registration_open ?? false,
+          off_stage_registration_open: config?.off_stage_registration_open ?? config?.registration_open ?? false,
+        })
       } catch (e) {
         console.error("Load error", e)
       } finally {
@@ -107,6 +110,19 @@ export default function MatrixRegistration() {
     }
     loadData()
   }, [])
+
+  const categoryOpen = useMemo(() => {
+    if (teamOverride === true) return true
+    if (teamOverride === false) return false
+    if (activeTab.cat === "ON STAGE") return appConfig.on_stage_registration_open
+    if (activeTab.cat === "OFF STAGE") return appConfig.off_stage_registration_open
+    return appConfig.registration_open
+  }, [activeTab.cat, appConfig, teamOverride])
+
+  const isLocked = !categoryOpen
+  const lockReason = teamOverride === false
+    ? "Your team's registration has been locked by Admin."
+    : `${activeTab.label} registration is currently closed.`
 
   const filteredStudents = useMemo(() => {
     let list = students
@@ -119,29 +135,37 @@ export default function MatrixRegistration() {
       )
     }
 
-    return list.filter((student) => student.section === "Senior")
+    return activeTab.cat === "SPECIAL" ? [] : list.filter((student) => student.section === "Senior")
   }, [students, activeTab, searchQuery])
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
       if (event.category !== activeTab.cat) return false
+      if (activeTab.cat === "GENERAL" && event.grade_type !== "C") return false
+      if (activeTab.cat === "SPECIAL" && event.grade_type !== "D") return false
       if (!event.applicable_section || event.applicable_section.length === 0) return false
       return event.applicable_section.includes(activeTab.section)
     })
   }, [events, activeTab])
 
   const getLimitStatus = (student: Student) => {
-    const limitRule = limits.find((limit) => limit.section === activeTab.section && limit.category === activeTab.cat)
-    const limit = limitRule ? limitRule.limit_count : 100
-
-    const count = participations.filter((participation) => {
+    const countByCategory = (category: string) => participations.filter((participation) => {
       const event = events.find((item) => item.id === participation.event_id)
       if (!event) return false
-      const isTabSectionEvent = event.applicable_section?.includes(activeTab.section)
-      return participation.student_id === student.id && isTabSectionEvent && event.category === activeTab.cat
+      return participation.student_id === student.id && event.category === category
     }).length
 
-    return { count, limit, isFull: count >= limit, remaining: limit - count }
+    const onCount = countByCategory("ON STAGE")
+    const offCount = countByCategory("OFF STAGE")
+    const generalCount = countByCategory("GENERAL")
+    const currentCount = countByCategory(activeTab.cat)
+
+    const limit = activeTab.cat === "GENERAL" ? 2 : 4
+    const totalLimit = activeTab.cat === "GENERAL" ? 2 : 6
+    const totalCount = activeTab.cat === "GENERAL" ? generalCount : onCount + offCount
+    const isFull = currentCount >= limit || totalCount >= totalLimit
+
+    return { count: currentCount, limit, totalCount, totalLimit, isFull, remaining: Math.max(0, Math.min(limit - currentCount, totalLimit - totalCount)) }
   }
 
   const handleToggle = async (studentId: string, eventId: string, isChecked: boolean) => {
@@ -165,7 +189,10 @@ export default function MatrixRegistration() {
     const { isFull, limit } = getLimitStatus(student)
 
     if (isFull) {
-      alert(`Limit Reached! Maximum ${limit} events allowed for ${activeTab.section} ${activeTab.cat}.`)
+      alert(activeTab.cat === "GENERAL"
+        ? "Limit Reached! A student can participate in only 2 General events."
+        : "Limit Reached! A student can participate in 6 total On/Off events, with max 4 in either On Stage or Off Stage."
+      )
       return
     }
 
@@ -197,6 +224,38 @@ export default function MatrixRegistration() {
     if (error) {
       setParticipations((prev) => prev.filter((p) => p.id !== tempId))
       alert("Error adding: " + error.message)
+    } else {
+      setParticipations((prev) => prev.map((p) => p.id === tempId ? inserted : p))
+    }
+  }
+
+  const handleTeamToggle = async (eventId: string, isChecked: boolean) => {
+    if (!teamId) return
+    if (isLocked) {
+      alert(`Action Blocked: ${lockReason}`)
+      return
+    }
+
+    if (!isChecked) {
+      setParticipations((prev) => prev.filter((p) => !(p.student_id === null && p.event_id === eventId && p.team_id === teamId)))
+      await supabase.from("participations").delete().match({ event_id: eventId, team_id: teamId }).is("student_id", null)
+      return
+    }
+
+    const tempId = Math.random().toString()
+    const newPart = { id: tempId, student_id: null, event_id: eventId, team_id: teamId, status: "registered" } as Participation
+    setParticipations((prev) => [...prev, newPart])
+
+    const { data: inserted, error } = await (supabase.from("participations") as any).insert({
+      event_id: eventId,
+      team_id: teamId,
+      student_id: null,
+      status: "registered",
+    }).select().single()
+
+    if (error) {
+      setParticipations((prev) => prev.filter((p) => p.id !== tempId))
+      alert("Error adding team participation: " + error.message)
     } else {
       setParticipations((prev) => prev.map((p) => p.id === tempId ? inserted : p))
     }
@@ -237,7 +296,7 @@ export default function MatrixRegistration() {
             </Badge>
             <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Build your team entries.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
-              Search Senior students and select event cells while staying inside programme limits.
+              Search Senior students and select event cells while staying inside the 6 total, 4 category, and 2 general limits.
             </p>
           </div>
 
@@ -245,8 +304,8 @@ export default function MatrixRegistration() {
             <div className="flex items-center gap-3">
               <Users className="size-5 text-gold" />
               <div>
-                <p className="text-2xl font-black text-ivory">{filteredStudents.length}</p>
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-ivory/48">Visible students</p>
+              <p className="text-2xl font-black text-ivory">{activeTab.cat === "SPECIAL" ? filteredEvents.length : filteredStudents.length}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-ivory/48">{activeTab.cat === "SPECIAL" ? "Team events" : "Visible students"}</p>
               </div>
             </div>
           </div>
@@ -274,7 +333,7 @@ export default function MatrixRegistration() {
 
           <div className="flex items-center gap-2 rounded-2xl border border-gold/20 bg-gold/10 px-3 py-2 text-xs font-bold text-navy">
             <AlertCircle className="size-4 text-gold" />
-            <span>Gold cells are selected. Muted cells are full or unavailable.</span>
+            <span>{activeTab.cat === "SPECIAL" ? "Special events are registered once for the full team." : "Gold cells are selected. Muted cells are full or unavailable."}</span>
           </div>
         </div>
       </section>
@@ -304,6 +363,27 @@ export default function MatrixRegistration() {
           <div className="flex h-full flex-col items-center justify-center text-center text-slatebrand">
             <Info className="mb-2 size-12 opacity-30" />
             <p className="text-sm font-bold text-navy">No programmes available for this category.</p>
+          </div>
+        ) : activeTab.cat === "SPECIAL" ? (
+          <div className="grid gap-3 overflow-y-auto p-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredEvents.map((event) => {
+              const isRegistered = participations.some((p) => p.event_id === event.id && p.team_id === teamId && p.student_id === null)
+              return (
+                <label key={event.id} className={cn("flex cursor-pointer items-center justify-between gap-4 rounded-3xl border p-4 transition", isRegistered ? "border-gold/40 bg-gold/12" : "border-navy/10 bg-ivory hover:bg-gold/6")}>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-black text-navy">{event.name}</div>
+                    <div className="mt-1 text-xs font-semibold text-slatebrand">Grade D Team Participation</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isRegistered}
+                    disabled={isLocked}
+                    onChange={(e) => handleTeamToggle(event.id, e.target.checked)}
+                    className="size-5 accent-[#D4AF37]"
+                  />
+                </label>
+              )
+            })}
           </div>
         ) : (
           <div className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-navy/18 scrollbar-track-transparent">

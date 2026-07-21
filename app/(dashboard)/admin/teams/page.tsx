@@ -25,6 +25,8 @@ interface TeamWithCounts extends Team {
 
 interface AppConfig {
   registration_open: boolean
+  on_stage_registration_open: boolean
+  off_stage_registration_open: boolean
 }
 
 function accessLabel(value: boolean | null) {
@@ -48,8 +50,9 @@ function accessClass(value: boolean | null) {
 export default function AdminTeams() {
   const [teams, setTeams] = useState<TeamWithCounts[]>([])
   const [loading, setLoading] = useState(true)
-  const [globalOpen, setGlobalOpen] = useState(false)
-  const [updatingGlobal, setUpdatingGlobal] = useState(false)
+  const [onStageOpen, setOnStageOpen] = useState(false)
+  const [offStageOpen, setOffStageOpen] = useState(false)
+  const [updatingGate, setUpdatingGate] = useState<"ON STAGE" | "OFF STAGE" | null>(null)
 
   const [editingTeam, setEditingTeam] = useState<TeamWithCounts | null>(null)
   const [viewingTeam, setViewingTeam] = useState<TeamWithCounts | null>(null)
@@ -60,9 +63,12 @@ export default function AdminTeams() {
 
   const loadData = async () => {
     try {
-      const { data: configData } = await supabase.from('app_config').select('registration_open').single()
+      const { data: configData } = await supabase.from('app_config').select('registration_open, on_stage_registration_open, off_stage_registration_open').single()
       const config = configData as unknown as AppConfig
-      if (config) setGlobalOpen(config.registration_open)
+      if (config) {
+        setOnStageOpen(config.on_stage_registration_open ?? config.registration_open)
+        setOffStageOpen(config.off_stage_registration_open ?? config.registration_open)
+      }
 
       const { data: teamsData, error } = await supabase.from('teams').select('*').order('name')
       if (error) throw error
@@ -87,19 +93,21 @@ export default function AdminTeams() {
     loadData()
   }, [])
 
-  const handleGlobalToggle = async (checked: boolean) => {
-    setUpdatingGlobal(true)
+  const handleCategoryGateToggle = async (category: "ON STAGE" | "OFF STAGE", checked: boolean) => {
+    setUpdatingGate(category)
     try {
+      const field = category === "ON STAGE" ? "on_stage_registration_open" : "off_stage_registration_open"
       const { error } = await (supabase.from('app_config') as any)
-        .update({ registration_open: checked })
+        .update({ [field]: checked })
         .eq('id', 1)
 
       if (error) throw error
-      setGlobalOpen(checked)
+      if (category === "ON STAGE") setOnStageOpen(checked)
+      else setOffStageOpen(checked)
     } catch (err) {
-      alert("Failed to update global settings")
+      alert("Failed to update registration gate")
     } finally {
-      setUpdatingGlobal(false)
+      setUpdatingGate(null)
     }
   }
 
@@ -176,42 +184,29 @@ export default function AdminTeams() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="eyebrow">Registration Status</div>
-              <h2 className="text-title mt-3 text-3xl text-navy">{globalOpen ? "Global Open" : "Global Locked"}</h2>
+              <h2 className="text-title mt-3 text-3xl text-navy">Category Locks</h2>
               <p className="mt-3 text-sm leading-6 text-slatebrand">
-                Teams set to global follow this main switch. Overrides can force individual team access.
+                Teams set to global follow these On Stage and Off Stage switches. Overrides can still force individual team access.
               </p>
             </div>
-            <div className={`grid size-12 place-items-center rounded-2xl ${globalOpen ? "bg-success/12 text-success" : "bg-destructive/12 text-destructive"}`}>
-              {globalOpen ? <ShieldCheck className="size-5" /> : <Lock className="size-5" />}
+            <div className={`grid size-12 place-items-center rounded-2xl ${onStageOpen || offStageOpen ? "bg-success/12 text-success" : "bg-destructive/12 text-destructive"}`}>
+              {onStageOpen || offStageOpen ? <ShieldCheck className="size-5" /> : <Lock className="size-5" />}
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col gap-4 rounded-3xl border border-navy/10 bg-ivory/70 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-sm font-bold text-navy">Main registration gate</div>
-              <div className={`mt-1 text-[11px] font-black uppercase tracking-[0.14em] ${globalOpen ? "text-success" : "text-destructive"}`}>
-                {globalOpen ? "Accepting registrations" : "Registration closed"}
-              </div>
-            </div>
-            <Button
-              type="button"
-              onClick={() => handleGlobalToggle(!globalOpen)}
-              disabled={updatingGlobal}
-              className={`h-11 min-w-36 rounded-2xl font-black shadow-none ${
-                globalOpen
-                  ? "bg-success text-ivory hover:bg-success/90"
-                  : "bg-destructive text-ivory hover:bg-destructive/90"
-              }`}
-            >
-              {updatingGlobal ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : globalOpen ? (
-                <Unlock className="size-4" />
-              ) : (
-                <Lock className="size-4" />
-              )}
-              {globalOpen ? "Unlocked" : "Locked"}
-            </Button>
+          <div className="mt-8 grid gap-3">
+            <CategoryGateButton
+              label="On Stage"
+              open={onStageOpen}
+              updating={updatingGate === "ON STAGE"}
+              onToggle={() => handleCategoryGateToggle("ON STAGE", !onStageOpen)}
+            />
+            <CategoryGateButton
+              label="Off Stage"
+              open={offStageOpen}
+              updating={updatingGate === "OFF STAGE"}
+              onToggle={() => handleCategoryGateToggle("OFF STAGE", !offStageOpen)}
+            />
           </div>
         </div>
       </section>
@@ -314,6 +309,38 @@ export default function AdminTeams() {
         open={isViewOpen}
         onOpenChange={setIsViewOpen}
       />
+    </div>
+  )
+}
+
+function CategoryGateButton({ label, open, updating, onToggle }: { label: string; open: boolean; updating: boolean; onToggle: () => void }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-3xl border border-navy/10 bg-ivory/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <div className="text-sm font-bold text-navy">{label} registration</div>
+        <div className={`mt-1 text-[11px] font-black uppercase tracking-[0.14em] ${open ? "text-success" : "text-destructive"}`}>
+          {open ? "Accepting registrations" : "Registration closed"}
+        </div>
+      </div>
+      <Button
+        type="button"
+        onClick={onToggle}
+        disabled={updating}
+        className={`h-11 min-w-36 rounded-2xl font-black shadow-none ${
+          open
+            ? "bg-success text-ivory hover:bg-success/90"
+            : "bg-destructive text-ivory hover:bg-destructive/90"
+        }`}
+      >
+        {updating ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : open ? (
+          <Unlock className="size-4" />
+        ) : (
+          <Lock className="size-4" />
+        )}
+        {open ? "Unlocked" : "Locked"}
+      </Button>
     </div>
   )
 }

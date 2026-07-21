@@ -12,10 +12,16 @@ import { Loader2, Save } from "lucide-react"
 
 interface GradeSetting {
   id: string
-  grade_type: 'A' | 'B' | 'C'
+  grade_type: 'A' | 'B' | 'C' | 'D'
   first_place: number
   second_place: number
   third_place: number
+}
+
+interface PerformanceGradeSetting {
+  id: string
+  grade_label: 'A+' | 'A' | 'B' | 'C'
+  points: number
 }
 
 interface Props {
@@ -28,6 +34,7 @@ export function GradeSettingsDialog({ open, onOpenChange, onSuccess }: Props) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<GradeSetting[]>([])
+  const [performanceSettings, setPerformanceSettings] = useState<PerformanceGradeSetting[]>([])
   const supabase = createClient()
 
   useEffect(() => {
@@ -36,8 +43,15 @@ export function GradeSettingsDialog({ open, onOpenChange, onSuccess }: Props) {
 
   async function loadSettings() {
     setLoading(true)
-    const { data } = await supabase.from('grade_settings').select('*').order('grade_type')
+    const [{ data }, { data: perfData }] = await Promise.all([
+      supabase.from('grade_settings').select('*').order('grade_type'),
+      supabase.from('performance_grade_settings').select('*').order('grade_label')
+    ])
     if (data) setSettings(data as GradeSetting[])
+    if (perfData) {
+      const order = ['A+', 'A', 'B', 'C']
+      setPerformanceSettings((perfData as PerformanceGradeSetting[]).sort((a, b) => order.indexOf(a.grade_label) - order.indexOf(b.grade_label)))
+    }
     setLoading(false)
   }
 
@@ -52,6 +66,11 @@ export function GradeSettingsDialog({ open, onOpenChange, onSuccess }: Props) {
             second_place: setting.second_place,
             third_place: setting.third_place
           })
+          .eq('id', setting.id)
+      }
+      for (const setting of performanceSettings) {
+        await (supabase.from('performance_grade_settings') as any)
+          .update({ points: setting.points })
           .eq('id', setting.id)
       }
       onSuccess()
@@ -71,18 +90,26 @@ export function GradeSettingsDialog({ open, onOpenChange, onSuccess }: Props) {
     setSettings(newSettings)
   }
 
+  const updatePerformanceVal = (index: number, val: string) => {
+    const newSettings = [...performanceSettings]
+    newSettings[index].points = parseInt(val) || 0
+    setPerformanceSettings(newSettings)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-[2rem] border-navy/10 bg-ivory sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="text-title text-xl text-navy">Scoring Configuration</DialogTitle>
-          <DialogDescription className="font-medium text-slatebrand">Adjust points awarded for each grade type.</DialogDescription>
+          <DialogDescription className="font-medium text-slatebrand">Adjust category place points and performance grade bonus points.</DialogDescription>
         </DialogHeader>
 
         {loading ? (
           <div className="flex h-40 items-center justify-center"><Loader2 className="animate-spin text-gold" /></div>
         ) : (
-          <div className="grid gap-6 py-4">
+          <div className="grid max-h-[65vh] gap-6 overflow-y-auto py-4 pr-1">
+            <div>
+              <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-navy">Category Points</h3>
             {settings.map((setting, idx) => (
               <div key={setting.id} className="grid grid-cols-4 items-center gap-4 border-b border-navy/10 pb-4 last:border-0 last:pb-0">
                 <div className="flex size-11 items-center justify-center rounded-2xl border border-gold/20 bg-gold/10 text-lg font-black text-gold">
@@ -117,6 +144,29 @@ export function GradeSettingsDialog({ open, onOpenChange, onSuccess }: Props) {
                 </div>
               </div>
             ))}
+            </div>
+
+            <div>
+              <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-navy">Performance Grade Points</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {performanceSettings.map((setting, idx) => (
+                  <div key={setting.id} className="flex items-center gap-3 rounded-2xl border border-navy/10 bg-mist p-3">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold/20 bg-gold/10 text-lg font-black text-gold">
+                      {setting.grade_label}
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Points</Label>
+                      <Input
+                        type="number"
+                        value={setting.points}
+                        onChange={(e) => updatePerformanceVal(idx, e.target.value)}
+                        className="h-10 rounded-2xl"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

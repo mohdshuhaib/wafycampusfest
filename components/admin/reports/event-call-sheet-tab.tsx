@@ -24,7 +24,7 @@ interface Event {
     name: string;
     event_code: string;
     category: string;
-    grade_type?: 'A' | 'B' | 'C';
+    grade_type?: 'A' | 'B' | 'C' | 'D';
     max_participants_per_team: number
 }
 
@@ -389,7 +389,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         yPos += 2;
 
         // 4. Table Prep & Dynamic Sizing
-        const isCategoryC = event.grade_type === 'C';
+        const isCategoryC = event.grade_type === 'D';
         let effectiveCount = 0;
 
         if (isCategoryC) {

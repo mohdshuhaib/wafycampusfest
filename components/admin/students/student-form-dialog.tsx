@@ -30,7 +30,20 @@ interface StudentFormDialogProps {
   onSuccess: () => void
 }
 
-const CLASSES = ['FOUNDATION', 'TH-1', 'TH-2', 'AL-1', 'AL-2', 'AL-3', 'AL-4']
+const CLASSES = [
+  'AQEEDA 1',
+  'AQEEDA 2',
+  'HALARA 1',
+  'HALARA 2',
+  'KVS 1',
+  'KVS 2',
+  'LUGA 1',
+  'LUGA 2',
+  'MUAMALA 1',
+  'MUAMALA 2',
+  'USRA 1',
+  'USRA 2',
+]
 
 export function StudentFormDialog({ open, onOpenChange, student, teams, onSuccess }: StudentFormDialogProps) {
   const [loading, setLoading] = useState(false)
@@ -40,7 +53,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
   const [formData, setFormData] = useState({
     name: "",
     chest_no: "",
-    class_grade: "FOUNDATION",
+    class_grade: "AQEEDA 1",
     image_link: "",
     section: "Senior",
     team_id: ""
@@ -52,7 +65,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
       setFormData({
         name: student.name,
         chest_no: student.chest_no || "",
-        class_grade: student.class_grade || "FOUNDATION",
+        class_grade: student.class_grade || "AQEEDA 1",
         image_link: student.image_link || "",
         section: "Senior",
         team_id: student.team_id
@@ -62,7 +75,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
       setFormData({
         name: "",
         chest_no: "",
-        class_grade: "FOUNDATION",
+        class_grade: "AQEEDA 1",
         image_link: "",
         section: "Senior",
         team_id: ""

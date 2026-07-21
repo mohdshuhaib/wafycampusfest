@@ -69,7 +69,7 @@ export default function LeaderboardPage() {
           </div>
           <div>
             <p className="text-sm font-bold text-navy">Scoring note</p>
-            <p className="text-xs font-medium text-slatebrand">Team totals include earned points minus penalties; individual rankings exclude Grade C group items.</p>
+            <p className="text-xs font-medium text-slatebrand">Team totals include earned points minus penalties; individual rankings exclude Special Grade D team items.</p>
           </div>
         </div>
         <Button variant="secondary" onClick={() => router.push("/admin/scoring")}>

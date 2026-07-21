@@ -41,23 +41,25 @@ interface Event {
   id: string
   name: string
   event_code: string
-  category: 'OFF STAGE' | 'ON STAGE'
+  category: 'OFF STAGE' | 'ON STAGE' | 'GENERAL' | 'SPECIAL'
   max_participants_per_team: number
   description: string | null
-  grade_type: 'A' | 'B' | 'C'
+  grade_type: 'A' | 'B' | 'C' | 'D'
   applicable_section: string[]
 }
 
 function categoryClass(category: Event["category"]) {
-  return category === "ON STAGE"
-    ? "border-gold/35 bg-gold/16 text-navy"
-    : "border-deepblue/15 bg-deepblue/10 text-deepblue"
+  if (category === "ON STAGE") return "border-gold/35 bg-gold/16 text-navy"
+  if (category === "OFF STAGE") return "border-deepblue/15 bg-deepblue/10 text-deepblue"
+  if (category === "GENERAL") return "border-success/20 bg-success/10 text-success"
+  return "border-destructive/20 bg-destructive/10 text-destructive"
 }
 
 function gradeClass(grade: Event["grade_type"]) {
   if (grade === "A") return "border-gold/35 bg-gold/16 text-navy"
   if (grade === "B") return "border-navy/12 bg-navy/7 text-navy"
-  return "border-[#c98743]/30 bg-[#c98743]/12 text-[#8a5525]"
+  if (grade === "C") return "border-[#c98743]/30 bg-[#c98743]/12 text-[#8a5525]"
+  return "border-destructive/20 bg-destructive/10 text-destructive"
 }
 
 export default function AdminEvents() {
@@ -148,6 +150,8 @@ export default function AdminEvents() {
   const hasActiveFilters = filterCategory !== "all" || filterGrade !== "all" || searchQuery !== ""
   const onStageCount = events.filter(event => event.category === "ON STAGE").length
   const offStageCount = events.filter(event => event.category === "OFF STAGE").length
+  const generalCount = events.filter(event => event.category === "GENERAL").length
+  const specialCount = events.filter(event => event.category === "SPECIAL").length
   const totalCapacity = events.reduce((sum, event) => sum + (event.max_participants_per_team || 0), 0)
 
   if (loading) {
@@ -182,7 +186,7 @@ export default function AdminEvents() {
               <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ivory/45">Total Events</div>
             </div>
             <div className="rounded-2xl border border-ivory/10 bg-ivory/8 p-4">
-              <div className="text-title text-2xl text-ivory">{onStageCount}/{offStageCount}</div>
+              <div className="text-title text-2xl text-ivory">{onStageCount}/{offStageCount}/{generalCount}/{specialCount}</div>
               <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ivory/45">Stage Mix</div>
             </div>
             <div className="rounded-2xl border border-ivory/10 bg-ivory/8 p-4">
@@ -216,6 +220,8 @@ export default function AdminEvents() {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="ON STAGE">On Stage</SelectItem>
                   <SelectItem value="OFF STAGE">Off Stage</SelectItem>
+                  <SelectItem value="GENERAL">General</SelectItem>
+                  <SelectItem value="SPECIAL">Special</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -229,6 +235,7 @@ export default function AdminEvents() {
                   <SelectItem value="A">Grade A</SelectItem>
                   <SelectItem value="B">Grade B</SelectItem>
                   <SelectItem value="C">Grade C</SelectItem>
+                  <SelectItem value="D">Grade D</SelectItem>
                 </SelectContent>
               </Select>
 

@@ -16,10 +16,10 @@ interface Event {
   id: string
   name: string
   event_code: string
-  category: 'OFF STAGE' | 'ON STAGE'
+  category: 'OFF STAGE' | 'ON STAGE' | 'GENERAL' | 'SPECIAL'
   max_participants_per_team: number
   description: string | null
-  grade_type: 'A' | 'B' | 'C'
+  grade_type: 'A' | 'B' | 'C' | 'D'
   applicable_section: string[]
 }
 
@@ -30,8 +30,8 @@ interface EventFormDialogProps {
   onSuccess: () => void
 }
 
-const GRADES = ['A', 'B', 'C']
-const CATEGORIES = ['ON STAGE', 'OFF STAGE']
+const GRADES = ['A', 'B', 'C', 'D']
+const CATEGORIES = ['ON STAGE', 'OFF STAGE', 'GENERAL', 'SPECIAL']
 
 export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventFormDialogProps) {
   const [loading, setLoading] = useState(false)
@@ -77,6 +77,15 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
 
   const supabase = createClient()
 
+  const handleCategoryChange = (category: string) => {
+    setFormData({
+      ...formData,
+      category,
+      grade_type: category === "GENERAL" ? "C" : category === "SPECIAL" ? "D" : formData.grade_type,
+      max_participants_per_team: category === "SPECIAL" ? 1 : formData.max_participants_per_team,
+    })
+  }
+
   const handleSubmit = async () => {
     setError(null)
     if (!formData.name || !formData.event_code) {
@@ -102,8 +111,8 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
         name: formData.name,
         event_code: formData.event_code,
         category: formData.category,
-        max_participants_per_team: formData.max_participants_per_team,
-        grade_type: formData.grade_type,
+        max_participants_per_team: formData.category === "SPECIAL" ? 1 : formData.max_participants_per_team,
+        grade_type: formData.category === "GENERAL" ? "C" : formData.category === "SPECIAL" ? "D" : formData.grade_type,
         applicable_section: ["Senior"],
         description: formData.description
       }
@@ -171,7 +180,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                 <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Category</Label>
                 <Select
                     value={formData.category}
-                    onValueChange={v => setFormData({...formData, category: v})}
+                    onValueChange={handleCategoryChange}
                 >
                     <SelectTrigger>
                         <SelectValue />
@@ -195,6 +204,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                 <Input
                     type="number"
                     min={1}
+                    disabled={formData.category === "SPECIAL"}
                     value={formData.max_participants_per_team}
                     onChange={e => setFormData({...formData, max_participants_per_team: parseInt(e.target.value) || 1})}
                 />
@@ -202,7 +212,8 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
             <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Grade Type</Label>
                 <Select
-                    value={formData.grade_type}
+                    value={formData.category === "GENERAL" ? "C" : formData.category === "SPECIAL" ? "D" : formData.grade_type}
+                    disabled={formData.category === "GENERAL" || formData.category === "SPECIAL"}
                     onValueChange={v => setFormData({...formData, grade_type: v})}
                 >
                     <SelectTrigger>

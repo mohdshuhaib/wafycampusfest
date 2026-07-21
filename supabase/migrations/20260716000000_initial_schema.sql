@@ -14,7 +14,7 @@ exception when duplicate_object then null;
 end $$;
 
 do $$ begin
-  create type public.event_category as enum ('ON STAGE', 'OFF STAGE');
+  create type public.event_category as enum ('ON STAGE', 'OFF STAGE', 'GENERAL', 'SPECIAL');
 exception when duplicate_object then null;
 end $$;
 
@@ -68,7 +68,7 @@ create table if not exists public.events (
   category public.event_category not null,
   description text,
   max_participants_per_team integer not null default 2 check (max_participants_per_team > 0),
-  grade_type text check (grade_type in ('A', 'B', 'C')),
+  grade_type text check (grade_type in ('A', 'B', 'C', 'D')),
   applicable_section text[] not null default array[]::text[],
   created_at timestamptz not null default now(),
   constraint events_applicable_section_values check (
@@ -84,7 +84,7 @@ create table if not exists public.participations (
   status public.participation_status not null default 'registered',
   result_position text check (result_position in ('FIRST', 'SECOND', 'THIRD')),
   points_earned integer not null default 0 check (points_earned >= 0),
-  performance_grade text check (performance_grade in ('A', 'B', 'C', 'NONE')),
+  performance_grade text check (performance_grade in ('A+', 'A', 'B', 'C', 'NONE')),
   attendance_status text not null default 'pending' check (attendance_status in ('pending', 'present', 'absent')),
   created_at timestamptz not null default now()
 );
@@ -99,7 +99,7 @@ create unique index if not exists participations_unique_team_event_result
 
 create table if not exists public.grade_settings (
   id uuid primary key default gen_random_uuid(),
-  grade_type text not null unique check (grade_type in ('A', 'B', 'C')),
+  grade_type text not null unique check (grade_type in ('A', 'B', 'C', 'D')),
   first_place integer not null default 0 check (first_place >= 0),
   second_place integer not null default 0 check (second_place >= 0),
   third_place integer not null default 0 check (third_place >= 0)
@@ -113,9 +113,17 @@ create table if not exists public.section_limits (
   unique (section, category)
 );
 
+create table if not exists public.performance_grade_settings (
+  id uuid primary key default gen_random_uuid(),
+  grade_label text not null unique check (grade_label in ('A+', 'A', 'B', 'C')),
+  points integer not null default 0 check (points >= 0)
+);
+
 create table if not exists public.app_config (
   id integer primary key default 1 check (id = 1),
-  registration_open boolean not null default false
+  registration_open boolean not null default false,
+  on_stage_registration_open boolean not null default false,
+  off_stage_registration_open boolean not null default false
 );
 
 create table if not exists public.site_assets (
@@ -187,6 +195,28 @@ as $$
   where t.id = target_team_id and c.id = 1
 $$;
 
+create or replace function public.registration_is_open_for_event(target_team_id uuid, target_event_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    t.access_override,
+    case
+      when e.category = 'ON STAGE'::public.event_category then c.on_stage_registration_open
+      when e.category = 'OFF STAGE'::public.event_category then c.off_stage_registration_open
+      else c.registration_open
+    end,
+    false
+  )
+  from public.teams t
+  cross join public.app_config c
+  join public.events e on e.id = target_event_id
+  where t.id = target_team_id and c.id = 1
+$$;
+
 create or replace function public.enforce_participation_team()
 returns trigger
 language plpgsql
@@ -232,6 +262,7 @@ alter table public.events enable row level security;
 alter table public.participations enable row level security;
 alter table public.grade_settings enable row level security;
 alter table public.section_limits enable row level security;
+alter table public.performance_grade_settings enable row level security;
 alter table public.app_config enable row level security;
 alter table public.site_assets enable row level security;
 alter table public.finance_transactions enable row level security;
@@ -298,7 +329,7 @@ on public.participations for insert to authenticated
 with check (
   public.current_user_role() = 'captain'
   and team_id = public.current_user_team_id()
-  and public.registration_is_open_for_team(team_id)
+  and public.registration_is_open_for_event(team_id, event_id)
 );
 
 drop policy if exists "Captains remove own registrations while registration is open" on public.participations;
@@ -307,7 +338,7 @@ on public.participations for delete to authenticated
 using (
   public.current_user_role() = 'captain'
   and team_id = public.current_user_team_id()
-  and public.registration_is_open_for_team(team_id)
+  and public.registration_is_open_for_event(team_id, event_id)
 );
 
 drop policy if exists "Authenticated users can read grade settings" on public.grade_settings;
@@ -329,6 +360,17 @@ using (true);
 drop policy if exists "Admins manage section limits" on public.section_limits;
 create policy "Admins manage section limits"
 on public.section_limits for all to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "Authenticated users can read performance grade settings" on public.performance_grade_settings;
+create policy "Authenticated users can read performance grade settings"
+on public.performance_grade_settings for select to authenticated
+using (true);
+
+drop policy if exists "Admins manage performance grade settings" on public.performance_grade_settings;
+create policy "Admins manage performance grade settings"
+on public.performance_grade_settings for all to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
@@ -388,8 +430,17 @@ insert into public.grade_settings (grade_type, first_place, second_place, third_
 values
   ('A', 0, 0, 0),
   ('B', 0, 0, 0),
-  ('C', 0, 0, 0)
+  ('C', 0, 0, 0),
+  ('D', 0, 0, 0)
 on conflict (grade_type) do nothing;
+
+insert into public.performance_grade_settings (grade_label, points)
+values
+  ('A+', 0),
+  ('A', 5),
+  ('B', 3),
+  ('C', 1)
+on conflict (grade_label) do nothing;
 
 insert into public.section_limits (section, category, limit_count)
 values

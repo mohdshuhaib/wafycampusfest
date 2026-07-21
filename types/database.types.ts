@@ -13,14 +13,20 @@ export interface Database {
         Row: {
           id: number
           registration_open: boolean
+          on_stage_registration_open: boolean
+          off_stage_registration_open: boolean
         }
         Insert: {
           id?: number
           registration_open?: boolean
+          on_stage_registration_open?: boolean
+          off_stage_registration_open?: boolean
         }
         Update: {
           id?: number
           registration_open?: boolean
+          on_stage_registration_open?: boolean
+          off_stage_registration_open?: boolean
         }
       }
       finance_transactions: {
@@ -58,21 +64,21 @@ export interface Database {
       grade_settings: {
         Row: {
           id: string
-          grade_type: 'A' | 'B' | 'C'
+          grade_type: 'A' | 'B' | 'C' | 'D'
           first_place: number
           second_place: number
           third_place: number
         }
         Insert: {
           id?: string
-          grade_type: 'A' | 'B' | 'C'
+          grade_type: 'A' | 'B' | 'C' | 'D'
           first_place?: number
           second_place?: number
           third_place?: number
         }
         Update: {
           id?: string
-          grade_type?: 'A' | 'B' | 'C'
+          grade_type?: 'A' | 'B' | 'C' | 'D'
           first_place?: number
           second_place?: number
           third_place?: number
@@ -99,6 +105,23 @@ export interface Database {
           team_id?: string | null
           full_name?: string | null
           created_at?: string
+        }
+      }
+      performance_grade_settings: {
+        Row: {
+          id: string
+          grade_label: 'A+' | 'A' | 'B' | 'C'
+          points: number
+        }
+        Insert: {
+          id?: string
+          grade_label: 'A+' | 'A' | 'B' | 'C'
+          points?: number
+        }
+        Update: {
+          id?: string
+          grade_label?: 'A+' | 'A' | 'B' | 'C'
+          points?: number
         }
       }
       teams: {
@@ -167,9 +190,9 @@ export interface Database {
           id: string
           name: string
           event_code: string | null
-          category: 'OFF STAGE' | 'ON STAGE'
+          category: 'OFF STAGE' | 'ON STAGE' | 'GENERAL' | 'SPECIAL'
           max_participants_per_team: number
-          grade_type: 'A' | 'B' | 'C' | null
+          grade_type: 'A' | 'B' | 'C' | 'D' | null
           applicable_section: string[]
           description: string | null
           created_at: string
@@ -178,9 +201,9 @@ export interface Database {
           id?: string
           name: string
           event_code?: string | null
-          category: 'OFF STAGE' | 'ON STAGE'
+          category: 'OFF STAGE' | 'ON STAGE' | 'GENERAL' | 'SPECIAL'
           max_participants_per_team?: number
-          grade_type?: 'A' | 'B' | 'C' | null
+          grade_type?: 'A' | 'B' | 'C' | 'D' | null
           applicable_section?: string[]
           description?: string | null
           created_at?: string
@@ -189,9 +212,9 @@ export interface Database {
           id?: string
           name?: string
           event_code?: string | null
-          category?: 'OFF STAGE' | 'ON STAGE'
+          category?: 'OFF STAGE' | 'ON STAGE' | 'GENERAL' | 'SPECIAL'
           max_participants_per_team?: number
-          grade_type?: 'A' | 'B' | 'C' | null
+          grade_type?: 'A' | 'B' | 'C' | 'D' | null
           applicable_section?: string[]
           description?: string | null
           created_at?: string
@@ -206,7 +229,7 @@ export interface Database {
           status: 'registered' | 'completed' | 'disqualified' | 'winner'
           result_position: 'FIRST' | 'SECOND' | 'THIRD' | null
           points_earned: number
-          performance_grade: 'A' | 'B' | 'C' | 'NONE' | null
+          performance_grade: 'A+' | 'A' | 'B' | 'C' | 'NONE' | null
           attendance_status: 'pending' | 'present' | 'absent'
           created_at: string
         }
@@ -218,7 +241,7 @@ export interface Database {
           status?: 'registered' | 'completed' | 'disqualified' | 'winner'
           result_position?: 'FIRST' | 'SECOND' | 'THIRD' | null
           points_earned?: number
-          performance_grade?: 'A' | 'B' | 'C' | 'NONE' | null
+          performance_grade?: 'A+' | 'A' | 'B' | 'C' | 'NONE' | null
           attendance_status?: 'pending' | 'present' | 'absent'
           created_at?: string
         }
@@ -230,7 +253,7 @@ export interface Database {
           status?: 'registered' | 'completed' | 'disqualified' | 'winner'
           result_position?: 'FIRST' | 'SECOND' | 'THIRD' | null
           points_earned?: number
-          performance_grade?: 'A' | 'B' | 'C' | 'NONE' | null
+          performance_grade?: 'A+' | 'A' | 'B' | 'C' | 'NONE' | null
           attendance_status?: 'pending' | 'present' | 'absent'
           created_at?: string
         }
@@ -239,19 +262,19 @@ export interface Database {
         Row: {
           id: string
           section: string
-          category: 'ON STAGE' | 'OFF STAGE'
+          category: 'ON STAGE' | 'OFF STAGE' | 'GENERAL' | 'SPECIAL'
           limit_count: number
         }
         Insert: {
           id?: string
           section: string
-          category: 'ON STAGE' | 'OFF STAGE'
+          category: 'ON STAGE' | 'OFF STAGE' | 'GENERAL' | 'SPECIAL'
           limit_count?: number
         }
         Update: {
           id?: string
           section?: string
-          category?: 'ON STAGE' | 'OFF STAGE'
+          category?: 'ON STAGE' | 'OFF STAGE' | 'GENERAL' | 'SPECIAL'
           limit_count?: number
         }
       }

@@ -19,13 +19,14 @@ interface Event {
   id: string
   name: string
   category: string
+  grade_type: string | null
   max_participants_per_team: number
   applicable_section: string[] | null
 }
 
 interface Participation {
   id: string
-  student_id: string
+  student_id: string | null
   event_id: string
   team_id: string
   status: string
@@ -45,6 +46,8 @@ interface Props {
 const TABS = [
   { id: "SENIOR_ON", label: "Senior On", section: "Senior", cat: "ON STAGE" },
   { id: "SENIOR_OFF", label: "Senior Off", section: "Senior", cat: "OFF STAGE" },
+  { id: "GENERAL", label: "General", section: "Senior", cat: "GENERAL" },
+  { id: "SPECIAL", label: "Special", section: "Senior", cat: "SPECIAL" },
 ]
 
 export function ReplacementMatrix({ teamId, teamName }: Props) {
@@ -96,29 +99,34 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
       )
     }
 
-    return list.filter((s) => s.section === "Senior")
+    return activeTab.cat === "SPECIAL" ? [] : list.filter((s) => s.section === "Senior")
   }, [students, activeTab, searchQuery])
 
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       if (e.category !== activeTab.cat) return false
+      if (activeTab.cat === "GENERAL" && e.grade_type !== "C") return false
+      if (activeTab.cat === "SPECIAL" && e.grade_type !== "D") return false
       if (!e.applicable_section || e.applicable_section.length === 0) return false
       return e.applicable_section.includes(activeTab.section)
     })
   }, [events, activeTab])
 
   const getLimitStatus = (student: Student) => {
-    const limitRule = limits.find((l) => l.section === activeTab.section && l.category === activeTab.cat)
-    const limit = limitRule ? limitRule.limit_count : 100
-
-    const count = participations.filter((p) => {
+    const countByCategory = (category: string) => participations.filter((p) => {
       const ev = events.find((e) => e.id === p.event_id)
       if (!ev) return false
-      const isTabSectionEvent = ev.applicable_section?.includes(activeTab.section)
-      return p.student_id === student.id && isTabSectionEvent && ev.category === activeTab.cat
+      return p.student_id === student.id && ev.category === category
     }).length
 
-    return { count, limit, isFull: count >= limit, remaining: limit - count }
+    const currentCount = countByCategory(activeTab.cat)
+    const onOffTotal = countByCategory("ON STAGE") + countByCategory("OFF STAGE")
+    const limit = activeTab.cat === "GENERAL" ? 2 : 4
+    const totalLimit = activeTab.cat === "GENERAL" ? 2 : 6
+    const totalCount = activeTab.cat === "GENERAL" ? currentCount : onOffTotal
+    const isFull = currentCount >= limit || totalCount >= totalLimit
+
+    return { count: currentCount, limit, isFull, remaining: Math.max(0, Math.min(limit - currentCount, totalLimit - totalCount)) }
   }
 
   const handleToggle = async (studentId: string, eventId: string, isChecked: boolean) => {
@@ -142,7 +150,10 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
     const { isFull, limit } = getLimitStatus(student)
 
     if (isFull) {
-      alert(`Limit Reached! Maximum ${limit} events allowed for Senior ${activeTab.cat}.`)
+      alert(activeTab.cat === "GENERAL"
+        ? "Limit Reached! A student can participate in only 2 General events."
+        : "Limit Reached! A student can participate in 6 total On/Off events, with max 4 in either On Stage or Off Stage."
+      )
       return
     }
 
@@ -174,6 +185,34 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
     if (error) {
       setParticipations((prev) => prev.filter((p) => p.id !== tempId))
       alert("Error adding: " + error.message)
+    } else {
+      setParticipations((prev) => prev.map((p) => p.id === tempId ? inserted : p))
+    }
+  }
+
+  const handleTeamToggle = async (eventId: string, isChecked: boolean) => {
+    if (!teamId) return
+
+    if (!isChecked) {
+      setParticipations((prev) => prev.filter((p) => !(p.student_id === null && p.event_id === eventId && p.team_id === teamId)))
+      await supabase.from("participations").delete().match({ event_id: eventId, team_id: teamId }).is("student_id", null)
+      return
+    }
+
+    const tempId = Math.random().toString()
+    const newPart = { id: tempId, student_id: null, event_id: eventId, team_id: teamId, status: "registered" } as Participation
+    setParticipations((prev) => [...prev, newPart])
+
+    const { data: inserted, error } = await (supabase.from("participations") as any).insert({
+      student_id: null,
+      event_id: eventId,
+      team_id: teamId,
+      status: "registered",
+    }).select().single()
+
+    if (error) {
+      setParticipations((prev) => prev.filter((p) => p.id !== tempId))
+      alert("Error adding team participation: " + error.message)
     } else {
       setParticipations((prev) => prev.map((p) => p.id === tempId ? inserted : p))
     }
@@ -216,7 +255,7 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
 
           <div className="flex items-center gap-2 rounded-2xl border border-gold/20 bg-gold/10 px-3 py-2 text-xs font-bold text-navy">
             <AlertCircle className="size-4 text-gold" />
-            <span>Committee mode follows the same participant limits as captain registration.</span>
+            <span>{activeTab.cat === "SPECIAL" ? "Special events are registered once for the full team." : "Committee mode follows the same participant limits as captain registration."}</span>
           </div>
         </div>
 
@@ -246,6 +285,26 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
           <div className="flex h-full flex-col items-center justify-center text-center text-slatebrand">
             <Info className="mb-2 size-12 opacity-30" />
             <p className="text-sm font-bold text-navy">No programmes available for this category.</p>
+          </div>
+        ) : activeTab.cat === "SPECIAL" ? (
+          <div className="grid gap-3 overflow-y-auto p-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredEvents.map((event) => {
+              const isRegistered = participations.some((p) => p.event_id === event.id && p.team_id === teamId && p.student_id === null)
+              return (
+                <label key={event.id} className={cn("flex cursor-pointer items-center justify-between gap-4 rounded-3xl border p-4 transition", isRegistered ? "border-gold/40 bg-gold/12" : "border-navy/10 bg-ivory hover:bg-gold/6")}>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-black text-navy">{event.name}</div>
+                    <div className="mt-1 text-xs font-semibold text-slatebrand">Grade D Team Participation</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isRegistered}
+                    onChange={(e) => handleTeamToggle(event.id, e.target.checked)}
+                    className="size-5 accent-[#D4AF37]"
+                  />
+                </label>
+              )
+            })}
           </div>
         ) : (
           <div className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-navy/18 scrollbar-track-transparent">
