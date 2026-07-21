@@ -88,11 +88,13 @@ export default function CaptainParticipations() {
       processGroupedData(participations as any as RawParticipation[])
 
       const { data: assetData } = await (supabase.from("site_assets") as any)
-        .select("value")
-        .eq("key", "admit_card_header")
-        .single()
+        .select("key, value")
+        .in("key", ["participation_card_logo", "admit_card_header"])
 
-      if (assetData) setHeaderImageUrl(assetData.value)
+      const assets = (assetData || []) as { key: string; value: string }[]
+      const headerAsset = assets.find((asset) => asset.key === "participation_card_logo")
+        || assets.find((asset) => asset.key === "admit_card_header")
+      if (headerAsset) setHeaderImageUrl(headerAsset.value)
     } catch (err) {
       console.error("Error fetching data:", err)
     } finally {

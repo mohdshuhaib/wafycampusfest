@@ -86,12 +86,14 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         // Fetch Header Image
         const { data: assetData } = await supabase
             .from('site_assets')
-            .select('value')
-            .eq('key', 'score_sheet_header')
-            .single()
+            .select('key, value')
+            .in('key', ['event_call_sheet_logo', 'score_sheet_header'])
 
-        if (assetData && typeof assetData === 'object' && 'value' in assetData) {
-            setHeaderImage((assetData as { value: string }).value)
+        if (assetData) {
+            const assets = assetData as unknown as { key: string; value: string }[]
+            const headerAsset = assets.find((asset) => asset.key === 'event_call_sheet_logo')
+                || assets.find((asset) => asset.key === 'score_sheet_header')
+            if (headerAsset) setHeaderImage(headerAsset.value)
         }
 
         // Fetch Completion Status

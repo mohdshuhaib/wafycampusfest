@@ -31,6 +31,11 @@ interface SiteAsset {
   updated_at: string
 }
 
+const PARTICIPATION_CARD_LOGO_KEY = "participation_card_logo"
+const EVENT_CALL_SHEET_LOGO_KEY = "event_call_sheet_logo"
+const LEGACY_PARTICIPATION_CARD_LOGO_KEY = "admit_card_header"
+const LEGACY_EVENT_CALL_SHEET_LOGO_KEY = "score_sheet_header"
+
 export default function AssetsManagePage() {
   const [loading, setLoading] = useState(true)
   const [handbookLink, setHandbookLink] = useState("")
@@ -58,15 +63,23 @@ export default function AssetsManagePage() {
 
         const { data, error } = await (supabase.from("site_assets") as any)
           .select("*")
-          .in("key", ["rulebook_link", "admit_card_header", "score_sheet_header"])
+          .in("key", [
+            "rulebook_link",
+            PARTICIPATION_CARD_LOGO_KEY,
+            EVENT_CALL_SHEET_LOGO_KEY,
+            LEGACY_PARTICIPATION_CARD_LOGO_KEY,
+            LEGACY_EVENT_CALL_SHEET_LOGO_KEY,
+          ])
 
         if (error) throw error
 
         if (data) {
           const assets = data as SiteAsset[]
           const linkAsset = assets.find((asset) => asset.key === "rulebook_link")
-          const imageAsset = assets.find((asset) => asset.key === "admit_card_header")
-          const scoreSheetAsset = assets.find((asset) => asset.key === "score_sheet_header")
+          const imageAsset = assets.find((asset) => asset.key === PARTICIPATION_CARD_LOGO_KEY)
+            || assets.find((asset) => asset.key === LEGACY_PARTICIPATION_CARD_LOGO_KEY)
+          const scoreSheetAsset = assets.find((asset) => asset.key === EVENT_CALL_SHEET_LOGO_KEY)
+            || assets.find((asset) => asset.key === LEGACY_EVENT_CALL_SHEET_LOGO_KEY)
 
           if (linkAsset) setHandbookLink(linkAsset.value)
           if (imageAsset) setHeaderImageUrl(imageAsset.value)
@@ -98,8 +111,14 @@ export default function AssetsManagePage() {
       setUpdatingLink(true)
 
       const { error } = await (supabase.from("site_assets") as any)
-        .update({ value: handbookLink, updated_at: new Date().toISOString() })
-        .eq("key", "rulebook_link")
+        .upsert({
+          key: "rulebook_link",
+          label: "Event Handbook",
+          type: "link",
+          value: handbookLink,
+          description: "Captain rulebook or handbook link.",
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "key" })
 
       if (error) throw error
       toast.success("Handbook link updated successfully")
@@ -257,8 +276,14 @@ export default function AssetsManagePage() {
         .getPublicUrl(fileName)
 
       const { error: dbError } = await (supabase.from("site_assets") as any)
-        .update({ value: publicUrl, updated_at: new Date().toISOString() })
-        .eq("key", "admit_card_header")
+        .upsert({
+          key: PARTICIPATION_CARD_LOGO_KEY,
+          label: "Participation Card Logo",
+          type: "image",
+          value: publicUrl,
+          description: "Logo or banner used in generated participation/admit cards.",
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "key" })
 
       if (dbError) throw dbError
 
@@ -311,8 +336,14 @@ export default function AssetsManagePage() {
         .getPublicUrl(fileName)
 
       const { error: dbError } = await (supabase.from("site_assets") as any)
-        .update({ value: publicUrl, updated_at: new Date().toISOString() })
-        .eq("key", "score_sheet_header")
+        .upsert({
+          key: EVENT_CALL_SHEET_LOGO_KEY,
+          label: "Event Call Sheet Logo",
+          type: "image",
+          value: publicUrl,
+          description: "Logo or banner used in generated call sheet and judgment PDFs.",
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "key" })
 
       if (dbError) throw dbError
 
