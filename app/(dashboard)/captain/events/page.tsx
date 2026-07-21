@@ -140,9 +140,12 @@ export default function MatrixRegistration() {
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
-      if (event.category !== activeTab.cat) return false
       if (activeTab.cat === "GENERAL" && event.grade_type !== "C") return false
       if (activeTab.cat === "SPECIAL" && event.grade_type !== "D") return false
+      if (activeTab.cat !== "GENERAL" && activeTab.cat !== "SPECIAL") {
+        if (event.category !== activeTab.cat) return false
+        if (event.grade_type === "C" || event.grade_type === "D") return false
+      }
       if (!event.applicable_section || event.applicable_section.length === 0) return false
       return event.applicable_section.includes(activeTab.section)
     })
@@ -152,7 +155,9 @@ export default function MatrixRegistration() {
     const countByCategory = (category: string) => participations.filter((participation) => {
       const event = events.find((item) => item.id === participation.event_id)
       if (!event) return false
-      return participation.student_id === student.id && event.category === category
+      if (participation.student_id !== student.id) return false
+      if (category === "GENERAL") return event.grade_type === "C"
+      return event.category === category && event.grade_type !== "C" && event.grade_type !== "D"
     }).length
 
     const onCount = countByCategory("ON STAGE")
@@ -285,7 +290,7 @@ export default function MatrixRegistration() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] flex-col gap-5 overflow-hidden pb-20 md:pb-4">
+    <div className="space-y-5 pb-20 md:pb-4">
       <section className="surface-dark relative shrink-0 overflow-hidden rounded-[2rem] p-5 sm:p-6">
 
         <div className="relative grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
@@ -358,14 +363,14 @@ export default function MatrixRegistration() {
         </div>
       </div>
 
-      <section className={cn("relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-navy/10 bg-ivory shadow-sm", isLocked && "opacity-70 grayscale")}>
+      <section className={cn("relative rounded-3xl border border-navy/10 bg-ivory shadow-sm", isLocked && "opacity-70 grayscale")}>
         {filteredEvents.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-center text-slatebrand">
+          <div className="flex min-h-80 flex-col items-center justify-center text-center text-slatebrand">
             <Info className="mb-2 size-12 opacity-30" />
             <p className="text-sm font-bold text-navy">No programmes available for this category.</p>
           </div>
         ) : activeTab.cat === "SPECIAL" ? (
-          <div className="grid gap-3 overflow-y-auto p-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredEvents.map((event) => {
               const isRegistered = participations.some((p) => p.event_id === event.id && p.team_id === teamId && p.student_id === null)
               return (
@@ -386,16 +391,21 @@ export default function MatrixRegistration() {
             })}
           </div>
         ) : (
-          <div className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-navy/18 scrollbar-track-transparent">
-            <table className="w-full border-collapse bg-ivory text-sm">
+          <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-navy/18 scrollbar-track-transparent">
+            <table className="w-max min-w-full border-collapse bg-ivory text-sm">
               <thead className="sticky top-0 z-20 bg-mist shadow-sm">
                 <tr>
                   <th className="sticky left-0 top-0 z-30 min-w-[150px] border-b border-r border-navy/10 bg-mist p-3 text-left shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] sm:min-w-64">
                     <div className="flex flex-col gap-1">
                       <span className="text-sm font-black text-navy">Student</span>
-                      <span className="hidden text-[10px] font-black uppercase tracking-[0.12em] text-slatebrand sm:block">
-                        {activeTab.section} / {activeTab.cat}
-                      </span>
+                      <div className="mt-1 flex max-w-[8rem] flex-wrap gap-1">
+                        <span className="rounded-full bg-navy/7 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-slatebrand">
+                          {activeTab.section}
+                        </span>
+                        <span className="rounded-full bg-gold/12 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-navy">
+                          {activeTab.cat}
+                        </span>
+                      </div>
                     </div>
                   </th>
 
@@ -405,12 +415,12 @@ export default function MatrixRegistration() {
                     const isFull = count >= limit
 
                     return (
-                      <th key={event.id} className="h-44 min-w-[72px] border-b border-l border-navy/10 bg-mist p-2 align-bottom sm:min-w-24">
+                      <th key={event.id} className="h-44 min-w-[64px] border-b border-l border-navy/10 bg-mist p-1.5 align-bottom sm:min-w-20">
                         <div className="flex h-full w-full flex-col items-center justify-end gap-3 pb-2">
                           <Badge className={cn("h-6 border px-2 text-[10px] font-black", getLimitBadgeColor(isFull))}>
                             {count}/{limit}
                           </Badge>
-                          <div className="max-h-32 text-[11px] font-black tracking-wide text-navy" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
+                          <div className="max-h-36 max-w-8 overflow-hidden text-[10px] font-black leading-tight tracking-normal text-navy sm:text-[11px]" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
                             {event.name}
                           </div>
                         </div>

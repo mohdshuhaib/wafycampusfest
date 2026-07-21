@@ -89,8 +89,24 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
   useEffect(() => {
     async function loadData() {
       setLoading(true)
+      setSelectedEventId("")
+
+      let eventsQuery = supabase
+        .from('events')
+        .select('*')
+        .contains('applicable_section', [section])
+        .order('name')
+
+      if (category === 'GENERAL') {
+        eventsQuery = eventsQuery.eq('grade_type', 'C')
+      } else if (category === 'SPECIAL') {
+        eventsQuery = eventsQuery.eq('grade_type', 'D')
+      } else {
+        eventsQuery = eventsQuery.eq('category', category).not('grade_type', 'in', '("C","D")')
+      }
+
       const [evtRes, teamRes, gradeRes, perfRes] = await Promise.all([
-        supabase.from('events').select('*').eq('category', category).contains('applicable_section', [section]).order('name'),
+        eventsQuery,
         supabase.from('teams').select('*').order('name'),
         supabase.from('grade_settings').select('*'),
         supabase.from('performance_grade_settings').select('*')
