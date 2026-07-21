@@ -30,12 +30,14 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || redirecting) return;
     setLoading(true);
     setError(null);
 
@@ -62,16 +64,19 @@ export default function LoginPage() {
         throw new Error('Profile not found. Please contact administrator.');
       }
 
-      if (profile.role === 'admin') router.push('/admin/dashboard');
-      else if (profile.role === 'captain') router.push('/captain/dashboard');
-      else router.push('/');
+      setRedirecting(true);
+      if (profile.role === 'admin') router.replace('/admin/dashboard');
+      else if (profile.role === 'captain') router.replace('/captain/dashboard');
+      else router.replace('/');
+      router.refresh();
 
     } catch (err: unknown) {
       console.error('Login failed:', err);
       const message = err instanceof Error ? err.message : 'Invalid login credentials';
       setError(message);
-    } finally {
       setLoading(false);
+      setRedirecting(false);
+    } finally {
     }
   };
 
@@ -117,6 +122,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      disabled={loading || redirecting}
                       autoComplete="email"
                       className="h-12 pl-11"
                     />
@@ -136,6 +142,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      disabled={loading || redirecting}
                       autoComplete="current-password"
                       className="h-12 pl-11 pr-12"
                     />
@@ -143,6 +150,7 @@ export default function LoginPage() {
                       type="button"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                       onClick={() => setShowPassword((value) => !value)}
+                      disabled={loading || redirecting}
                       className="focus-premium absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-lg text-slatebrand transition hover:bg-navy/7 hover:text-navy"
                     >
                       {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -156,6 +164,7 @@ export default function LoginPage() {
                       type="checkbox"
                       checked={remember}
                       onChange={(e) => setRemember(e.target.checked)}
+                      disabled={loading || redirecting}
                       className="size-4 rounded border-navy/20 accent-[#0A1D2C]"
                     />
                     Remember this device
@@ -169,11 +178,11 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <Button type="submit" size="lg" className="w-full" disabled={loading}>
-                  {loading ? (
+                <Button type="submit" size="lg" className="w-full" disabled={loading || redirecting} aria-busy={loading || redirecting}>
+                  {loading || redirecting ? (
                     <>
                       <Loader2 className="size-5 animate-spin" />
-                      Authenticating
+                      {redirecting ? "Opening dashboard" : "Authenticating"}
                     </>
                   ) : (
                     <>

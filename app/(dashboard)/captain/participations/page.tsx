@@ -30,13 +30,17 @@ interface RawParticipation {
     name: string
     category: string
     event_code: string | null
+    grade_type: string | null
   }
+  teams: {
+    name: string
+  } | null
 }
 
 interface GroupedParticipant {
   studentId: string
   student: RawParticipation["students"]
-  category: string
+  teamName: string
   events: RawParticipation["events"][]
   status: string
 }
@@ -72,8 +76,9 @@ export default function CaptainParticipations() {
           id,
           status,
           created_at,
+          teams ( name ),
           students ( id, name, section, chest_no, class_grade, image_link ),
-          events ( name, category, event_code )
+          events ( name, category, event_code, grade_type )
         `)
         .eq("team_id", profile.team_id)
         .order("created_at", { ascending: false })
@@ -99,21 +104,29 @@ export default function CaptainParticipations() {
     const map = new Map<string, GroupedParticipant>()
 
     rows.forEach((row) => {
-      const key = `${row.students.id}-${row.events.category}`
+      if (!row.students || !row.events) return
+      if (row.events.grade_type === "C" || row.events.grade_type === "D") return
+
+      const key = row.students.id
 
       if (!map.has(key)) {
         map.set(key, {
           studentId: row.students.id,
           student: row.students,
-          category: row.events.category,
+          teamName: row.teams?.name || "Team",
           events: [],
           status: row.status,
         })
       }
-      map.get(key)?.events.push(row.events)
+      const group = map.get(key)
+      if (group && group.events.length < 6) group.events.push(row.events)
     })
 
-    setGroupedData(Array.from(map.values()))
+    setGroupedData(Array.from(map.values()).sort((a, b) => {
+      const chestA = parseInt(a.student.chest_no || "99999", 10) || 99999
+      const chestB = parseInt(b.student.chest_no || "99999", 10) || 99999
+      return chestA - chestB
+    }))
   }
 
   useEffect(() => {
@@ -127,21 +140,6 @@ export default function CaptainParticipations() {
     })
   }, [groupedData, searchQuery])
 
-  const getDataUri = async (url: string): Promise<string> => {
-    try {
-      const response = await fetch(url)
-      const blob = await response.blob()
-      return new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.readAsDataURL(blob)
-      })
-    } catch (e) {
-      console.error("Error fetching image:", e)
-      return ""
-    }
-  }
-
   const generatePDF = async (itemsToPrint: GroupedParticipant[]) => {
     if (itemsToPrint.length === 0) return alert("No data to print")
 
@@ -152,7 +150,7 @@ export default function CaptainParticipations() {
       let headerBase64 = ""
 
       if (headerImageUrl) {
-        headerBase64 = await getDataUri(headerImageUrl)
+        headerBase64 = await imageUrlToDataUrl(headerImageUrl)
       }
 
       let isFirstPage = true
@@ -162,70 +160,76 @@ export default function CaptainParticipations() {
         if (!isFirstPage) doc.addPage()
         isFirstPage = false
 
+        const margin = 14
+        const pageWidth = doc.internal.pageSize.width
+        const pageHeight = doc.internal.pageSize.height
+
         if (headerBase64) {
-          doc.addImage(headerBase64, "PNG", 0, 0, 210, 35)
+          doc.addImage(headerBase64, getImageFormatFromDataUrl(headerBase64), margin, 10, pageWidth - margin * 2, 34)
         } else {
           doc.setFillColor(10, 29, 44)
-          doc.rect(0, 0, 210, 35, "F")
+          doc.roundedRect(margin, 10, pageWidth - margin * 2, 34, 3, 3, "F")
           doc.setTextColor(255, 255, 255)
           doc.setFontSize(20)
           doc.setFont("helvetica", "bold")
-          doc.text("ARTS FEST 2025", 105, 20, { align: "center" })
+          doc.text("WAFY CAMPUS KALIKKAV", pageWidth / 2, 23, { align: "center" })
+          doc.setFontSize(10)
+          doc.text("ARTS FEST PORTAL", pageWidth / 2, 31, { align: "center" })
         }
 
-        doc.setTextColor(0, 0, 0)
+        doc.setTextColor(10, 29, 44)
         doc.setFont("helvetica", "bold")
-        doc.setFontSize(16)
-        doc.text("ADMIT CARD", 105, 48, { align: "center" })
-
-        doc.setFontSize(11)
-        doc.setTextColor(100, 100, 100)
-        doc.setFont("helvetica", "normal")
-        doc.text(`CATEGORY: ${item.category}`, 105, 54, { align: "center" })
-
-        doc.setDrawColor(200, 200, 200)
-        doc.line(70, 58, 140, 58)
+        doc.setFontSize(15)
+        doc.text("ADMIT CARD", pageWidth / 2, 55, { align: "center" })
 
         const photoData = await imageUrlToDataUrl(item.student.image_link)
+        const profileY = 64
+        const photoSize = 34
+        doc.setDrawColor(10, 29, 44, 0.18)
+        doc.setFillColor(246, 242, 232)
+        doc.roundedRect(margin, profileY, pageWidth - margin * 2, 46, 3, 3, "FD")
+
         if (photoData) {
-          doc.addImage(photoData, getImageFormatFromDataUrl(photoData), 160, 62, 28, 34)
+          doc.addImage(photoData, getImageFormatFromDataUrl(photoData), margin + 6, profileY + 6, photoSize, photoSize)
+        } else {
+          doc.setFillColor(10, 29, 44)
+          doc.roundedRect(margin + 6, profileY + 6, photoSize, photoSize, 3, 3, "F")
+          doc.setTextColor(212, 175, 55)
+          doc.setFontSize(18)
+          doc.text("ID", margin + 23, profileY + 27, { align: "center" })
         }
 
-        const startY = 65
-        const col1 = 20
-        const col2 = 98
-
-        doc.setFontSize(10)
-        doc.setTextColor(50, 50, 50)
-        doc.setFont("helvetica", "bold")
-        doc.text("NAME:", col1, startY)
-        doc.setFont("helvetica", "normal")
-        doc.text(item.student.name.toUpperCase(), col1 + 25, startY)
-
-        doc.setFont("helvetica", "bold")
-        doc.text("CHEST NO:", col2, startY)
-        doc.setFontSize(12)
-        doc.text(item.student.chest_no || "N/A", col2 + 25, startY)
-
-        const row2Y = startY + 8
-        doc.setFontSize(10)
-        doc.text("SECTION:", col1, row2Y)
-        doc.setFont("helvetica", "normal")
-        doc.text(item.student.section, col1 + 25, row2Y)
-
-        doc.setFont("helvetica", "bold")
-        doc.text("CLASS:", col2, row2Y)
-        doc.setFont("helvetica", "normal")
-        doc.text(item.student.class_grade || "-", col2 + 25, row2Y)
-
         autoTable(doc, {
-          startY: 85,
-          head: [["#", "Code", "Event Name", "Invigilator Sign"]],
-          body: item.events.map((event, i) => [
+          startY: profileY + 6,
+          margin: { left: margin + 46, right: margin + 6 },
+          body: [
+            ["Chest No", item.student.chest_no || "N/A"],
+            ["Name", item.student.name],
+            ["Group", item.teamName],
+            ["Class", item.student.class_grade || "-"],
+          ],
+          theme: "grid",
+          styles: { fontSize: 9.5, cellPadding: 2.2, lineColor: [210, 198, 169], lineWidth: 0.15, textColor: [10, 29, 44] },
+          columnStyles: {
+            0: { cellWidth: 28, fontStyle: "bold", fillColor: [237, 231, 217], textColor: [90, 109, 126] },
+            1: { cellWidth: "auto", fontStyle: "bold" },
+          },
+        })
+
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(12)
+        doc.setTextColor(10, 29, 44)
+        doc.text("Events", margin, 121)
+        autoTable(doc, {
+          startY: 126,
+          margin: { left: margin, right: margin },
+          head: [["Sl No", "Code", "Name", "Category", "Grade"]],
+          body: item.events.slice(0, 6).map((event, i) => [
             i + 1,
             event.event_code || "-",
             event.name,
-            "",
+            event.category,
+            event.grade_type || "-",
           ]),
           theme: "grid",
           headStyles: {
@@ -236,23 +240,24 @@ export default function CaptainParticipations() {
             halign: "center",
           },
           columnStyles: {
-            0: { cellWidth: 15, halign: "center" },
-            1: { cellWidth: 30, halign: "center" },
-            2: { cellWidth: "auto" },
-            3: { cellWidth: 40 },
+            0: { cellWidth: 16, halign: "center" },
+            1: { cellWidth: 26, halign: "center", fontStyle: "bold" },
+            2: { cellWidth: 82 },
+            3: { cellWidth: 36, halign: "center" },
+            4: { cellWidth: 18, halign: "center", fontStyle: "bold" },
           },
           styles: {
             fontSize: 10,
             cellPadding: 4,
-            lineColor: [200, 200, 200],
-            lineWidth: 0.1,
+            lineColor: [210, 198, 169],
+            lineWidth: 0.15,
+            textColor: [10, 29, 44],
           },
           alternateRowStyles: {
-            fillColor: [250, 250, 250],
+            fillColor: [246, 242, 232],
           },
         })
 
-        const pageHeight = doc.internal.pageSize.height
         const now = new Date().toLocaleString("en-IN", {
           day: "2-digit",
           month: "short",
@@ -263,11 +268,11 @@ export default function CaptainParticipations() {
         })
 
         doc.setFontSize(8)
-        doc.setTextColor(150, 150, 150)
+        doc.setTextColor(90, 109, 126)
         doc.setFont("helvetica", "italic")
-        doc.text(`Printed: ${now}`, 15, pageHeight - 10)
-        doc.text("Generated by Arts Fest System", 105, pageHeight - 10, { align: "center" })
-        doc.text(`Page ${index + 1} of ${itemsToPrint.length}`, 195, pageHeight - 10, { align: "right" })
+        doc.text(`Printed on ${now}`, margin, pageHeight - 12)
+        doc.text("© Wafy Campus Kalikkav Arts Fest Portal", pageWidth / 2, pageHeight - 12, { align: "center" })
+        doc.text(`Page ${index + 1} of ${itemsToPrint.length}`, pageWidth - margin, pageHeight - 12, { align: "right" })
       }
 
       doc.save(`AdmitCards_${new Date().toISOString().slice(0, 10)}.pdf`)
@@ -280,7 +285,7 @@ export default function CaptainParticipations() {
   }
 
   const handleBulkPrint = (category: string) => {
-    const listToPrint = filteredData.filter((item) => item.category === category)
+    const listToPrint = filteredData.filter((item) => item.events.some((event) => event.category === category))
     if (listToPrint.length === 0) {
       alert(`No participants found for ${category} in the current view.`)
       return
@@ -311,7 +316,7 @@ export default function CaptainParticipations() {
             </Badge>
             <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Download registered entries.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
-              Review grouped registrations and generate admit cards by student category or in bulk.
+              Review student registrations and generate one A4 admit card per participant.
             </p>
           </div>
 
@@ -324,8 +329,9 @@ export default function CaptainParticipations() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="surface-elevated rounded-2xl border-navy/10 p-2">
-              <DropdownMenuItem onClick={() => handleBulkPrint("ON STAGE")}>On Stage Participants</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleBulkPrint("OFF STAGE")}>Off Stage Participants</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => generatePDF(filteredData)}>All Admit Cards</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleBulkPrint("ON STAGE")}>Students with On Stage</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleBulkPrint("OFF STAGE")}>Students with Off Stage</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -356,7 +362,7 @@ export default function CaptainParticipations() {
             </div>
             <div>
               <h2 className="text-title text-lg text-navy">Participants List</h2>
-              <p className="text-xs font-semibold text-slatebrand">Grouped by student and event category.</p>
+            <p className="text-xs font-semibold text-slatebrand">One card per student. Grade C and D programmes are excluded.</p>
             </div>
           </div>
         </div>
@@ -373,14 +379,14 @@ export default function CaptainParticipations() {
                 <TableRow className="border-navy/10 hover:bg-transparent">
                   <TableHead className="w-[280px] pl-6 font-black text-slatebrand">Student Details</TableHead>
                   <TableHead className="font-black text-slatebrand">Section</TableHead>
-                  <TableHead className="font-black text-slatebrand">Category</TableHead>
+                  <TableHead className="font-black text-slatebrand">Group</TableHead>
                   <TableHead className="font-black text-slatebrand">Events Count</TableHead>
                   <TableHead className="pr-6 text-right font-black text-slatebrand">Admit Card</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredData.map((row) => (
-                  <TableRow key={`${row.studentId}-${row.category}`} className="border-navy/8 transition-colors hover:bg-gold/6">
+                  <TableRow key={row.studentId} className="border-navy/8 transition-colors hover:bg-gold/6">
                     <TableCell className="pl-6">
                       <div className="flex items-center gap-3">
                         <StudentPhoto imageLink={row.student.image_link} name={row.student.name} className="size-12" />
@@ -397,15 +403,21 @@ export default function CaptainParticipations() {
                       <Badge variant="outline">{row.student.section}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={row.category === "ON STAGE" ? "gold" : "outline"}
-                        className={cn(row.category === "OFF STAGE" && "border-deepblue/20 bg-deepblue/10 text-deepblue")}
-                      >
-                        {row.category}
-                      </Badge>
+                      <span className="text-sm font-bold text-navy">{row.teamName}</span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-black text-navy">{row.events.length} Events</span>
+                      <div className="flex flex-wrap gap-1">
+                        <span className="text-sm font-black text-navy">{row.events.length} Events</span>
+                        {Array.from(new Set(row.events.map((event) => event.category))).map((category) => (
+                          <Badge
+                            key={category}
+                            variant={category === "ON STAGE" ? "gold" : "outline"}
+                            className={cn(category === "OFF STAGE" && "border-deepblue/20 bg-deepblue/10 text-deepblue")}
+                          >
+                            {category}
+                          </Badge>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell className="pr-6 text-right">
                       <Button variant="outline" size="sm" className="h-9 rounded-2xl" onClick={() => generatePDF([row])} disabled={isGeneratingPdf}>

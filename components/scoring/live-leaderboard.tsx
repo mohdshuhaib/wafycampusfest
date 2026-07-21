@@ -28,7 +28,6 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
           teams ( id, name, color_hex ),
           events ( category )
         `)
-      .gt("points_earned", 0)
 
     const { data: teams } = await supabase.from("teams").select("*")
 

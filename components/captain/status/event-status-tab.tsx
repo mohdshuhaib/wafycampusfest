@@ -10,7 +10,8 @@ import { CheckCircle, Clock, Filter, Search, UserMinus, UserX } from "lucide-rea
 interface Participation {
   id: string
   attendance_status: string | null
-  event: { name: string; category: string; event_code: string }
+  points_earned?: number | null
+  event: { name: string; category: string; event_code: string; grade_type?: string | null }
   student: { name: string; chest_no: string | null; class_grade: string | null }
 }
 
@@ -24,7 +25,7 @@ export function EventStatusTab({ participations }: { participations: Participati
     const rows = participations.map((participation) => {
       const isAbsent = participation.attendance_status === "absent"
       const isPresent = participation.attendance_status === "present"
-      const penalty = isAbsent ? 5 : 0
+      const penalty = isAbsent ? Math.abs(participation.points_earned || 0) : 0
       totalDeduction += penalty
 
       let statusDisplay = {
@@ -39,7 +40,7 @@ export function EventStatusTab({ participations }: { participations: Participati
         statusDisplay = {
           key: "absent",
           label: "Absent",
-          subLabel: "-5 Marks",
+          subLabel: `-${penalty} Marks`,
           color: "border-destructive/20 bg-destructive/10 text-destructive",
           icon: UserX,
         }

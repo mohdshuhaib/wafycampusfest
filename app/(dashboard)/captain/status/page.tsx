@@ -74,8 +74,8 @@ export default function CaptainStatusPage() {
         const { data: participationData } = await supabase
           .from("participations")
           .select(`
-                id, attendance_status,
-                event:events ( name, category, event_code ),
+                id, attendance_status, points_earned,
+                event:events ( name, category, event_code, grade_type ),
                 student:students ( name, chest_no, class_grade, image_link )
             `)
           .eq("team_id", currentTeamId)
