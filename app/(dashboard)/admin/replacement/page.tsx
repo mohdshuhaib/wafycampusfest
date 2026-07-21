@@ -72,7 +72,7 @@ export default function AdminReplacementPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] flex-col gap-5 overflow-hidden pb-20 md:pb-4">
+    <div className="space-y-5 pb-20 md:pb-4">
       <section className="surface-dark relative shrink-0 overflow-hidden rounded-[2rem] p-5 sm:p-6">
 
         <div className="relative grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
@@ -124,7 +124,7 @@ export default function AdminReplacementPage() {
         <InfoStrip icon={RefreshCw} label="Updates" value="Saved instantly" />
       </section>
 
-      <section className="surface-elevated min-h-0 flex-1 overflow-hidden rounded-[2rem] p-2 md:p-4">
+      <section className="surface-elevated rounded-[2rem] p-2 md:p-4">
         {selectedTeam ? (
           <ReplacementMatrix teamId={selectedTeam} teamName={currentTeam?.name || "Team"} />
         ) : (

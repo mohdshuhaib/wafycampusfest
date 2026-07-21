@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { AlertCircle, Check, Info, Loader2, Lock, Search, Sparkles, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -65,6 +67,7 @@ export default function MatrixRegistration() {
   const [participations, setParticipations] = useState<Participation[]>([])
   const [limits, setLimits] = useState<SectionLimit[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null)
 
   const supabase = createClient()
 
@@ -111,18 +114,31 @@ export default function MatrixRegistration() {
     loadData()
   }, [])
 
-  const categoryOpen = useMemo(() => {
+  const getStageOpen = (category: string) => {
+    if (category === "ON STAGE") return appConfig.on_stage_registration_open
+    if (category === "OFF STAGE") return appConfig.off_stage_registration_open
+    return appConfig.registration_open
+  }
+
+  const getEventRegistrationOpen = (event: Event) => {
     if (teamOverride === true) return true
     if (teamOverride === false) return false
-    if (activeTab.cat === "ON STAGE") return appConfig.on_stage_registration_open
-    if (activeTab.cat === "OFF STAGE") return appConfig.off_stage_registration_open
-    return appConfig.registration_open
-  }, [activeTab.cat, appConfig, teamOverride])
+    return getStageOpen(event.category)
+  }
 
-  const isLocked = !categoryOpen
-  const lockReason = teamOverride === false
-    ? "Your team's registration has been locked by Admin."
-    : `${activeTab.label} registration is currently closed.`
+  const getLockReason = (event?: Event) => {
+    if (teamOverride === false) return "Your team's registration has been locked by Admin."
+    const category = event?.category || activeTab.cat
+    if (category === "ON STAGE") return "On Stage registration is currently closed."
+    if (category === "OFF STAGE") return "Off Stage registration is currently closed."
+    return `${activeTab.label} registration is currently closed.`
+  }
+
+  const fallbackCategoryOpen = useMemo(() => {
+    if (teamOverride === true) return true
+    if (teamOverride === false) return false
+    return getStageOpen(activeTab.cat)
+  }, [activeTab.cat, appConfig, teamOverride])
 
   const filteredStudents = useMemo(() => {
     let list = students
@@ -151,6 +167,16 @@ export default function MatrixRegistration() {
     })
   }, [events, activeTab])
 
+  const categoryOpen = filteredEvents.length > 0
+    ? filteredEvents.some((event) => getEventRegistrationOpen(event))
+    : fallbackCategoryOpen
+  const isLocked = !categoryOpen
+  const lockReason = teamOverride === false
+    ? "Your team's registration has been locked by Admin."
+    : activeTab.cat === "GENERAL" || activeTab.cat === "SPECIAL"
+      ? `All ${activeTab.label} programmes are locked by their On/Off Stage registration setting.`
+      : getLockReason()
+
   const getLimitStatus = (student: Student) => {
     const countByCategory = (category: string) => participations.filter((participation) => {
       const event = events.find((item) => item.id === participation.event_id)
@@ -176,8 +202,11 @@ export default function MatrixRegistration() {
   const handleToggle = async (studentId: string, eventId: string, isChecked: boolean) => {
     if (!teamId) return
 
-    if (isLocked) {
-      alert(`Action Blocked: ${lockReason}`)
+    const event = events.find((item) => item.id === eventId)
+    if (!event) return
+
+    if (!getEventRegistrationOpen(event)) {
+      setNotice({ title: "Action blocked", message: getLockReason(event) })
       return
     }
 
@@ -188,22 +217,23 @@ export default function MatrixRegistration() {
     }
 
     const student = students.find((item) => item.id === studentId)
-    const event = events.find((item) => item.id === eventId)
-    if (!student || !event) return
+    if (!student) return
 
     const { isFull, limit } = getLimitStatus(student)
 
     if (isFull) {
-      alert(activeTab.cat === "GENERAL"
-        ? "Limit Reached! A student can participate in only 2 General events."
-        : "Limit Reached! A student can participate in 6 total On/Off events, with max 4 in either On Stage or Off Stage."
-      )
+      setNotice({
+        title: "Maximum reached",
+        message: activeTab.cat === "GENERAL"
+          ? "This student already reached the 2 programme General limit."
+          : "This student already reached the 6 total On/Off limit or the 4 programme stage limit.",
+      })
       return
     }
 
     const eventTeamCount = participations.filter((p) => p.event_id === eventId).length
     if (eventTeamCount >= event.max_participants_per_team) {
-      alert(`Event Limit Reached! Max ${event.max_participants_per_team} participants allowed.`)
+      setNotice({ title: "Programme full", message: `This programme allows only ${event.max_participants_per_team} participants from this team.` })
       return
     }
 
@@ -228,7 +258,7 @@ export default function MatrixRegistration() {
 
     if (error) {
       setParticipations((prev) => prev.filter((p) => p.id !== tempId))
-      alert("Error adding: " + error.message)
+      setNotice({ title: "Could not save", message: error.message })
     } else {
       setParticipations((prev) => prev.map((p) => p.id === tempId ? inserted : p))
     }
@@ -236,8 +266,10 @@ export default function MatrixRegistration() {
 
   const handleTeamToggle = async (eventId: string, isChecked: boolean) => {
     if (!teamId) return
-    if (isLocked) {
-      alert(`Action Blocked: ${lockReason}`)
+    const event = events.find((item) => item.id === eventId)
+    if (!event) return
+    if (!getEventRegistrationOpen(event)) {
+      setNotice({ title: "Action blocked", message: getLockReason(event) })
       return
     }
 
@@ -260,7 +292,7 @@ export default function MatrixRegistration() {
 
     if (error) {
       setParticipations((prev) => prev.filter((p) => p.id !== tempId))
-      alert("Error adding team participation: " + error.message)
+      setNotice({ title: "Could not save team participation", message: error.message })
     } else {
       setParticipations((prev) => prev.map((p) => p.id === tempId ? inserted : p))
     }
@@ -373,16 +405,19 @@ export default function MatrixRegistration() {
           <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredEvents.map((event) => {
               const isRegistered = participations.some((p) => p.event_id === event.id && p.team_id === teamId && p.student_id === null)
+              const isEventLocked = !getEventRegistrationOpen(event)
               return (
-                <label key={event.id} className={cn("flex cursor-pointer items-center justify-between gap-4 rounded-3xl border p-4 transition", isRegistered ? "border-gold/40 bg-gold/12" : "border-navy/10 bg-ivory hover:bg-gold/6")}>
+                <label key={event.id} className={cn("flex cursor-pointer items-center justify-between gap-4 rounded-3xl border p-4 transition", isRegistered ? "border-gold/40 bg-gold/12" : "border-navy/10 bg-ivory hover:bg-gold/6", isEventLocked && "cursor-not-allowed opacity-55")}>
                   <div className="min-w-0">
                     <div className="truncate text-sm font-black text-navy">{event.name}</div>
-                    <div className="mt-1 text-xs font-semibold text-slatebrand">Grade D Team Participation</div>
+                    <div className="mt-1 text-xs font-semibold text-slatebrand">
+                      Grade D Team Participation · {event.category}
+                    </div>
                   </div>
                   <input
                     type="checkbox"
                     checked={isRegistered}
-                    disabled={isLocked}
+                    disabled={isEventLocked}
                     onChange={(e) => handleTeamToggle(event.id, e.target.checked)}
                     className="size-5 accent-[#D4AF37]"
                   />
@@ -392,10 +427,10 @@ export default function MatrixRegistration() {
           </div>
         ) : (
           <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-navy/18 scrollbar-track-transparent">
-            <table className="w-max min-w-full border-collapse bg-ivory text-sm">
-              <thead className="sticky top-0 z-20 bg-mist shadow-sm">
+            <table className="w-max min-w-full border-collapse bg-[#F6F2E8] text-sm">
+              <thead className="sticky top-0 z-20 bg-[#F2F1EE] shadow-sm">
                 <tr>
-                  <th className="sticky left-0 top-0 z-30 min-w-[150px] border-b border-r border-navy/10 bg-mist p-3 text-left shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] sm:min-w-64">
+                  <th className="sticky left-0 top-0 z-30 min-w-[150px] border-b border-r border-navy/10 bg-[#F2F1EE] p-3 text-left shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] sm:min-w-64">
                     <div className="flex flex-col gap-1">
                       <span className="text-sm font-black text-navy">Student</span>
                       <div className="mt-1 flex max-w-[8rem] flex-wrap gap-1">
@@ -413,13 +448,17 @@ export default function MatrixRegistration() {
                     const count = participations.filter((p) => p.event_id === event.id).length
                     const limit = event.max_participants_per_team
                     const isFull = count >= limit
+                    const isEventLocked = !getEventRegistrationOpen(event)
 
                     return (
-                      <th key={event.id} className="h-44 min-w-[64px] border-b border-l border-navy/10 bg-mist p-1.5 align-bottom sm:min-w-20">
+                      <th key={event.id} className={cn("h-44 min-w-[64px] border-b border-l border-navy/10 bg-[#F2F1EE] p-1.5 align-bottom sm:min-w-20", isEventLocked && "bg-navy/7")}>
                         <div className="flex h-full w-full flex-col items-center justify-end gap-3 pb-2">
-                          <Badge className={cn("h-6 border px-2 text-[10px] font-black", getLimitBadgeColor(isFull))}>
-                            {count}/{limit}
-                          </Badge>
+                          <div className="flex flex-col items-center gap-1">
+                            <Badge className={cn("h-6 border px-2 text-[10px] font-black", getLimitBadgeColor(isFull))}>
+                              {count}/{limit}
+                            </Badge>
+                            {isEventLocked && <Lock className="size-3 text-destructive" />}
+                          </div>
                           <div className="max-h-36 max-w-8 overflow-hidden text-[10px] font-black leading-tight tracking-normal text-navy sm:text-[11px]" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
                             {event.name}
                           </div>
@@ -434,8 +473,8 @@ export default function MatrixRegistration() {
                   const { isFull, remaining } = getLimitStatus(student)
 
                   return (
-                    <tr key={student.id} className="group border-b border-navy/8 hover:bg-gold/6">
-                      <td className="sticky left-0 z-10 border-r border-navy/10 bg-ivory p-3 shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] group-hover:bg-[#f3ead8]">
+                    <tr key={student.id} className={cn("group border-b border-navy/8 hover:bg-gold/6", isFull && "bg-gold/12")}>
+                      <td className={cn("sticky left-0 z-10 border-r border-navy/10 bg-[#F6F2E8] p-3 shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] group-hover:bg-[#f3ead8]", isFull && "bg-[#F4E5BE]")}>
                         <div className="flex min-w-0 items-center gap-3">
                           <StudentPhoto imageLink={student.image_link} name={student.name} className="size-11" />
                           <div className="min-w-0">
@@ -455,7 +494,8 @@ export default function MatrixRegistration() {
                         const isRegistered = participations.some((p) => p.student_id === student.id && p.event_id === event.id)
                         const eventCount = participations.filter((p) => p.event_id === event.id).length
                         const isEventFull = eventCount >= event.max_participants_per_team
-                        const isDisabled = !isRegistered && (isFull || isEventFull || isLocked)
+                        const isEventLocked = !getEventRegistrationOpen(event)
+                        const isDisabled = !isRegistered && (isFull || isEventFull || isEventLocked)
 
                         return (
                           <td key={`${student.id}-${event.id}`} className="relative border-b border-l border-navy/8 p-0 align-middle">
@@ -480,6 +520,18 @@ export default function MatrixRegistration() {
           </div>
         )}
       </section>
+
+      <Dialog open={!!notice} onOpenChange={(open) => !open && setNotice(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{notice?.title}</DialogTitle>
+            <DialogDescription>{notice?.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setNotice(null)}>Okay</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

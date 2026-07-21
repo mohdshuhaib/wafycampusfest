@@ -1,19 +1,10 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { User } from "lucide-react"
 import { toDriveImageViewUrl } from "@/lib/student-images"
 import { cn } from "@/lib/utils"
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "ST"
-}
 
 interface StudentPhotoProps {
   imageLink?: string | null
@@ -26,6 +17,10 @@ export function StudentPhoto({ imageLink, name, className, fallbackClassName }: 
   const [failed, setFailed] = useState(false)
   const src = useMemo(() => toDriveImageViewUrl(imageLink), [imageLink])
   const sizeClass = className || "size-12"
+
+  useEffect(() => {
+    setFailed(false)
+  }, [src])
 
   if (src && !failed) {
     return (
@@ -52,7 +47,7 @@ export function StudentPhoto({ imageLink, name, className, fallbackClassName }: 
       )}
       aria-label={`${name} photo placeholder`}
     >
-      {name ? initials(name) : <User className="size-4" />}
+      <User className="size-4" />
     </div>
   )
 }

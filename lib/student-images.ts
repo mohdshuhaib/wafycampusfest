@@ -22,7 +22,7 @@ export function toDriveImageViewUrl(url?: string | null): string | null {
   if (!trimmed) return null
 
   const id = getGoogleDriveFileId(trimmed)
-  return id ? `https://drive.google.com/uc?export=view&id=${id}` : trimmed
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1000` : trimmed
 }
 
 export function getImageFormatFromDataUrl(dataUrl: string): "PNG" | "JPEG" {

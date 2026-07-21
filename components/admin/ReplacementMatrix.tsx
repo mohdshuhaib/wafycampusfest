@@ -3,15 +3,19 @@
 import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { AlertCircle, Check, Info, Loader2, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { StudentPhoto } from "@/components/student-photo"
 
 interface Student {
   id: string
   name: string
   section: string
   chest_no: string | null
+  image_link: string | null
   team_id: string
 }
 
@@ -58,6 +62,7 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
   const [participations, setParticipations] = useState<Participation[]>([])
   const [limits, setLimits] = useState<SectionLimit[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null)
 
   const supabase = createClient()
 
@@ -143,7 +148,7 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
       const { error } = await supabase.from("participations").delete().match({ student_id: studentId, event_id: eventId, team_id: teamId })
 
       if (error) {
-        alert("Failed to remove participant")
+        setNotice({ title: "Could not remove participant", message: error.message })
       }
       return
     }
@@ -155,16 +160,18 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
     const { isFull, limit } = getLimitStatus(student)
 
     if (isFull) {
-      alert(activeTab.cat === "GENERAL"
-        ? "Limit Reached! A student can participate in only 2 General events."
-        : "Limit Reached! A student can participate in 6 total On/Off events, with max 4 in either On Stage or Off Stage."
-      )
+      setNotice({
+        title: "Maximum reached",
+        message: activeTab.cat === "GENERAL"
+          ? "This student already reached the 2 programme General limit."
+          : "This student already reached the 6 total On/Off limit or the 4 programme stage limit.",
+      })
       return
     }
 
     const eventTeamCount = participations.filter((p) => p.event_id === eventId).length
     if (eventTeamCount >= event.max_participants_per_team) {
-      alert(`Event Limit Reached! Max ${event.max_participants_per_team} participants allowed.`)
+      setNotice({ title: "Programme full", message: `This programme allows only ${event.max_participants_per_team} participants from this team.` })
       return
     }
 
@@ -189,7 +196,7 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
 
     if (error) {
       setParticipations((prev) => prev.filter((p) => p.id !== tempId))
-      alert("Error adding: " + error.message)
+      setNotice({ title: "Could not save", message: error.message })
     } else {
       setParticipations((prev) => prev.map((p) => p.id === tempId ? inserted : p))
     }
@@ -217,7 +224,7 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
 
     if (error) {
       setParticipations((prev) => prev.filter((p) => p.id !== tempId))
-      alert("Error adding team participation: " + error.message)
+      setNotice({ title: "Could not save team participation", message: error.message })
     } else {
       setParticipations((prev) => prev.map((p) => p.id === tempId ? inserted : p))
     }
@@ -313,10 +320,10 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
           </div>
         ) : (
           <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-navy/18 scrollbar-track-transparent">
-            <table className="w-max min-w-full border-collapse bg-ivory text-sm">
-              <thead className="sticky top-0 z-20 bg-mist shadow-sm">
+            <table className="w-max min-w-full border-collapse bg-[#F6F2E8] text-sm">
+              <thead className="sticky top-0 z-20 bg-[#F2F1EE] shadow-sm">
                 <tr>
-                  <th className="sticky left-0 top-0 z-30 min-w-[150px] border-b border-r border-navy/10 bg-mist p-3 text-left shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] sm:min-w-64">
+                  <th className="sticky left-0 top-0 z-30 min-w-[150px] border-b border-r border-navy/10 bg-[#F2F1EE] p-3 text-left shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] sm:min-w-64">
                     <div className="flex flex-col gap-1">
                       <span className="text-sm font-black text-navy">Student</span>
                       <div className="mt-1 flex max-w-[8rem] flex-wrap gap-1">
@@ -336,7 +343,7 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
                     const isFull = count >= limit
 
                     return (
-                      <th key={event.id} className="h-44 min-w-[64px] border-b border-l border-navy/10 bg-mist p-1.5 align-bottom sm:min-w-20">
+                      <th key={event.id} className="h-44 min-w-[64px] border-b border-l border-navy/10 bg-[#F2F1EE] p-1.5 align-bottom sm:min-w-20">
                         <div className="flex h-full w-full flex-col items-center justify-end gap-3 pb-2">
                           <Badge className={cn("h-6 border px-2 text-[10px] font-black", getLimitBadgeColor(isFull))}>
                             {count}/{limit}
@@ -358,17 +365,20 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
                   const { isFull, remaining } = getLimitStatus(student)
 
                   return (
-                    <tr key={student.id} className="group border-b border-navy/8 hover:bg-gold/6">
-                      <td className="sticky left-0 z-10 border-r border-navy/10 bg-ivory p-3 shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] group-hover:bg-[#f3ead8]">
-                        <div className="min-w-0">
-                          <div className="truncate text-xs font-black text-navy sm:text-sm">{student.name}</div>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slatebrand">
-                            <span className="rounded-full bg-navy/7 px-2 py-0.5 font-mono text-navy">{student.chest_no || "-"}</span>
-                            <span className="hidden sm:inline">{student.section}</span>
+                    <tr key={student.id} className={cn("group border-b border-navy/8 hover:bg-gold/6", isFull && "bg-gold/12")}>
+                      <td className={cn("sticky left-0 z-10 border-r border-navy/10 bg-[#F6F2E8] p-3 shadow-[8px_0_18px_-18px_rgba(10,29,44,.45)] group-hover:bg-[#f3ead8]", isFull && "bg-[#F4E5BE]")}>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <StudentPhoto imageLink={student.image_link} name={student.name} className="size-11" />
+                          <div className="min-w-0">
+                            <div className="truncate text-xs font-black text-navy sm:text-sm">{student.name}</div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slatebrand">
+                              <span className="rounded-full bg-navy/7 px-2 py-0.5 font-mono text-navy">{student.chest_no || "-"}</span>
+                              <span className="hidden sm:inline">{student.section}</span>
+                            </div>
+                            <Badge variant="outline" className={cn("mt-2 h-5 border px-2 text-[9px]", getLimitBadgeColor(isFull))}>
+                              {isFull ? "Maxed" : `${remaining} left`}
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className={cn("mt-2 h-5 border px-2 text-[9px]", getLimitBadgeColor(isFull))}>
-                            {isFull ? "Maxed" : `${remaining} left`}
-                          </Badge>
                         </div>
                       </td>
 
@@ -400,6 +410,18 @@ export function ReplacementMatrix({ teamId, teamName }: Props) {
           </div>
         )}
       </div>
+
+      <Dialog open={!!notice} onOpenChange={(open) => !open && setNotice(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{notice?.title}</DialogTitle>
+            <DialogDescription>{notice?.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setNotice(null)}>Okay</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
