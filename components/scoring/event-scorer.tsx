@@ -522,7 +522,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                                 onClick={() => toggleWinner(pos as any, id)}
                                                 className={cn(
                                                     "relative cursor-pointer rounded-2xl border p-3 transition-all duration-200",
-                                                    isSelected ? "border-gold/45 bg-ivory ring-2 ring-gold/18 shadow-premium" : "border-navy/8 bg-ivory/70 hover:border-gold/25 hover:bg-ivory"
+                                                    isSelected ? "border-gold/55 bg-gold/12 ring-2 ring-gold/28 shadow-gold" : "border-navy/8 bg-ivory/70 hover:border-gold/25 hover:bg-ivory"
                                                 )}
                                             >
                                                 <div className="flex items-center justify-between">
@@ -550,8 +550,8 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                                                     className={cn(
                                                                         "flex size-6 items-center justify-center rounded-lg border text-[9px] font-black transition-colors",
                                                                         grade === g
-                                                                            ? "border-navy bg-navy text-ivory"
-                                                                            : "border-navy/10 bg-ivory text-slatebrand hover:bg-navy/7"
+                                                                            ? "border-gold bg-gold text-navy shadow-gold"
+                                                                            : "border-navy/10 bg-ivory text-slatebrand hover:border-gold/30 hover:bg-gold/10 hover:text-navy"
                                                                     )}
                                                                 >
                                                                     {g === 'NONE' ? '-' : g}
@@ -589,7 +589,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                     const hasGrade = otherGrades.has(id) && grade !== 'NONE'
 
                                     return (
-                                        <div key={id} className={cn("flex flex-col gap-3 rounded-2xl border bg-ivory/75 p-3 transition-all", hasGrade ? "border-gold/30 ring-2 ring-gold/12" : "border-navy/8")}>
+                                        <div key={id} className={cn("flex flex-col gap-3 rounded-2xl border bg-ivory/75 p-3 transition-all", hasGrade ? "border-gold/45 bg-gold/10 ring-2 ring-gold/18 shadow-sm" : "border-navy/8")}>
                                             <div className="flex min-w-0 items-start justify-between">
                                                 <div className="min-w-0">
                                                     <div className="truncate text-sm font-bold text-navy">
@@ -613,8 +613,8 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                                             className={cn(
                                                                 "size-7 rounded-lg border text-[10px] font-black transition-all",
                                                                 grade === g
-                                                                    ? "border-navy bg-navy text-ivory shadow-sm"
-                                                                    : "border-navy/10 bg-ivory text-slatebrand hover:bg-navy/7"
+                                                                    ? "border-gold bg-gold text-navy shadow-gold"
+                                                                    : "border-navy/10 bg-ivory text-slatebrand hover:border-gold/30 hover:bg-gold/10 hover:text-navy"
                                                             )}
                                                         >
                                                             {g}
@@ -624,7 +624,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                                         onClick={() => updateOtherGrade(id, 'NONE')}
                                                         className={cn(
                                                             "size-7 rounded-lg border text-[10px] transition-all",
-                                                            grade === 'NONE' ? "border-transparent bg-navy/6 text-slatebrand" : "border-transparent text-destructive hover:bg-destructive/10"
+                                                            grade === 'NONE' ? "border-gold/40 bg-gold/12 font-black text-navy" : "border-transparent text-destructive hover:bg-destructive/10"
                                                         )}
                                                         title="Clear"
                                                      >
