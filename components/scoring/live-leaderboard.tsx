@@ -3,18 +3,14 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { AlertCircle, ArrowUpRight, Gavel, Loader2, Medal, Shield, Trophy } from "lucide-react"
+import { ArrowUpRight, Loader2, Medal, Shield, Trophy } from "lucide-react"
 import { TeamDetailsModal } from "./team-details-modal"
-import { PenaltySettingsDialog } from "./penalty-settings-dialog"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) {
   const [scores, setScores] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
-  const [isPenaltyOpen, setIsPenaltyOpen] = useState(false)
 
   const supabase = createClient()
 
@@ -41,15 +37,12 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
     const leaderboard = teams.map((team: any) => {
       const teamParts = parts.filter((p: any) => p.teams?.id === team.id)
       const earnedTotal = teamParts.reduce((sum: number, p: any) => sum + (p.points_earned || 0), 0)
-      const penalty = team.penalty_points || 0
-      const total = Math.max(0, earnedTotal - penalty)
       return {
         id: team.id,
         name: team.name,
         color: team.color_hex,
-        total,
+        total: earnedTotal,
         rawTotal: earnedTotal,
-        penalty,
       }
     })
 
@@ -88,23 +81,6 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
             </div>
 
             <div className="flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsPenaltyOpen(true)}
-                      className="size-9 rounded-2xl text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Gavel className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Manage penalties</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
               <span className="rounded-full bg-navy/7 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-slatebrand">
                 {scores.length} Teams
               </span>
@@ -153,12 +129,6 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
                               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-navy/8">
                                 <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${progress}%` }} />
                               </div>
-                              {team.penalty > 0 && (
-                                <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-destructive">
-                                  <AlertCircle className="size-3" />
-                                  <span>-{team.penalty} penalty</span>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </TableCell>
@@ -190,11 +160,6 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
         onOpenChange={(open) => !open && setSelectedTeamId(null)}
       />
 
-      <PenaltySettingsDialog
-        open={isPenaltyOpen}
-        onOpenChange={setIsPenaltyOpen}
-        onSuccess={calculateScores}
-      />
     </>
   )
 }

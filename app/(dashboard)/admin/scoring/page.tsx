@@ -425,7 +425,7 @@ export default function ScoringPage() {
                             <TabsTrigger
                                 key={sec.id}
                                 value={sec.id}
-                                className="rounded-xl px-4 py-2 text-xs font-bold text-slatebrand transition-all duration-200 hover:bg-navy/7 hover:text-navy data-[state=active]:bg-navy data-[state=active]:text-ivory data-[state=active]:shadow-premium md:text-sm"
+                                className="rounded-xl px-4 py-2 text-xs font-bold text-slatebrand transition-all duration-200 hover:bg-gold/12 hover:text-navy data-[state=active]:bg-gold data-[state=active]:text-navy data-[state=active]:shadow-gold md:text-sm"
                             >
                                 <SlidersHorizontal className="mr-2 hidden size-3.5 sm:inline" />
                                 {sec.label}

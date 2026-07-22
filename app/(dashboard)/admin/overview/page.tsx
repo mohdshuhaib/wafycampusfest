@@ -15,7 +15,6 @@ interface Team {
   id: string
   name: string
   color_hex: string
-  penalty_points: number
 }
 
 export default function OverviewPage() {
@@ -33,7 +32,7 @@ export default function OverviewPage() {
 
       const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
-        .select("id, name, color_hex, penalty_points") as { data: Team[] | null; error: any }
+        .select("id, name, color_hex") as { data: Team[] | null; error: any }
 
       if (teamsError || !teamsData) {
         console.error("Error fetching teams", teamsError)
@@ -69,7 +68,6 @@ export default function OverviewPage() {
           name: team.name,
           color: team.color_hex,
           earnedPoints: 0,
-          penalty: team.penalty_points || 0,
           totalPoints: 0,
           first: 0,
           second: 0,
@@ -91,7 +89,7 @@ export default function OverviewPage() {
       })
 
       teamsMap.forEach((t) => {
-        t.totalPoints = Math.max(0, t.earnedPoints - t.penalty)
+        t.totalPoints = t.earnedPoints
       })
 
       setTeamStats(Array.from(teamsMap.values()).sort((a, b) => b.totalPoints - a.totalPoints))
@@ -183,11 +181,9 @@ export default function OverviewPage() {
 
   const totals = useMemo(() => {
     const earned = teamStats.reduce((sum, team) => sum + (team.earnedPoints || 0), 0)
-    const penalties = teamStats.reduce((sum, team) => sum + (team.penalty || 0), 0)
     const awards = teamStats.reduce((sum, team) => sum + team.first + team.second + team.third, 0)
     return {
       earned,
-      penalties,
       awards,
       students: studentStats.length,
       leader: teamStats[0]?.name || "Awaiting scores",
@@ -215,13 +211,11 @@ export default function OverviewPage() {
 
       autoTable(doc, {
         startY: yPos,
-        head: [["Rank", "Team Name", "Earned Pts", "Penalty", "Net Points", "1st", "2nd", "3rd"]],
+        head: [["Rank", "Team Name", "Total Points", "1st", "2nd", "3rd"]],
         body: teamStats.map((t, i) => [
           i + 1,
           t.name,
           t.earnedPoints,
-          t.penalty > 0 ? `-${t.penalty}` : "0",
-          t.totalPoints,
           t.first,
           t.second,
           t.third,
@@ -229,7 +223,7 @@ export default function OverviewPage() {
         theme: "striped",
         headStyles: { fillColor: [10, 29, 44] },
         columnStyles: {
-          4: { fontStyle: "bold" },
+          2: { fontStyle: "bold" },
         },
       })
 
@@ -311,10 +305,10 @@ export default function OverviewPage() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <OverviewMetric label="Current Leader" value={totals.leader} helper={`${totals.leaderPoints} net points`} icon={Trophy} tone="gold" />
-        <OverviewMetric label="Earned Points" value={totals.earned} helper="Before penalties" icon={BarChart3} tone="navy" />
+        <OverviewMetric label="Current Leader" value={totals.leader} helper={`${totals.leaderPoints} total points`} icon={Trophy} tone="gold" />
+        <OverviewMetric label="Earned Points" value={totals.earned} helper="Total judging points" icon={BarChart3} tone="navy" />
         <OverviewMetric label="Individual Scorers" value={totals.students} helper="Non-group item performers" icon={Users} tone="blue" />
-        <OverviewMetric label="Awarded Positions" value={totals.awards} helper={`${totals.penalties} penalty points applied`} icon={Medal} tone="slate" />
+        <OverviewMetric label="Awarded Positions" value={totals.awards} helper="First, second, and third places" icon={Medal} tone="slate" />
       </section>
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">

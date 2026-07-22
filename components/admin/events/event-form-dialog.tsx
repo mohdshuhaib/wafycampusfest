@@ -20,6 +20,7 @@ interface Event {
   max_participants_per_team: number
   description: string | null
   grade_type: 'A' | 'B' | 'C' | 'D'
+  duration_minutes: number | null
   applicable_section: string[]
 }
 
@@ -44,6 +45,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
     category: "ON STAGE",
     max_participants_per_team: 1,
     grade_type: "A",
+    duration_minutes: "",
     applicable_section: "Senior", // UI handles single select, DB stores array
     description: ""
   })
@@ -57,6 +59,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
         category: event.category,
         max_participants_per_team: event.max_participants_per_team,
         grade_type: event.grade_type || "A",
+        duration_minutes: event.duration_minutes ? String(event.duration_minutes) : "",
         applicable_section: "Senior",
         description: event.description || ""
       })
@@ -68,6 +71,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
         category: "ON STAGE",
         max_participants_per_team: 1,
         grade_type: "A",
+        duration_minutes: "",
         applicable_section: "Senior",
         description: ""
       })
@@ -113,6 +117,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
         category: formData.category,
         max_participants_per_team: formData.category === "SPECIAL" ? 1 : formData.max_participants_per_team,
         grade_type: formData.category === "GENERAL" ? "C" : formData.category === "SPECIAL" ? "D" : formData.grade_type,
+        duration_minutes: formData.duration_minutes ? Number(formData.duration_minutes) : null,
         applicable_section: ["Senior"],
         description: formData.description
       }
@@ -224,6 +229,24 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                     </SelectContent>
                 </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Duration</Label>
+            <div className="relative">
+              <Input
+                type="number"
+                min={1}
+                value={formData.duration_minutes}
+                onChange={e => setFormData({...formData, duration_minutes: e.target.value})}
+                placeholder="None"
+                className="pr-14"
+              />
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black uppercase tracking-[0.08em] text-slatebrand">
+                min
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-slatebrand">Optional. Leave blank if the event has no fixed time.</p>
           </div>
 
           <div className="space-y-2">

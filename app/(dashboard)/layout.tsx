@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Sidebar, MobileBottomNav, MobileSidebar } from "@/components/dashboard/sidebar"
+import { DashboardViewport } from "@/components/dashboard/dashboard-viewport"
 
 export default async function DashboardLayout({
   children,
@@ -36,6 +37,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="app-shell flex h-screen w-full overflow-hidden">
+      <DashboardViewport />
       <div className="fixed inset-y-0 z-50 hidden md:flex md:w-72 md:flex-col">
         <Sidebar role={profile.role} />
       </div>

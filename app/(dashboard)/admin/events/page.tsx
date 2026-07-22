@@ -45,6 +45,7 @@ interface Event {
   max_participants_per_team: number
   description: string | null
   grade_type: 'A' | 'B' | 'C' | 'D'
+  duration_minutes: number | null
   applicable_section: string[]
 }
 
@@ -299,6 +300,7 @@ export default function AdminEvents() {
               <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Category</TableHead>
               <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Section</TableHead>
               <TableHead className="text-center text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Grade</TableHead>
+              <TableHead className="text-center text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Time</TableHead>
               <TableHead className="text-center text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Max</TableHead>
               <TableHead className="pr-5 text-right text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Actions</TableHead>
             </TableRow>
@@ -306,7 +308,7 @@ export default function AdminEvents() {
           <TableBody>
             {filteredEvents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-56 text-center">
+                <TableCell colSpan={8} className="h-56 text-center">
                   <div className="flex flex-col items-center justify-center gap-3 text-slatebrand">
                     <Search className="size-9 opacity-35" />
                     <p className="text-sm font-semibold">No events found matching your filters.</p>
@@ -336,6 +338,9 @@ export default function AdminEvents() {
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant="outline" className={gradeClass(event.grade_type)}>Grade {event.grade_type}</Badge>
+                  </TableCell>
+                  <TableCell className="text-center font-mono text-sm font-bold text-slatebrand">
+                    {event.duration_minutes ? `${event.duration_minutes} min` : "-"}
                   </TableCell>
                   <TableCell className="text-center font-mono text-sm font-bold text-slatebrand">{event.max_participants_per_team}</TableCell>
                   <TableCell className="pr-5 text-right">
@@ -378,6 +383,11 @@ export default function AdminEvents() {
                   <Users className="size-3" />
                   Max {event.max_participants_per_team}
                 </span>
+                {event.duration_minutes && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/20 bg-gold/10 px-3 py-1 text-xs font-bold text-navy">
+                    {event.duration_minutes} min
+                  </span>
+                )}
                 {event.applicable_section?.map(sec => (
                   <span key={sec} className="rounded-full border border-navy/10 bg-ivory/70 px-3 py-1 text-xs font-bold text-slatebrand">
                     {sec}

@@ -65,6 +65,11 @@ export function EventsCsvUpload({ open, onOpenChange, onSuccess }: CsvUploadDial
       if (!['A', 'B', 'C', 'D'].includes(grade)) {
          throw new Error(`Row ${i+2}: Invalid grade '${rowData['grade']}'. Must be A, B, C, or D.`)
       }
+      const duration = rowData['duration_minutes'] || rowData['duration'] || ''
+      const durationMinutes = duration ? parseInt(duration, 10) : null
+      if (duration && (!durationMinutes || durationMinutes < 1)) {
+         throw new Error(`Row ${i+2}: Invalid duration '${duration}'. Use minutes as a positive number or leave blank.`)
+      }
 
       parsedData.push({
         name: rowData['name'],
@@ -72,6 +77,7 @@ export function EventsCsvUpload({ open, onOpenChange, onSuccess }: CsvUploadDial
         category,
         max_participants_per_team: category === 'SPECIAL' ? 1 : parseInt(rowData['limit']) || 1,
         grade_type: grade,
+        duration_minutes: durationMinutes,
         applicable_section: ["Senior"],
         description: rowData['description'] || ''
       })

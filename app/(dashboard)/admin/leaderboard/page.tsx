@@ -32,7 +32,7 @@ export default function LeaderboardPage() {
               Rankings that feel official.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
-              Track team movement, individual champions, penalties, and current podium status from one polished control room.
+              Track team movement, individual champions, and current podium status from one polished control room.
             </p>
           </div>
 
@@ -69,7 +69,7 @@ export default function LeaderboardPage() {
           </div>
           <div>
             <p className="text-sm font-bold text-navy">Scoring note</p>
-            <p className="text-xs font-medium text-slatebrand">Team totals include earned points minus penalties; individual rankings exclude Special Grade D team items.</p>
+            <p className="text-xs font-medium text-slatebrand">Team totals include earned judging points; individual rankings exclude Special Grade D team items.</p>
           </div>
         </div>
         <Button variant="secondary" onClick={() => router.push("/admin/scoring")}>

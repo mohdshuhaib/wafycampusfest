@@ -69,6 +69,7 @@ create table if not exists public.events (
   description text,
   max_participants_per_team integer not null default 2 check (max_participants_per_team > 0),
   grade_type text check (grade_type in ('A', 'B', 'C', 'D')),
+  duration_minutes integer check (duration_minutes is null or duration_minutes > 0),
   applicable_section text[] not null default array[]::text[],
   created_at timestamptz not null default now(),
   constraint events_applicable_section_values check (

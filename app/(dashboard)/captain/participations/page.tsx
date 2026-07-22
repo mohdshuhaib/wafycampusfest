@@ -225,13 +225,14 @@ export default function CaptainParticipations() {
         autoTable(doc, {
           startY: 126,
           margin: { left: margin, right: margin },
-          head: [["Sl No", "Code", "Name", "Category", "Grade"]],
+          head: [["Sl No", "Code", "Name", "Category", "Grade", "Sign"]],
           body: item.events.slice(0, 6).map((event, i) => [
             i + 1,
             event.event_code || "-",
             event.name,
             event.category,
             event.grade_type || "-",
+            "",
           ]),
           theme: "grid",
           headStyles: {
@@ -244,9 +245,10 @@ export default function CaptainParticipations() {
           columnStyles: {
             0: { cellWidth: 16, halign: "center" },
             1: { cellWidth: 26, halign: "center", fontStyle: "bold" },
-            2: { cellWidth: 82 },
-            3: { cellWidth: 36, halign: "center" },
-            4: { cellWidth: 18, halign: "center", fontStyle: "bold" },
+            2: { cellWidth: 62 },
+            3: { cellWidth: 30, halign: "center" },
+            4: { cellWidth: 16, halign: "center", fontStyle: "bold" },
+            5: { cellWidth: 38 },
           },
           styles: {
             fontSize: 10,

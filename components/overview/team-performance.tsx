@@ -24,7 +24,7 @@ export function TeamPerformance({ data }: { data: TeamStats[] }) {
           </div>
           <div>
             <h2 className="text-title text-lg text-navy">Team Performance</h2>
-            <p className="text-xs font-semibold text-slatebrand">Net points and podium distribution.</p>
+            <p className="text-xs font-semibold text-slatebrand">Total points and podium distribution.</p>
           </div>
         </div>
         <Badge variant="outline">{data.length} teams</Badge>

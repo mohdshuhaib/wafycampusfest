@@ -193,6 +193,7 @@ export interface Database {
           category: 'OFF STAGE' | 'ON STAGE' | 'GENERAL' | 'SPECIAL'
           max_participants_per_team: number
           grade_type: 'A' | 'B' | 'C' | 'D' | null
+          duration_minutes: number | null
           applicable_section: string[]
           description: string | null
           created_at: string
@@ -204,6 +205,7 @@ export interface Database {
           category: 'OFF STAGE' | 'ON STAGE' | 'GENERAL' | 'SPECIAL'
           max_participants_per_team?: number
           grade_type?: 'A' | 'B' | 'C' | 'D' | null
+          duration_minutes?: number | null
           applicable_section?: string[]
           description?: string | null
           created_at?: string
@@ -215,6 +217,7 @@ export interface Database {
           category?: 'OFF STAGE' | 'ON STAGE' | 'GENERAL' | 'SPECIAL'
           max_participants_per_team?: number
           grade_type?: 'A' | 'B' | 'C' | 'D' | null
+          duration_minutes?: number | null
           applicable_section?: string[]
           description?: string | null
           created_at?: string
