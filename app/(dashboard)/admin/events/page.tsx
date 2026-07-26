@@ -177,7 +177,7 @@ export default function AdminEvents() {
             </div>
             <h1 className="text-display mt-5 text-4xl text-ivory sm:text-5xl">Curate every competition.</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-ivory/62 sm:text-base">
-              Create Senior event codes, grade types, and participant limits while keeping the full event catalogue searchable.
+              Create event codes, grade types, and participant limits while keeping the full event catalogue searchable.
             </p>
           </div>
 
@@ -298,7 +298,6 @@ export default function AdminEvents() {
               <TableHead className="h-12 pl-5 text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Code</TableHead>
               <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Event Name</TableHead>
               <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Category</TableHead>
-              <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Section</TableHead>
               <TableHead className="text-center text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Grade</TableHead>
               <TableHead className="text-center text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Time</TableHead>
               <TableHead className="text-center text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Max</TableHead>
@@ -308,7 +307,7 @@ export default function AdminEvents() {
           <TableBody>
             {filteredEvents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-56 text-center">
+                <TableCell colSpan={7} className="h-56 text-center">
                   <div className="flex flex-col items-center justify-center gap-3 text-slatebrand">
                     <Search className="size-9 opacity-35" />
                     <p className="text-sm font-semibold">No events found matching your filters.</p>
@@ -326,15 +325,6 @@ export default function AdminEvents() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={categoryClass(event.category)}>{event.category}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {event.applicable_section?.map(sec => (
-                        <span key={sec} className="rounded-full border border-navy/10 bg-navy/6 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slatebrand">
-                          {sec}
-                        </span>
-                      ))}
-                    </div>
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant="outline" className={gradeClass(event.grade_type)}>Grade {event.grade_type}</Badge>
@@ -388,11 +378,6 @@ export default function AdminEvents() {
                     {event.duration_minutes} min
                   </span>
                 )}
-                {event.applicable_section?.map(sec => (
-                  <span key={sec} className="rounded-full border border-navy/10 bg-ivory/70 px-3 py-1 text-xs font-bold text-slatebrand">
-                    {sec}
-                  </span>
-                ))}
               </div>
               {event.description && <p className="mt-4 text-sm leading-6 text-slatebrand">{event.description}</p>}
               <div className="mt-5 flex gap-2">

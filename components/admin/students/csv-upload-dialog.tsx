@@ -67,12 +67,20 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
         throw new Error(`Row ${i + 2}: Team '${rowData['team_name']}' not found in database.`)
       }
 
+      const roleValue = (rowData['team_role'] || rowData['role'] || "member").toLowerCase().replace(/\s+/g, "_")
+      const teamRole = roleValue === "m" || roleValue === "manager"
+        ? "manager"
+        : roleValue === "am" || roleValue === "assistant_manager" || roleValue === "assistant"
+          ? "assistant_manager"
+          : "member"
+
       parsedData.push({
         name: rowData['name'],
         chest_no: rowData['chest_no'],
         class_grade: rowData['class'],
         image_link: rowData['image_link'] || null,
         section: "Senior",
+        team_role: teamRole,
         team_id: team.id
       })
     }
@@ -172,7 +180,7 @@ export function CsvUploadDialog({ open, onOpenChange, teams, onSuccess }: CsvUpl
           )}
 
           <div className="rounded-2xl border border-navy/10 bg-mist p-3 text-xs font-semibold text-slatebrand">
-            <strong>Required Headers:</strong> name, chest_no, class, team_name. Optional: image_link. Section is always Senior.
+            <strong>Required Headers:</strong> name, chest_no, class, team_name. Optional: image_link, team_role (M, AM, or member).
           </div>
         </div>
 

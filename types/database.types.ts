@@ -61,6 +61,41 @@ export interface Database {
           created_at?: string
         }
       }
+      committee_members: {
+        Row: {
+          id: string
+          name: string
+          role: string
+          whatsapp_number: string
+          phone_number: string
+          sort_order: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          role: string
+          whatsapp_number: string
+          phone_number: string
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          role?: string
+          whatsapp_number?: string
+          phone_number?: string
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       grade_settings: {
         Row: {
           id: string
@@ -160,7 +195,8 @@ export interface Database {
           chest_no: string | null
           class_grade: string | null
           image_link: string | null
-          section: 'Senior' | 'Junior' | 'Sub-Junior'
+          section: 'Senior'
+          team_role: 'member' | 'manager' | 'assistant_manager'
           team_id: string
           created_at: string
         }
@@ -170,7 +206,8 @@ export interface Database {
           chest_no?: string | null
           class_grade?: string | null
           image_link?: string | null
-          section: 'Senior' | 'Junior' | 'Sub-Junior'
+          section: 'Senior'
+          team_role?: 'member' | 'manager' | 'assistant_manager'
           team_id: string
           created_at?: string
         }
@@ -180,7 +217,8 @@ export interface Database {
           chest_no?: string | null
           class_grade?: string | null
           image_link?: string | null
-          section?: 'Senior' | 'Junior' | 'Sub-Junior'
+          section?: 'Senior'
+          team_role?: 'member' | 'manager' | 'assistant_manager'
           team_id?: string
           created_at?: string
         }

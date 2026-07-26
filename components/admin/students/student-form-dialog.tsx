@@ -19,6 +19,7 @@ interface Student {
   class_grade: string | null
   image_link: string | null
   section: string
+  team_role: "member" | "manager" | "assistant_manager"
   team_id: string
 }
 
@@ -56,6 +57,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
     class_grade: "AQEEDA 1",
     image_link: "",
     section: "Senior",
+    team_role: "member" as "member" | "manager" | "assistant_manager",
     team_id: ""
   })
 
@@ -68,6 +70,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
         class_grade: student.class_grade || "AQEEDA 1",
         image_link: student.image_link || "",
         section: "Senior",
+        team_role: student.team_role || "member",
         team_id: student.team_id
       })
     } else if (!student && open) {
@@ -78,6 +81,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
         class_grade: "AQEEDA 1",
         image_link: "",
         section: "Senior",
+        team_role: "member",
         team_id: ""
       })
     }
@@ -117,6 +121,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
             class_grade: formData.class_grade,
             image_link: formData.image_link.trim() || null,
             section: "Senior",
+            team_role: formData.team_role,
             team_id: formData.team_id
           })
           .eq('id', student.id)
@@ -129,6 +134,7 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
           class_grade: formData.class_grade,
           image_link: formData.image_link.trim() || null,
           section: "Senior",
+          team_role: formData.team_role,
           team_id: formData.team_id
         })
         if (insertError) throw insertError
@@ -181,13 +187,6 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Section</Label>
-            <div className="col-span-3 flex h-10 items-center rounded-2xl border border-navy/12 bg-navy/6 px-3 text-sm font-bold text-navy">
-              Senior
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Image Link</Label>
             <Input
               value={formData.image_link}
@@ -209,6 +208,25 @@ export function StudentFormDialog({ open, onOpenChange, student, teams, onSucces
                 </SelectTrigger>
                 <SelectContent className="surface-elevated rounded-2xl border-navy/10">
                   {CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Team Role</Label>
+            <div className="col-span-3">
+              <Select
+                value={formData.team_role}
+                onValueChange={(v: "member" | "manager" | "assistant_manager") => setFormData({...formData, team_role: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="surface-elevated rounded-2xl border-navy/10">
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="manager">Manager (M)</SelectItem>
+                  <SelectItem value="assistant_manager">Assistant Manager (AM)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

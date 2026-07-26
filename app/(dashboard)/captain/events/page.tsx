@@ -17,6 +17,7 @@ interface Student {
   chest_no: string | null
   image_link: string | null
   team_id: string
+  team_role: "member" | "manager" | "assistant_manager"
 }
 
 interface Event {
@@ -46,11 +47,28 @@ interface AppConfig {
 interface SectionLimit { section: string; category: string; limit_count: number }
 
 const TABS = [
-  { id: "SENIOR_ON", label: "Senior On", section: "Senior", cat: "ON STAGE" },
-  { id: "SENIOR_OFF", label: "Senior Off", section: "Senior", cat: "OFF STAGE" },
+  { id: "ON_STAGE", label: "On Stage", section: "Senior", cat: "ON STAGE" },
+  { id: "OFF_STAGE", label: "Off Stage", section: "Senior", cat: "OFF STAGE" },
   { id: "GENERAL", label: "General", section: "Senior", cat: "GENERAL" },
   { id: "SPECIAL", label: "Special", section: "Senior", cat: "SPECIAL" },
 ]
+
+function chestSortValue(chestNo: string | null) {
+  const numeric = Number(chestNo)
+  return Number.isFinite(numeric) ? numeric : Number.MAX_SAFE_INTEGER
+}
+
+function teamRoleRank(role?: Student["team_role"]) {
+  if (role === "manager") return 0
+  if (role === "assistant_manager") return 1
+  return 2
+}
+
+function teamRoleLabel(role?: Student["team_role"]) {
+  if (role === "manager") return "M"
+  if (role === "assistant_manager") return "AM"
+  return null
+}
 
 export default function MatrixRegistration() {
   const [loading, setLoading] = useState(true)
@@ -151,7 +169,14 @@ export default function MatrixRegistration() {
       )
     }
 
-    return activeTab.cat === "SPECIAL" ? [] : list.filter((student) => student.section === "Senior")
+    if (activeTab.cat === "SPECIAL") return []
+    return [...list.filter((student) => student.section === "Senior")].sort((a, b) => {
+      const roleDiff = teamRoleRank(a.team_role) - teamRoleRank(b.team_role)
+      if (roleDiff !== 0) return roleDiff
+      const chestDiff = chestSortValue(a.chest_no) - chestSortValue(b.chest_no)
+      if (chestDiff !== 0) return chestDiff
+      return a.name.localeCompare(b.name)
+    })
   }, [students, activeTab, searchQuery])
 
   const filteredEvents = useMemo(() => {
@@ -333,7 +358,7 @@ export default function MatrixRegistration() {
             </Badge>
             <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Build your team entries.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
-              Search Senior students and select event cells while staying inside the 6 total, 4 category, and 2 general limits.
+              Search students and select event cells while staying inside the 6 total, 4 category, and 2 general limits.
             </p>
           </div>
 
@@ -434,9 +459,6 @@ export default function MatrixRegistration() {
                     <div className="flex flex-col gap-1">
                       <span className="text-sm font-black text-navy">Student</span>
                       <div className="mt-1 flex max-w-[8rem] flex-wrap gap-1">
-                        <span className="rounded-full bg-navy/7 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-slatebrand">
-                          {activeTab.section}
-                        </span>
                         <span className="rounded-full bg-gold/12 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-navy">
                           {activeTab.cat}
                         </span>
@@ -478,10 +500,16 @@ export default function MatrixRegistration() {
                         <div className="flex min-w-0 items-center gap-3">
                           <StudentPhoto imageLink={student.image_link} name={student.name} className="size-11" />
                           <div className="min-w-0">
-                            <div className="truncate text-xs font-black text-navy sm:text-sm">{student.name}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="truncate text-xs font-black text-navy sm:text-sm">{student.name}</div>
+                              {teamRoleLabel(student.team_role) && (
+                                <Badge variant="outline" className="h-5 border-gold/30 bg-gold/12 px-2 text-[9px] text-navy">
+                                  {teamRoleLabel(student.team_role)}
+                                </Badge>
+                              )}
+                            </div>
                             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slatebrand">
                               <span className="rounded-full bg-navy/7 px-2 py-0.5 font-mono text-navy">{student.chest_no || "-"}</span>
-                              <span className="hidden sm:inline">{student.section}</span>
                             </div>
                             <Badge variant="outline" className={cn("mt-2 h-5 border px-2 text-[9px]", getLimitBadgeColor(isFull))}>
                               {isFull ? "Maxed" : `${remaining} left`}

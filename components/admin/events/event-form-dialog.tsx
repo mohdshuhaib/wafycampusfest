@@ -46,7 +46,6 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
     max_participants_per_team: 1,
     grade_type: "A",
     duration_minutes: "",
-    applicable_section: "Senior", // UI handles single select, DB stores array
     description: ""
   })
 
@@ -60,7 +59,6 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
         max_participants_per_team: event.max_participants_per_team,
         grade_type: event.grade_type || "A",
         duration_minutes: event.duration_minutes ? String(event.duration_minutes) : "",
-        applicable_section: "Senior",
         description: event.description || ""
       })
     } else if (!event && open) {
@@ -72,7 +70,6 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
         max_participants_per_team: 1,
         grade_type: "A",
         duration_minutes: "",
-        applicable_section: "Senior",
         description: ""
       })
     }
@@ -180,7 +177,7 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Category</Label>
                 <Select
@@ -194,12 +191,6 @@ export function EventFormDialog({ open, onOpenChange, event, onSuccess }: EventF
                         {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                 </Select>
-            </div>
-            <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-[0.12em] text-slatebrand">Section</Label>
-                <div className="flex h-10 items-center rounded-2xl border border-navy/12 bg-navy/6 px-3 text-sm font-bold text-navy">
-                  Senior
-                </div>
             </div>
           </div>
 

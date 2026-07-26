@@ -8,12 +8,16 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
   CheckCircle2,
+  Edit2,
   ExternalLink,
   FileBadge,
   FileText,
   Image as ImageIcon,
   Link as LinkIcon,
   Loader2,
+  MessageCircle,
+  Phone,
+  Plus,
   Save,
   Settings2,
   Sparkles,
@@ -29,6 +33,16 @@ interface SiteAsset {
   value: string
   label: string
   updated_at: string
+}
+
+interface CommitteeMember {
+  id: string
+  name: string
+  role: string
+  whatsapp_number: string
+  phone_number: string
+  sort_order: number
+  is_active: boolean
 }
 
 const PARTICIPATION_CARD_LOGO_KEY = "participation_card_logo"
@@ -50,6 +64,17 @@ export default function AssetsManagePage() {
   const [uploadingHighlights, setUploadingHighlights] = useState(false)
   const [highlightUploadError, setHighlightUploadError] = useState<string | null>(null)
   const [deletingHighlightId, setDeletingHighlightId] = useState<string | null>(null)
+  const [committeeMembers, setCommitteeMembers] = useState<CommitteeMember[]>([])
+  const [savingCommittee, setSavingCommittee] = useState(false)
+  const [editingCommitteeId, setEditingCommitteeId] = useState<string | null>(null)
+  const [committeeForm, setCommitteeForm] = useState({
+    name: "",
+    role: "",
+    whatsapp_number: "",
+    phone_number: "",
+    sort_order: "0",
+    is_active: true,
+  })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const scoreSheetInputRef = useRef<HTMLInputElement>(null)
@@ -94,6 +119,14 @@ export default function AssetsManagePage() {
 
         if (highlightsError) throw highlightsError
         setHighlightImages((highlights || []) as SiteAsset[])
+
+        const { data: committeeData, error: committeeError } = await supabase.from("committee_members")
+          .select("*")
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true })
+
+        if (committeeError) throw committeeError
+        setCommitteeMembers((committeeData || []) as CommitteeMember[])
       } catch (error) {
         console.error("Error fetching assets:", error)
         toast.error("Failed to load assets")
@@ -127,6 +160,84 @@ export default function AssetsManagePage() {
       toast.error("Failed to update link")
     } finally {
       setUpdatingLink(false)
+    }
+  }
+
+  const resetCommitteeForm = () => {
+    setEditingCommitteeId(null)
+    setCommitteeForm({
+      name: "",
+      role: "",
+      whatsapp_number: "",
+      phone_number: "",
+      sort_order: "0",
+      is_active: true,
+    })
+  }
+
+  const handleEditCommittee = (member: CommitteeMember) => {
+    setEditingCommitteeId(member.id)
+    setCommitteeForm({
+      name: member.name,
+      role: member.role,
+      whatsapp_number: member.whatsapp_number,
+      phone_number: member.phone_number,
+      sort_order: String(member.sort_order ?? 0),
+      is_active: member.is_active,
+    })
+  }
+
+  const handleSaveCommittee = async () => {
+    if (!committeeForm.name.trim() || !committeeForm.role.trim() || !committeeForm.whatsapp_number.trim() || !committeeForm.phone_number.trim()) {
+      toast.error("Fill name, role, WhatsApp, and phone number")
+      return
+    }
+
+    try {
+      setSavingCommittee(true)
+      const payload = {
+        name: committeeForm.name.trim(),
+        role: committeeForm.role.trim(),
+        whatsapp_number: committeeForm.whatsapp_number.trim(),
+        phone_number: committeeForm.phone_number.trim(),
+        sort_order: Number(committeeForm.sort_order) || 0,
+        is_active: committeeForm.is_active,
+      }
+
+      const { data, error } = editingCommitteeId
+        ? await supabase.from("committee_members").update(payload as never).eq("id", editingCommitteeId).select("*").single()
+        : await supabase.from("committee_members").insert(payload as never).select("*").single()
+      if (error) throw error
+
+      setCommitteeMembers((prev) => {
+        const next = editingCommitteeId
+          ? prev.map((item) => item.id === editingCommitteeId ? data as CommitteeMember : item)
+          : [...prev, data as CommitteeMember]
+        return next.sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name))
+      })
+      resetCommitteeForm()
+      toast.success(editingCommitteeId ? "Committee member updated" : "Committee member added")
+    } catch (error: unknown) {
+      console.error("Committee save failed:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to save committee member")
+    } finally {
+      setSavingCommittee(false)
+    }
+  }
+
+  const handleDeleteCommittee = async (member: CommitteeMember) => {
+    try {
+      const { error } = await supabase.from("committee_members")
+        .delete()
+        .eq("id", member.id)
+      if (error) throw error
+
+      setCommitteeMembers((prev) => prev.filter((item) => item.id !== member.id))
+      if (editingCommitteeId === member.id) resetCommitteeForm()
+      toast.success("Committee member deleted")
+    } catch (error: unknown) {
+      console.error("Committee delete failed:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to delete committee member")
     }
   }
 
@@ -466,6 +577,91 @@ export default function AssetsManagePage() {
             onUpload={handleScoreSheetUpload}
             accent="blue"
           />
+        </div>
+      </section>
+
+      <section className="surface-elevated rounded-[2rem] p-5">
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-navy text-gold">
+              <Phone className="size-5" />
+            </div>
+            <div>
+              <h2 className="text-title text-xl text-navy">Committee Contacts</h2>
+              <p className="mt-1 max-w-2xl text-xs font-semibold leading-5 text-slatebrand">
+                Add the contact list shown to captains, including direct WhatsApp and phone call numbers.
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className="h-8 w-fit px-3">{committeeMembers.length} Members</Badge>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[22rem_minmax(0,1fr)]">
+          <div className="rounded-3xl border border-navy/10 bg-mist/70 p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-black text-navy">{editingCommitteeId ? "Edit Member" : "Add Member"}</h3>
+              {editingCommitteeId && (
+                <Button variant="ghost" size="sm" onClick={resetCommitteeForm}>Clear</Button>
+              )}
+            </div>
+            <div className="space-y-3">
+              <Input placeholder="Name" value={committeeForm.name} onChange={(e) => setCommitteeForm({...committeeForm, name: e.target.value})} />
+              <Input placeholder="Role" value={committeeForm.role} onChange={(e) => setCommitteeForm({...committeeForm, role: e.target.value})} />
+              <Input placeholder="WhatsApp number with country code" value={committeeForm.whatsapp_number} onChange={(e) => setCommitteeForm({...committeeForm, whatsapp_number: e.target.value})} />
+              <Input placeholder="Phone call number" value={committeeForm.phone_number} onChange={(e) => setCommitteeForm({...committeeForm, phone_number: e.target.value})} />
+              <Input type="number" placeholder="Sort order" value={committeeForm.sort_order} onChange={(e) => setCommitteeForm({...committeeForm, sort_order: e.target.value})} />
+              <label className="flex items-center gap-2 rounded-2xl border border-navy/10 bg-ivory/70 px-3 py-2 text-sm font-bold text-navy">
+                <input
+                  type="checkbox"
+                  checked={committeeForm.is_active}
+                  onChange={(e) => setCommitteeForm({...committeeForm, is_active: e.target.checked})}
+                  className="size-4 accent-[#D4AF37]"
+                />
+                Show to captains
+              </label>
+              <Button onClick={handleSaveCommittee} disabled={savingCommittee} className="w-full">
+                {savingCommittee ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Plus className="mr-2 size-4" />}
+                {editingCommitteeId ? "Save Member" : "Add Member"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-3xl border border-navy/10 bg-ivory/70">
+            {committeeMembers.length === 0 ? (
+              <div className="grid min-h-72 place-items-center p-8 text-center text-slatebrand">
+                <div>
+                  <MessageCircle className="mx-auto mb-3 size-10 opacity-40" />
+                  <p className="text-sm font-bold text-navy">No committee contacts added yet.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-navy/8">
+                {committeeMembers.map((member) => (
+                  <article key={member.id} className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate text-sm font-black text-navy">{member.name}</h3>
+                        {!member.is_active && <Badge variant="outline" className="border-destructive/20 bg-destructive/10 text-destructive">Hidden</Badge>}
+                      </div>
+                      <p className="mt-1 text-xs font-semibold text-slatebrand">{member.role}</p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-slatebrand">
+                        <span>WA {member.whatsapp_number}</span>
+                        <span>Call {member.phone_number}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon-sm" onClick={() => handleEditCommittee(member)} aria-label={`Edit ${member.name}`}>
+                        <Edit2 className="size-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" className="hover:text-destructive" onClick={() => handleDeleteCommittee(member)} aria-label={`Delete ${member.name}`}>
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

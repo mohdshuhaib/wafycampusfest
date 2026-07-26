@@ -18,18 +18,18 @@ import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
 const SECTIONS = [
-  { id: 'SENIOR_ON', label: 'Senior On-Stage', section: 'Senior', cat: 'ON STAGE' },
-  { id: 'SENIOR_OFF', label: 'Senior Off-Stage', section: 'Senior', cat: 'OFF STAGE' },
+  { id: 'ON_STAGE', label: 'On Stage', section: 'Senior', cat: 'ON STAGE' },
+  { id: 'OFF_STAGE', label: 'Off Stage', section: 'Senior', cat: 'OFF STAGE' },
   { id: 'GENERAL', label: 'General', section: 'Senior', cat: 'GENERAL' },
   { id: 'SPECIAL', label: 'Special', section: 'Senior', cat: 'SPECIAL' },
 ]
 
 const EXPORT_CATEGORIES = [
-  { label: 'Senior', value: 'Senior' },
+  { label: 'All Students', value: 'Senior' },
 ]
 
 const PERFORMANCE_CATEGORIES = [
-  { label: 'Senior', value: 'Senior' },
+  { label: 'All Students', value: 'Senior' },
 ]
 
 export default function ScoringPage() {
@@ -359,7 +359,7 @@ export default function ScoringPage() {
             </div>
             <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Register winners with confidence.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
-              Choose a Senior event, rank winners, apply performance grades, and export official reports.
+              Choose an event, rank winners, apply performance grades, and export official reports.
             </p>
           </div>
 

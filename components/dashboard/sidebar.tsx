@@ -21,6 +21,7 @@ import {
   Menu,
   History,
   IndianRupee,
+  Phone,
   Sparkles,
 } from "lucide-react"
 
@@ -47,6 +48,7 @@ const captainLinks = [
   { href: "/captain/events", label: "Events", icon: Music },
   { href: "/captain/participations", label: "Admit Card", icon: IdCardLanyard },
   { href: "/captain/status", label: "Reports", icon: ScrollText },
+  { href: "/captain/contact", label: "Contact", icon: Phone },
 ]
 
 function BrandMark() {

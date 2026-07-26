@@ -382,7 +382,6 @@ export default function CaptainParticipations() {
               <TableHeader className="bg-mist">
                 <TableRow className="border-navy/10 hover:bg-transparent">
                   <TableHead className="w-[280px] pl-6 font-black text-slatebrand">Student Details</TableHead>
-                  <TableHead className="font-black text-slatebrand">Section</TableHead>
                   <TableHead className="font-black text-slatebrand">Group</TableHead>
                   <TableHead className="font-black text-slatebrand">Events Count</TableHead>
                   <TableHead className="pr-6 text-right font-black text-slatebrand">Admit Card</TableHead>
@@ -402,9 +401,6 @@ export default function CaptainParticipations() {
                           </span>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{row.student.section}</Badge>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm font-bold text-navy">{row.teamName}</span>

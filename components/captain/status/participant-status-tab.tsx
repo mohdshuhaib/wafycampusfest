@@ -112,7 +112,6 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
                 <TableHead className="w-[110px] font-black text-slatebrand">Chest No</TableHead>
                 <TableHead className="font-black text-slatebrand">Student Name</TableHead>
                 <TableHead className="hidden font-black text-slatebrand md:table-cell">Class</TableHead>
-                <TableHead className="hidden font-black text-slatebrand md:table-cell">Section</TableHead>
                 <TableHead className="text-center font-black text-slatebrand">On-Stage</TableHead>
                 <TableHead className="text-center font-black text-slatebrand">Off-Stage</TableHead>
                 <TableHead className="pr-6 text-right font-black text-slatebrand">Status</TableHead>
@@ -132,7 +131,6 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
                     </div>
                   </TableCell>
                   <TableCell className="hidden font-semibold text-slatebrand md:table-cell">{student.class_grade || "-"}</TableCell>
-                  <TableCell className="hidden md:table-cell"><Badge variant="outline">{student.section}</Badge></TableCell>
                   <TableCell className="text-center">{student.hasOnStage ? <CheckCircle2 className="mx-auto size-5 text-success" /> : <div className="mx-auto size-2 rounded-full bg-navy/15" />}</TableCell>
                   <TableCell className="text-center">{student.hasOffStage ? <CheckCircle2 className="mx-auto size-5 text-success" /> : <div className="mx-auto size-2 rounded-full bg-navy/15" />}</TableCell>
                   <TableCell className="pr-6 text-right">
@@ -148,7 +146,7 @@ export function ParticipantStatusTab({ students }: { students: Student[] }) {
               ))}
               {processedData.rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-56 text-center text-sm font-bold text-slatebrand">No participants found matching your criteria.</TableCell>
+                  <TableCell colSpan={6} className="h-56 text-center text-sm font-bold text-slatebrand">No participants found matching your criteria.</TableCell>
                 </TableRow>
               )}
             </TableBody>

@@ -49,12 +49,26 @@ interface Student {
   class_grade: string | null
   image_link: string | null
   section: 'Senior'
+  team_role: "member" | "manager" | "assistant_manager"
   team_id: string
   teams?: { name: string; color_hex: string }
 }
 
-function sectionTone(section: Student["section"]) {
-  return "border-gold/35 bg-gold/16 text-navy"
+function chestSortValue(chestNo: string | null) {
+  const numeric = Number(chestNo)
+  return Number.isFinite(numeric) ? numeric : Number.MAX_SAFE_INTEGER
+}
+
+function teamRoleRank(role?: Student["team_role"]) {
+  if (role === "manager") return 0
+  if (role === "assistant_manager") return 1
+  return 2
+}
+
+function teamRoleLabel(role?: Student["team_role"]) {
+  if (role === "manager") return "M"
+  if (role === "assistant_manager") return "AM"
+  return null
 }
 
 export default function AdminStudents() {
@@ -136,12 +150,21 @@ export default function AdminStudents() {
 
   const filteredStudents = useMemo(() => {
     const query = search.toLowerCase()
-    return students.filter(s => {
+    const list = students.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(query) ||
         (s.chest_no && s.chest_no.toLowerCase().includes(query))
       const matchesTeam = filterTeam === "all" || s.team_id === filterTeam
       const matchesClass = filterClass === "all" || s.class_grade === filterClass
       return matchesSearch && matchesTeam && matchesClass
+    })
+    return [...list].sort((a, b) => {
+      if (filterTeam !== "all") {
+        const roleDiff = teamRoleRank(a.team_role) - teamRoleRank(b.team_role)
+        if (roleDiff !== 0) return roleDiff
+      }
+      const chestDiff = chestSortValue(a.chest_no) - chestSortValue(b.chest_no)
+      if (chestDiff !== 0) return chestDiff
+      return a.name.localeCompare(b.name)
     })
   }, [students, search, filterTeam, filterClass])
 
@@ -152,7 +175,6 @@ export default function AdminStudents() {
   }
 
   const hasActiveFilters = search !== "" || filterTeam !== "all" || filterClass !== "all"
-  const seniorCount = students.filter(s => s.section === "Senior").length
   const assignedTeams = new Set(students.map(s => s.team_id)).size
 
   if (loading) {
@@ -177,7 +199,7 @@ export default function AdminStudents() {
             </div>
             <h1 className="text-display mt-5 text-4xl text-ivory sm:text-5xl">Organize every participant.</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-ivory/62 sm:text-base">
-              Search, import, classify, and manage Senior student profiles across teams, classes, and chest numbers.
+              Search, import, classify, and manage student profiles across teams, classes, and chest numbers.
             </p>
           </div>
 
@@ -276,9 +298,9 @@ export default function AdminStudents() {
         <div className="surface-panel rounded-3xl p-5">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
             <GraduationCap className="size-4 text-gold" />
-            Senior Students
+            Total Students
           </div>
-          <div className="text-title text-3xl text-navy">{seniorCount}</div>
+          <div className="text-title text-3xl text-navy">{students.length}</div>
         </div>
         <div className="surface-panel rounded-3xl p-5">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
@@ -303,7 +325,6 @@ export default function AdminStudents() {
               <TableHead className="h-12 pl-5 text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Chest</TableHead>
               <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Student</TableHead>
               <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Class</TableHead>
-              <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Section</TableHead>
               <TableHead className="text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Team</TableHead>
               <TableHead className="pr-5 text-right text-[11px] font-black uppercase tracking-[0.14em] text-ivory/70">Actions</TableHead>
             </TableRow>
@@ -311,7 +332,7 @@ export default function AdminStudents() {
           <TableBody>
             {filteredStudents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-56 text-center">
+                <TableCell colSpan={5} className="h-56 text-center">
                   <div className="flex flex-col items-center justify-center gap-3 text-slatebrand">
                     <Search className="size-9 opacity-35" />
                     <p className="text-sm font-semibold">No students found matching your filters.</p>
@@ -327,15 +348,19 @@ export default function AdminStudents() {
                     <div className="flex items-center gap-3">
                       <StudentPhoto imageLink={student.image_link} name={student.name} className="size-10" />
                       <div className="min-w-0">
-                        <div className="truncate font-bold text-navy">{student.name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="truncate font-bold text-navy">{student.name}</div>
+                          {teamRoleLabel(student.team_role) && (
+                            <Badge variant="outline" className="h-5 border-gold/30 bg-gold/12 px-2 text-[10px] text-navy">
+                              {teamRoleLabel(student.team_role)}
+                            </Badge>
+                          )}
+                        </div>
                         <div className="mt-1 text-xs font-semibold text-slatebrand">ID {student.id.slice(0, 8)}</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="font-semibold text-slatebrand">{student.class_grade || '-'}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={sectionTone(student.section)}>{student.section}</Badge>
-                  </TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
@@ -381,7 +406,14 @@ export default function AdminStudents() {
                   <div className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-slatebrand">
                     Chest {student.chest_no || '-'}
                   </div>
-                  <h2 className="text-title mt-1 text-xl text-navy">{student.name}</h2>
+                  <div className="mt-1 flex items-center gap-2">
+                    <h2 className="text-title text-xl text-navy">{student.name}</h2>
+                    {teamRoleLabel(student.team_role) && (
+                      <Badge variant="outline" className="h-6 border-gold/30 bg-gold/12 px-2 text-[10px] text-navy">
+                        {teamRoleLabel(student.team_role)}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteId(student.id)}>
                   <Trash2 className="size-4" />
@@ -389,7 +421,6 @@ export default function AdminStudents() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Badge variant="outline" className={sectionTone(student.section)}>{student.section}</Badge>
                 <span className="inline-flex items-center gap-1 rounded-full border border-navy/10 bg-navy/6 px-3 py-1 text-xs font-bold text-slatebrand">
                   <IdCard className="size-3" />
                   {student.class_grade || 'No class'}
