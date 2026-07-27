@@ -45,6 +45,7 @@ const adminLinks = [
 
 const captainLinks = [
   { href: "/captain/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/captain/participants", label: "Participants", icon: Users },
   { href: "/captain/events", label: "Events", icon: Music },
   { href: "/captain/participations", label: "Admit Card", icon: IdCardLanyard },
   { href: "/captain/status", label: "Reports", icon: ScrollText },
