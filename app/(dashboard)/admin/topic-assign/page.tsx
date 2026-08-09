@@ -655,19 +655,19 @@ export default function AdminTopicAssignPage() {
                             handleOpenAddModal(existing)
                           }
                         }}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-all cursor-pointer ${
+                        className={`w-full flex items-center justify-between p-3 rounded-xl text-left text-xs transition-all cursor-pointer ${
                           isSelected
-                            ? "bg-navy text-ivory font-bold shadow-xs"
+                            ? "bg-navy text-ivory border-2 border-gold ring-2 ring-gold/40 font-black shadow-md scale-[1.01]"
                             : isAssigned
-                            ? "bg-emerald-500/10 text-emerald-950 border border-emerald-500/25 font-semibold"
-                            : "hover:bg-navy/6 text-navy font-medium"
+                            ? "bg-emerald-500/10 text-emerald-950 border border-emerald-500/30 font-semibold hover:bg-emerald-500/15"
+                            : "hover:bg-navy/8 text-navy font-medium bg-white/80 border border-navy/10"
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
                           <span
                             className={`font-mono text-[11px] px-2 py-0.5 rounded-md font-extrabold shrink-0 ${
                               isSelected
-                                ? "bg-gold text-navy"
+                                ? "bg-gold text-navy font-black"
                                 : isAssigned
                                 ? "bg-emerald-600 text-white"
                                 : "bg-navy/8 text-navy"
@@ -675,19 +675,20 @@ export default function AdminTopicAssignPage() {
                           >
                             {evt.event_code || "N/A"}
                           </span>
-                          <span className="truncate">{evt.name}</span>
+                          <span className={`truncate ${isSelected ? "text-ivory font-black text-sm" : ""}`}>{evt.name}</span>
                         </div>
 
-                        {isAssigned && (
-                          <span
-                            className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                              isSelected ? "bg-emerald-500 text-white" : "bg-emerald-600/15 text-emerald-700"
-                            }`}
-                          >
+                        {isSelected ? (
+                          <span className="flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-lg bg-gold text-navy shadow-sm shrink-0">
+                            <Check className="size-3.5 stroke-[3]" />
+                            <span>SELECTED</span>
+                          </span>
+                        ) : isAssigned ? (
+                          <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600/15 text-emerald-700 shrink-0">
                             <Check className="size-3 stroke-[3]" />
                             <span>Assigned</span>
                           </span>
-                        )}
+                        ) : null}
                       </button>
                     )
                   })

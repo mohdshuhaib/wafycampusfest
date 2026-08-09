@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import { Input } from "@/components/ui/input"
-import { BookOpen, Search, Loader2, Globe, Users, User, Clock } from "lucide-react"
+import { BookOpen, Search, Loader2, Globe, Users, User, ShieldCheck } from "lucide-react"
 
 interface ProgrammeEvent {
   id: string
@@ -25,6 +25,7 @@ interface StudentInfo {
   id: string
   name: string
   chest_no: string | null
+  team_id: string
 }
 
 interface EventTopicRecord {
@@ -45,6 +46,7 @@ export default function CaptainViewTopicPage() {
   const [topicRecords, setTopicRecords] = useState<EventTopicRecord[]>([])
   const [teamsMap, setTeamsMap] = useState<Record<string, Team>>({})
   const [studentsMap, setStudentsMap] = useState<Record<string, StudentInfo>>({})
+  const [captainTeamId, setCaptainTeamId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -53,7 +55,19 @@ export default function CaptainViewTopicPage() {
   const fetchTopics = async () => {
     setLoading(true)
 
-    // 1. Fetch Teams for lookup
+    // 1. Fetch Logged-in Captain's Profile Team ID
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await (supabase.from("profiles") as any)
+        .select("team_id")
+        .eq("id", user.id)
+        .single()
+      if (profile?.team_id) {
+        setCaptainTeamId(profile.team_id)
+      }
+    }
+
+    // 2. Fetch Teams for lookup
     const { data: teamsData } = await (supabase.from("teams") as any).select("id, name, slug, color_hex")
     if (teamsData) {
       const map: Record<string, Team> = {}
@@ -63,8 +77,8 @@ export default function CaptainViewTopicPage() {
       setTeamsMap(map)
     }
 
-    // 2. Fetch Students for lookup in participant-wise topics
-    const { data: studentsData } = await (supabase.from("students") as any).select("id, name, chest_no")
+    // 3. Fetch Students for lookup in participant-wise topics
+    const { data: studentsData } = await (supabase.from("students") as any).select("id, name, chest_no, team_id")
     if (studentsData) {
       const map: Record<string, StudentInfo> = {}
       ;(studentsData as StudentInfo[]).forEach((s) => {
@@ -73,7 +87,7 @@ export default function CaptainViewTopicPage() {
       setStudentsMap(map)
     }
 
-    // 3. Fetch EventTopics with Event details
+    // 4. Fetch EventTopics with Event details
     const { data: topicsData, error } = await (supabase.from("event_topics") as any)
       .select(`
         id,
@@ -142,11 +156,7 @@ export default function CaptainViewTopicPage() {
     const code = rec.event?.event_code?.toLowerCase() || ""
     const name = rec.event?.name?.toLowerCase() || ""
     const genTopic = rec.general_topic?.toLowerCase() || ""
-
-    // Match team topics
     const teamTopicsStr = rec.team_topics ? Object.values(rec.team_topics).join(" ").toLowerCase() : ""
-    
-    // Match participant topics
     const partTopicsStr = rec.participant_topics ? Object.values(rec.participant_topics).join(" ").toLowerCase() : ""
 
     return (
@@ -158,17 +168,28 @@ export default function CaptainViewTopicPage() {
     )
   })
 
+  const currentTeamName = captainTeamId && teamsMap[captainTeamId] ? teamsMap[captainTeamId].name : null
+
   return (
     <div className="space-y-6 font-sans">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-black text-navy flex items-center gap-2">
-          <BookOpen className="size-6 text-gold" />
-          View Programme Topics
-        </h1>
-        <p className="text-sm text-slatebrand mt-1">
-          Released topics and subjects for festival programmes (General, Team-wise & Participant-wise).
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-navy flex items-center gap-2">
+            <BookOpen className="size-6 text-gold" />
+            View Programme Topics
+          </h1>
+          <p className="text-sm text-slatebrand mt-1">
+            Released topics and subjects for festival programmes.
+          </p>
+        </div>
+
+        {currentTeamName && (
+          <div className="flex items-center gap-2 bg-navy text-ivory px-4 py-2 rounded-2xl shadow-xs self-start sm:self-auto border border-gold/30">
+            <ShieldCheck className="size-4 text-gold" />
+            <span className="text-xs font-extrabold">{currentTeamName} Portal</span>
+          </div>
+        )}
       </div>
 
       {/* Top Search Bar */}
@@ -250,7 +271,7 @@ export default function CaptainViewTopicPage() {
                   </div>
                 </div>
 
-                {/* MODE 1: GENERAL TOPIC */}
+                {/* MODE 1: GENERAL TOPIC (Shown for all teams) */}
                 {rec.topic_type === "general" && (
                   <div
                     className={`p-4 rounded-2xl bg-white/80 border border-navy/10 text-navy font-semibold text-base leading-relaxed ${
@@ -262,81 +283,131 @@ export default function CaptainViewTopicPage() {
                   </div>
                 )}
 
-                {/* MODE 2: PERSONAL (TEAM-WISE) TOPIC */}
+                {/* MODE 2: PERSONAL (TEAM-WISE) TOPIC (Isolated to Captain's own team) */}
                 {rec.topic_type === "personal" && rec.team_topics && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {Object.entries(rec.team_topics).map(([teamId, topicVal]) => {
-                      const team = teamsMap[teamId]
-                      return (
-                        <div
-                          key={teamId}
-                          className="p-4 rounded-2xl bg-white/80 border border-navy/10 space-y-2 flex flex-col justify-between"
-                        >
-                          <div className="flex items-center gap-2 font-bold text-xs">
+                  <div>
+                    {captainTeamId && rec.team_topics[captainTeamId] ? (
+                      <div className="p-4 rounded-2xl bg-white/90 border border-navy/10 space-y-2">
+                        <div className="flex items-center justify-between font-bold text-xs">
+                          <div className="flex items-center gap-2">
                             <span
                               className="size-3 rounded-full shrink-0"
-                              style={{ backgroundColor: team?.color_hex || "#1e3a8a" }}
+                              style={{ backgroundColor: teamsMap[captainTeamId]?.color_hex || "#1e3a8a" }}
                             />
-                            <span className="text-navy">{team?.name || "Team"}</span>
+                            <span className="text-navy font-extrabold text-sm">{teamsMap[captainTeamId]?.name}</span>
                           </div>
-
-                          <div
-                            className={`text-sm font-semibold text-slatebrand p-2.5 rounded-xl bg-navy/4 ${
-                              isArabic ? "text-right text-base text-emerald-950" : "text-left"
-                            }`}
-                            dir={isArabic ? "rtl" : "ltr"}
-                          >
-                            {topicVal}
-                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-gold/20 text-navy px-2.5 py-0.5 rounded-full border border-gold/30">
+                            Your Team Topic
+                          </span>
                         </div>
-                      )
-                    })}
+
+                        <div
+                          className={`p-3 rounded-xl bg-navy/4 text-navy font-semibold text-sm leading-relaxed ${
+                            isArabic ? "text-right font-sans text-lg text-emerald-950" : "text-left"
+                          }`}
+                          dir={isArabic ? "rtl" : "ltr"}
+                        >
+                          {rec.team_topics[captainTeamId]}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Fallback for Admins or if captainTeamId is not set */
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {Object.entries(rec.team_topics).map(([teamId, topicVal]) => {
+                          const team = teamsMap[teamId]
+                          return (
+                            <div
+                              key={teamId}
+                              className="p-4 rounded-2xl bg-white/80 border border-navy/10 space-y-2 flex flex-col justify-between"
+                            >
+                              <div className="flex items-center gap-2 font-bold text-xs">
+                                <span
+                                  className="size-3 rounded-full shrink-0"
+                                  style={{ backgroundColor: team?.color_hex || "#1e3a8a" }}
+                                />
+                                <span className="text-navy">{team?.name || "Team"}</span>
+                              </div>
+
+                              <div
+                                className={`text-sm font-semibold text-slatebrand p-2.5 rounded-xl bg-navy/4 ${
+                                  isArabic ? "text-right text-base text-emerald-950" : "text-left"
+                                }`}
+                                dir={isArabic ? "rtl" : "ltr"}
+                              >
+                                {topicVal}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* MODE 3: PARTICIPANT-WISE TOPIC */}
+                {/* MODE 3: PARTICIPANT-WISE TOPIC (Isolated to Captain's own team participants) */}
                 {rec.topic_type === "participant" && rec.participant_topics && (
-                  <div className="overflow-x-auto rounded-2xl border border-navy/10 bg-white/80">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-navy text-ivory text-xs uppercase tracking-wider font-extrabold">
-                        <tr>
-                          <th className="px-4 py-3.5 w-16 text-center">#</th>
-                          <th className="px-4 py-3.5 w-28">Chest No</th>
-                          <th className="px-4 py-3.5 min-w-[160px]">Participant</th>
-                          <th className="px-4 py-3.5 min-w-[260px]">Assigned Topic</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-navy/5 font-medium">
-                        {Object.entries(rec.participant_topics).map(([studentId, topicVal], idx) => {
-                          const student = studentsMap[studentId]
-                          return (
-                            <tr key={studentId} className="hover:bg-navy/4 transition-colors">
-                              <td className="px-4 py-3 text-center font-mono font-bold text-slatebrand">
-                                {idx + 1}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="font-mono text-xs font-extrabold text-navy bg-navy/8 px-2 py-0.5 rounded-md">
-                                  #{student?.chest_no || "N/A"}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 font-bold text-navy">
-                                {student?.name || "Participant"}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div
-                                  className={`p-2.5 rounded-xl bg-navy/4 text-navy font-semibold text-xs ${
-                                    isArabic ? "text-right text-sm text-emerald-950" : "text-left"
-                                  }`}
-                                  dir={isArabic ? "rtl" : "ltr"}
-                                >
-                                  {topicVal}
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                  <div>
+                    {(() => {
+                      // Filter participant entries by captain's team_id if captainTeamId exists
+                      const participantEntries = Object.entries(rec.participant_topics).filter(([studentId]) => {
+                        if (!captainTeamId) return true
+                        const student = studentsMap[studentId]
+                        return student?.team_id === captainTeamId
+                      })
+
+                      if (participantEntries.length === 0) {
+                        return (
+                          <p className="p-3 text-xs text-center text-slatebrand bg-white/60 rounded-xl">
+                            No participant topics assigned for your team in this programme.
+                          </p>
+                        )
+                      }
+
+                      return (
+                        <div className="overflow-x-auto rounded-2xl border border-navy/10 bg-white/80">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-navy text-ivory text-xs uppercase tracking-wider font-extrabold">
+                              <tr>
+                                <th className="px-4 py-3.5 w-16 text-center">#</th>
+                                <th className="px-4 py-3.5 w-28">Chest No</th>
+                                <th className="px-4 py-3.5 min-w-[160px]">Participant</th>
+                                <th className="px-4 py-3.5 min-w-[260px]">Assigned Topic</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-navy/5 font-medium">
+                              {participantEntries.map(([studentId, topicVal], idx) => {
+                                const student = studentsMap[studentId]
+                                return (
+                                  <tr key={studentId} className="hover:bg-navy/4 transition-colors">
+                                    <td className="px-4 py-3 text-center font-mono font-bold text-slatebrand">
+                                      {idx + 1}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <span className="font-mono text-xs font-extrabold text-navy bg-navy/8 px-2 py-0.5 rounded-md">
+                                        #{student?.chest_no || "N/A"}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 font-bold text-navy">
+                                      {student?.name || "Participant"}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <div
+                                        className={`p-2.5 rounded-xl bg-navy/4 text-navy font-semibold text-xs ${
+                                          isArabic ? "text-right text-sm text-emerald-950" : "text-left"
+                                        }`}
+                                        dir={isArabic ? "rtl" : "ltr"}
+                                      >
+                                        {topicVal}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
               </div>
