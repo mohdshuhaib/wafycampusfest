@@ -234,6 +234,8 @@ export interface Database {
           duration_minutes: number | null
           applicable_section: string[]
           description: string | null
+          topic: string | null
+          topic_language: 'english' | 'malayalam' | 'arabic' | null
           created_at: string
         }
         Insert: {
@@ -246,6 +248,8 @@ export interface Database {
           duration_minutes?: number | null
           applicable_section?: string[]
           description?: string | null
+          topic?: string | null
+          topic_language?: 'english' | 'malayalam' | 'arabic' | null
           created_at?: string
         }
         Update: {
@@ -258,6 +262,8 @@ export interface Database {
           duration_minutes?: number | null
           applicable_section?: string[]
           description?: string | null
+          topic?: string | null
+          topic_language?: 'english' | 'malayalam' | 'arabic' | null
           created_at?: string
         }
       }

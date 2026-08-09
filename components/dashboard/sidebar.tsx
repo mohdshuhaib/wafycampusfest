@@ -23,6 +23,7 @@ import {
   IndianRupee,
   Phone,
   Sparkles,
+  BookOpen,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ const adminLinks = [
   { href: "/admin/teams", label: "Teams", icon: Trophy },
   { href: "/admin/students", label: "Students", icon: Users },
   { href: "/admin/events", label: "Events", icon: Music },
+  { href: "/admin/topic-assign", label: "Topic Assign", icon: BookOpen },
   { href: "/admin/schedule", label: "Schedule", icon: CalendarClock },
   { href: "/admin/scoring", label: "Scoring", icon: Trophy },
   { href: "/admin/replacement", label: "Replacement", icon: Replace },
@@ -47,6 +49,7 @@ const captainLinks = [
   { href: "/captain/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/captain/participants", label: "Participants", icon: Users },
   { href: "/captain/events", label: "Events", icon: Music },
+  { href: "/captain/view-topic", label: "View Topic", icon: BookOpen },
   { href: "/captain/participations", label: "Admit Card", icon: IdCardLanyard },
   { href: "/captain/status", label: "Reports", icon: ScrollText },
   { href: "/captain/contact", label: "Contact", icon: Phone },
