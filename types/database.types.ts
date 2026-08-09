@@ -267,6 +267,47 @@ export interface Database {
           created_at?: string
         }
       }
+      event_topics: {
+        Row: {
+          id: string
+          event_id: string
+          topic_type: 'general' | 'personal' | 'participant'
+          topic_language: 'english' | 'malayalam' | 'arabic'
+          publish_type: 'immediate' | 'scheduled'
+          scheduled_publish_time: string | null
+          general_topic: string | null
+          team_topics: Record<string, string> | null
+          participant_topics: Record<string, string> | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          topic_type?: 'general' | 'personal' | 'participant'
+          topic_language?: 'english' | 'malayalam' | 'arabic'
+          publish_type?: 'immediate' | 'scheduled'
+          scheduled_publish_time?: string | null
+          general_topic?: string | null
+          team_topics?: Record<string, string> | null
+          participant_topics?: Record<string, string> | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          topic_type?: 'general' | 'personal' | 'participant'
+          topic_language?: 'english' | 'malayalam' | 'arabic'
+          publish_type?: 'immediate' | 'scheduled'
+          scheduled_publish_time?: string | null
+          general_topic?: string | null
+          team_topics?: Record<string, string> | null
+          participant_topics?: Record<string, string> | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       participations: {
         Row: {
           id: string
