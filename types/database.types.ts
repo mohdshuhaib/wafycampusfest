@@ -308,6 +308,35 @@ export interface Database {
           updated_at?: string
         }
       }
+      programme_schedules: {
+        Row: {
+          id: string
+          programme_id: string
+          schedule_date: string
+          start_time: string
+          end_time: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          programme_id: string
+          schedule_date: string
+          start_time: string
+          end_time: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          programme_id?: string
+          schedule_date?: string
+          start_time?: string
+          end_time?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
       participations: {
         Row: {
           id: string
