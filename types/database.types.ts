@@ -337,6 +337,35 @@ export interface Database {
           updated_at?: string
         }
       }
+      programme_timers: {
+        Row: {
+          id: string
+          programme_id: string
+          language: 'english' | 'malayalam' | 'arabic'
+          subject: string
+          duration_seconds: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          programme_id: string
+          language?: 'english' | 'malayalam' | 'arabic'
+          subject: string
+          duration_seconds: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          programme_id?: string
+          language?: 'english' | 'malayalam' | 'arabic'
+          subject?: string
+          duration_seconds?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
       participations: {
         Row: {
           id: string

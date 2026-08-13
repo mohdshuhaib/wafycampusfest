@@ -24,6 +24,7 @@ import {
   Phone,
   Sparkles,
   BookOpen,
+  Clock,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -36,6 +37,7 @@ const adminLinks = [
   { href: "/admin/students", label: "Students", icon: Users },
   { href: "/admin/events", label: "Events", icon: Music },
   { href: "/admin/topic-assign", label: "Topic Assign", icon: BookOpen },
+  { href: "/admin/timer", label: "Timer", icon: Clock },
   { href: "/admin/schedule", label: "Schedule", icon: CalendarClock },
   { href: "/admin/scoring", label: "Scoring", icon: Trophy },
   { href: "/admin/replacement", label: "Replacement", icon: Replace },
