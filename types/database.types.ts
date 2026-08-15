@@ -340,28 +340,37 @@ export interface Database {
       programme_timers: {
         Row: {
           id: string
-          programme_id: string
-          language: 'english' | 'malayalam' | 'arabic'
-          subject: string
-          duration_seconds: number
+          programme_id: string | null
+          language: 'english' | 'malayalam' | 'arabic' | null
+          subject: string | null
+          duration_seconds: number | null
+          slots_count: number
+          programme_slots: any[]
+          access_code: string
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          programme_id: string
-          language?: 'english' | 'malayalam' | 'arabic'
-          subject: string
-          duration_seconds: number
+          programme_id?: string | null
+          language?: 'english' | 'malayalam' | 'arabic' | null
+          subject?: string | null
+          duration_seconds?: number | null
+          slots_count?: number
+          programme_slots?: any[]
+          access_code?: string
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          programme_id?: string
-          language?: 'english' | 'malayalam' | 'arabic'
-          subject?: string
-          duration_seconds?: number
+          programme_id?: string | null
+          language?: 'english' | 'malayalam' | 'arabic' | null
+          subject?: string | null
+          duration_seconds?: number | null
+          slots_count?: number
+          programme_slots?: any[]
+          access_code?: string
           created_at?: string
           updated_at?: string
         }
