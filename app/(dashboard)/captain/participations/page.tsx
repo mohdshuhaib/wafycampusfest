@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertCircle, Calendar, ChevronDown, FileDown, Loader2, Printer, Search, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { StudentPhoto } from "@/components/student-photo"
-import { getImageFormatFromDataUrl, imageUrlToDataUrl } from "@/lib/student-images"
+import { getCroppedSquareImageDataUrl, getImageFormatFromDataUrl, imageUrlToDataUrl } from "@/lib/student-images"
 
 interface RawParticipation {
   id: string
@@ -184,7 +184,7 @@ export default function CaptainParticipations() {
         doc.setFontSize(15)
         doc.text("ADMIT CARD", pageWidth / 2, 55, { align: "center" })
 
-        const photoData = await imageUrlToDataUrl(item.student.image_link)
+        const photoData = await getCroppedSquareImageDataUrl(item.student.image_link)
         const profileY = 64
         const photoSize = 34
         doc.setDrawColor(10, 29, 44, 0.18)
@@ -192,7 +192,7 @@ export default function CaptainParticipations() {
         doc.roundedRect(margin, profileY, pageWidth - margin * 2, 46, 3, 3, "FD")
 
         if (photoData) {
-          doc.addImage(photoData, getImageFormatFromDataUrl(photoData), margin + 6, profileY + 6, photoSize, photoSize)
+          doc.addImage(photoData, "JPEG", margin + 6, profileY + 6, photoSize, photoSize)
         } else {
           doc.setFillColor(10, 29, 44)
           doc.roundedRect(margin + 6, profileY + 6, photoSize, photoSize, 3, 3, "F")

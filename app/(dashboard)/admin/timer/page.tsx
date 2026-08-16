@@ -277,12 +277,16 @@ export default function AdminTimerPage() {
 
     setSaving(true)
 
-    const programmeSlots = activeSlots.map((s) => ({
-      programme_id: s.programme_id,
-      language: s.language,
-      subject: s.subject.trim(),
-      duration_seconds: (s.hours || 0) * 3600 + (s.minutes || 0) * 60 + (s.seconds || 0),
-    }))
+    const programmeSlots = activeSlots.map((s) => {
+      const prog = events.find((e) => e.id === s.programme_id)
+      return {
+        programme_id: s.programme_id,
+        language: s.language,
+        subject: s.subject.trim(),
+        duration_seconds: (s.hours || 0) * 3600 + (s.minutes || 0) * 60 + (s.seconds || 0),
+        programme: prog ? { id: prog.id, name: prog.name, event_code: prog.event_code, category: prog.category } : undefined,
+      }
+    })
 
     const slot0 = programmeSlots[0]
 

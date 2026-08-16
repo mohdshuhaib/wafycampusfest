@@ -15,6 +15,7 @@ import {
 import { Loader2, FileText, Printer, FileDown, ChevronDown, Check, UserCheck, UserX, Clock, FileSpreadsheet, Download, ClipboardCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { StudentPhoto } from "@/components/student-photo"
+import { getCroppedSquareImageDataUrl } from "@/lib/student-images"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import * as XLSX from 'xlsx'
@@ -56,6 +57,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
   const [selectedEventId, setSelectedEventId] = useState<string>("")
   const [loadingEvent, setLoadingEvent] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [generatingCallSheet, setGeneratingCallSheet] = useState(false)
   const [generatingList, setGeneratingList] = useState(false)
   const [generatingExcel, setGeneratingExcel] = useState(false)
   const [participants, setParticipants] = useState<ParticipationRecord[]>([])
@@ -82,7 +84,6 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
   // 2. Fetch Header Image & Completion Status
   useEffect(() => {
     async function initData() {
-        // Fetch Header Image
         const { data: assetData } = await supabase
             .from('site_assets')
             .select('key, value')
@@ -95,7 +96,6 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
             if (headerAsset) setHeaderImage(headerAsset.value)
         }
 
-        // Fetch Completion Status
         const { data } = await supabase
             .from('participations')
             .select('event_id, attendance_status')
@@ -204,22 +204,6 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
       }
   }
 
-  // --- HELPER: Image to Data URL ---
-  const getImageDataUrl = async (url: string): Promise<string> => {
-      try {
-          const response = await fetch(url);
-          const blob = await response.blob();
-          return new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-          });
-      } catch (e) {
-          console.error("Failed to load image", e);
-          return "";
-      }
-  }
-
   // --- HELPER: Render Text to Image using Canvas (Fixes Malayalam Rendering) ---
   const textToImage = (text: string, widthMM: number, fontSizePt: number): { dataUrl: string; heightMM: number } | null => {
     if (typeof document === 'undefined') return null;
@@ -228,18 +212,14 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // Conversion factors
-    const pxPerMM = 3.78; // approx at 96dpi
-    const scaleFactor = 3; // Super sampling for sharpness
+    const pxPerMM = 3.78;
+    const scaleFactor = 3;
 
     const widthPx = widthMM * pxPerMM * scaleFactor;
-    // Guess height first, resize later
     canvas.width = widthPx;
     canvas.height = 1000 * scaleFactor;
 
-    // Configure Context
     ctx.scale(scaleFactor, scaleFactor);
-    // Use AnekMalayalam if available, otherwise sans-serif handles Malayalam better than jsPDF
     ctx.font = `${fontSizePt * 1.33}px 'AnekMalayalam', 'Arial', sans-serif`;
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#000000';
@@ -247,7 +227,6 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
     const maxWidth = widthMM * pxPerMM;
     const lineHeight = fontSizePt * 1.33 * 1.4;
 
-    // Wrap Text Logic
     const paragraphs = text.split('\n');
     let y = 0;
 
@@ -272,10 +251,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         y += lineHeight;
     });
 
-    // Crop Canvas to content
     const finalHeight = (y + lineHeight) * scaleFactor;
-
-    // Create final canvas
     const finalCanvas = document.createElement('canvas');
     finalCanvas.width = widthPx;
     finalCanvas.height = finalHeight;
@@ -287,23 +263,155 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
     return null;
   }
 
-  // --- NEW: GENERATE SCORE SHEET (JUDGMENT SHEET) ---
+  // --- EVENT CALL SHEET PDF GENERATOR (Single & Bulk) ---
+  const generateCallSheetPDF = async (eventsToPrint: Event[]) => {
+    if (eventsToPrint.length === 0) return alert("No events selected to print.")
+    setGeneratingCallSheet(true)
+
+    try {
+      const doc = new jsPDF("p", "mm", "a4")
+      let isFirstPage = true
+
+      for (const event of eventsToPrint) {
+        const { data } = await supabase
+          .from("participations")
+          .select(`
+            id, team_id, event_id, status,
+            teams ( name, color_hex ),
+            students!inner ( name, chest_no, class_grade, section, image_link )
+          `)
+          .eq("event_id", event.id)
+
+        const rawParts = (data as any[]) || []
+        const parts = rawParts.map((p) => ({
+          id: p.id,
+          chest_no: p.students?.chest_no || "N/A",
+          name: p.students?.name || "Unknown",
+          class_grade: p.students?.class_grade || "-",
+          teamName: p.teams?.name || "Unknown Team",
+          image_link: p.students?.image_link || null,
+        })).sort((a, b) => (parseInt(a.chest_no) || 999) - (parseInt(b.chest_no) || 999))
+
+        // Pre-crop all participant photos
+        const photoDataMap = new Map<number, string>()
+        for (let i = 0; i < parts.length; i++) {
+          if (parts[i].image_link) {
+            const croppedData = await getCroppedSquareImageDataUrl(parts[i].image_link, 150)
+            if (croppedData) photoDataMap.set(i, croppedData)
+          }
+        }
+
+        if (!isFirstPage) doc.addPage()
+        isFirstPage = false
+
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const margin = 12
+        let yPos = 12
+
+        // Top Banner Header
+        doc.setFillColor(10, 29, 44)
+        doc.roundedRect(margin, yPos, pageWidth - margin * 2, 22, 3, 3, "F")
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(15)
+        doc.setFont("helvetica", "bold")
+        doc.text("WAFY CAMPUS KALIKKAV ARTS FEST 2026", pageWidth / 2, yPos + 9, { align: "center" })
+        doc.setFontSize(8.5)
+        doc.setFont("helvetica", "normal")
+        doc.text("OFFICIAL EVENT CALL SHEET & PHYSICAL ATTENDANCE REGISTER", pageWidth / 2, yPos + 16, { align: "center" })
+        yPos += 27
+
+        // Subheader: Programme Code & Name
+        doc.setTextColor(10, 29, 44)
+        doc.setFontSize(12)
+        doc.setFont("helvetica", "bold")
+        doc.text(`PROGRAMME: ${event.event_code || "---"} - ${event.name}`, margin, yPos)
+
+        doc.setFontSize(9)
+        doc.setFont("helvetica", "normal")
+        doc.text(`Category: ${event.category}  |  Total: ${parts.length}`, pageWidth - margin, yPos, { align: "right" })
+        yPos += 6
+
+        // AutoTable Grid
+        const tableBody = parts.map((p, idx) => [
+          idx + 1,
+          "", // Photo column
+          p.chest_no,
+          p.name,
+          p.class_grade,
+          p.teamName,
+          "", // Signature box
+        ])
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [["Sl No", "Photo", "Chest No", "Name", "Class", "Team", "Sign"]],
+          body: tableBody,
+          theme: "grid",
+          headStyles: {
+            fillColor: [10, 29, 44],
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: "bold",
+            halign: "center",
+            valign: "middle",
+          },
+          bodyStyles: {
+            fontSize: 8.5,
+            valign: "middle",
+            minCellHeight: 14,
+            textColor: [10, 29, 44],
+          },
+          columnStyles: {
+            0: { cellWidth: 12, halign: "center" },
+            1: { cellWidth: 16, halign: "center" },
+            2: { cellWidth: 20, halign: "center", fontStyle: "bold" },
+            3: { cellWidth: "auto", fontStyle: "bold" },
+            4: { cellWidth: 18, halign: "center" },
+            5: { cellWidth: 32 },
+            6: { cellWidth: 30, halign: "center" },
+          },
+          didDrawCell: (data) => {
+            if (data.section === "body" && data.column.index === 1) {
+              const photoUrl = photoDataMap.get(data.row.index)
+              if (photoUrl) {
+                const dim = 11
+                const x = data.cell.x + (data.cell.width - dim) / 2
+                const y = data.cell.y + (data.cell.height - dim) / 2
+                try {
+                  doc.addImage(photoUrl, "JPEG", x, y, dim, dim)
+                } catch (e) {
+                  console.warn("Failed to add cell photo", e)
+                }
+              }
+            }
+          },
+        })
+      }
+
+      doc.save("event_call_sheets.pdf")
+    } catch (err) {
+      console.error("Error generating call sheet PDF:", err)
+      alert("Failed to generate Call Sheet PDF.")
+    } finally {
+      setGeneratingCallSheet(false)
+    }
+  }
+
+  // --- GENERATE SCORE SHEET (JUDGMENT SHEET) ---
   const generateScoreSheetPDF = async (eventsToPrint: Event[]) => {
     setGeneratingPdf(true)
-    const doc = new jsPDF('p', 'mm', 'a4'); // A4 size
+    const doc = new jsPDF('p', 'mm', 'a4');
     let isFirstPage = true
 
-    // Fetch header image base64 if available
     let headerImgData = "";
     if (headerImage) {
-        headerImgData = await getImageDataUrl(headerImage);
+        headerImgData = await getCroppedSquareImageDataUrl(headerImage, 400);
     }
 
     for (const event of eventsToPrint) {
         if (!isFirstPage) doc.addPage()
         isFirstPage = false
 
-        // Fetch Event Description (Criteria) & Participants
         const [eventDetails, participantsRes] = await Promise.all([
             supabase.from('events').select('description').eq('id', event.id).single(),
             supabase.from('participations').select('id, teams(name), students(chest_no)').eq('event_id', event.id)
@@ -312,19 +420,16 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         const criteria = (eventDetails.data as { description: string } | null)?.description || "";
         const parts = participantsRes.data as any[] || [];
 
-        // --- PAGE LAYOUT ---
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         let yPos = 15;
 
-        // 1. Header Image
         if (headerImgData) {
             try {
                 const imgProps = doc.getImageProperties(headerImgData);
                 const desiredWidth = pageWidth - 2 * margin;
                 let imgHeight = (imgProps.height * desiredWidth) / imgProps.width;
-                // Limit Header Height
                 if (imgHeight > 30) {
                     imgHeight = 30;
                     const adjustedWidth = (imgProps.width * imgHeight) / imgProps.height;
@@ -338,11 +443,10 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         } else {
              doc.setFontSize(16);
              doc.setFont("helvetica", "bold");
-             doc.text("PMSA ARTS FEST 2025-26", pageWidth / 2, yPos, { align: 'center' });
+             doc.text("WAFY CAMPUS KALIKKAV ARTS FEST 2026", pageWidth / 2, yPos, { align: 'center' });
              yPos += 10;
         }
 
-        // 2. Titles
         doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
         doc.text("JUDGMENT SHEET", pageWidth / 2, yPos, { align: 'center' });
@@ -353,31 +457,25 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         doc.text("GRADING SYSTEM: GRADE A-80% AND ABOVE, GRADE B-70% TO 79%, GRADE C-60% TO 69%", pageWidth / 2, yPos, { align: 'center' });
         yPos += 12;
 
-        // 3. Info Fields
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
-
-        // ITEM
         doc.text("ITEM:", margin, yPos);
         doc.setFont("helvetica", "normal");
         doc.text(`${event.name} (${event.event_code})`, margin + 15, yPos);
         yPos += 8;
 
-        // TOPIC
         doc.setFont("helvetica", "bold");
         doc.text("TOPIC:", margin, yPos);
         doc.setLineWidth(0.1);
         doc.line(margin + 18, yPos + 1, pageWidth - margin, yPos + 1);
         yPos += 8;
 
-        // CRITERIA (With Malayalam Fix)
         doc.setFont("helvetica", "bold");
         doc.text("CRITERIA:", margin, yPos);
 
         if (criteria) {
-             // Render criteria as Image to support Malayalam ligatures
-             const criteriaWidth = pageWidth - margin - 35; // Available width
-             const result = textToImage(criteria, criteriaWidth, 10); // 10pt font
+             const criteriaWidth = pageWidth - margin - 35;
+             const result = textToImage(criteria, criteriaWidth, 10);
 
              if (result) {
                  const { dataUrl, heightMM } = result;
@@ -392,18 +490,16 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
 
         yPos += 2;
 
-        // 4. Table Prep & Dynamic Sizing
         const isCategoryC = event.grade_type === 'D';
         let effectiveCount = 0;
 
         if (isCategoryC) {
-            effectiveCount = 4; // Strictly A, B, C, D
+            effectiveCount = 4;
         } else {
             const rowCount = parts.length;
             effectiveCount = Math.max(rowCount, 5);
         }
 
-        // Calculate dynamic height
         const footerHeight = 30;
         const bottomMargin = 15;
         const availableHeight = pageHeight - yPos - footerHeight - bottomMargin;
@@ -411,8 +507,6 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         const availableForRows = availableHeight - tableHeaderHeight;
 
         let dynamicRowHeight = availableForRows / effectiveCount;
-
-        // Clamp height
         if (dynamicRowHeight > 35) dynamicRowHeight = 35;
         if (dynamicRowHeight < 10) dynamicRowHeight = 10;
 
@@ -430,7 +524,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
             startY: yPos,
             head: [["CODE", "REMARKS", "PLACE", "GRADE"]],
             body: tableBody,
-            theme: 'grid', // Full Borders
+            theme: 'grid',
             headStyles: {
                 fillColor: [255, 255, 255],
                 textColor: [0, 0, 0],
@@ -444,22 +538,21 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
             bodyStyles: {
                 lineWidth: 0.3,
                 lineColor: [0, 0, 0],
-                minCellHeight: dynamicRowHeight, // Dynamic Height
+                minCellHeight: dynamicRowHeight,
                 valign: 'middle',
                 textColor: [0,0,0]
             },
             columnStyles: {
-                0: { cellWidth: 20, halign: 'center', fontStyle: 'bold', fontSize: 12 }, // CODE
-                1: { cellWidth: 'auto' }, // REMARKS
-                2: { cellWidth: 25, halign: 'center' }, // PLACE
-                3: { cellWidth: 25, halign: 'center' }  // GRADE
+                0: { cellWidth: 20, halign: 'center', fontStyle: 'bold', fontSize: 12 },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 25, halign: 'center' },
+                3: { cellWidth: 25, halign: 'center' }
             },
             didParseCell: function(data: any) {
                 data.cell.styles.textColor = [0, 0, 0];
             }
         });
 
-        // 5. Footer (NAME & SIGN)
         const footerY = pageHeight - 25;
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
@@ -470,7 +563,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
     setGeneratingPdf(false)
   }
 
-  // --- NEW: GENERATE PARTICIPANT LIST (BULK EXPORT) ---
+  // --- GENERATE PARTICIPANT LIST (BULK EXPORT) ---
   const generateParticipantListPDF = async (category: 'ON STAGE' | 'OFF STAGE') => {
       setGeneratingList(true);
 
@@ -483,11 +576,10 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
 
       const doc = new jsPDF();
 
-      // Title Page
       doc.setFontSize(22);
       doc.text(`PARTICIPANT LIST - ${category}`, 105, 100, { align: 'center' });
       doc.setFontSize(14);
-      doc.text("PMSA ARTS FEST 2025-26", 105, 115, { align: 'center' });
+      doc.text("WAFY CAMPUS KALIKKAV ARTS FEST 2026", 105, 115, { align: 'center' });
       doc.addPage();
 
       for (const event of filteredEvents) {
@@ -606,38 +698,64 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
                     Export Excel
                 </Button>
 
-                {/* PDF SCORE SHEET (Single) */}
+                {/* SINGLE EVENT CALL SHEET PDF */}
                 <Button
-                    variant="outline"
-                    disabled={!selectedEventId || generatingPdf}
-                    onClick={() => { const e = events.find(ev => ev.id === selectedEventId); if(e) generateScoreSheetPDF([e]) }}
-                    className="gap-2"
+                    disabled={!selectedEventId || generatingCallSheet}
+                    onClick={() => { const e = events.find(ev => ev.id === selectedEventId); if(e) generateCallSheetPDF([e]) }}
+                    className="gap-2 bg-navy text-ivory hover:bg-navy/90 font-bold"
                 >
-                    {generatingPdf ? <Loader2 className="size-4 animate-spin"/> : <FileDown className="size-4" />}
-                    Score Sheet
+                    {generatingCallSheet ? <Loader2 className="size-4 animate-spin text-gold"/> : <FileDown className="size-4 text-gold" />}
+                    Call Sheet PDF
                 </Button>
 
-                {/* BULK SCORE SHEET EXPORT */}
+                {/* BULK CALL SHEETS EXPORT */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button className="gap-2">
-                            <Printer className="size-4" /> Bulk Score Sheets <ChevronDown className="size-3 opacity-50"/>
+                        <Button className="gap-2 bg-navy text-ivory hover:bg-navy/90 font-bold">
+                            <Printer className="size-4 text-gold" /> Bulk Call Sheets <ChevronDown className="size-3 opacity-50"/>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="surface-elevated rounded-2xl border-navy/10 p-2">
-                        <DropdownMenuItem onClick={() => generateScoreSheetPDF(events.filter(e => e.category === 'ON STAGE'))}>
-                            All ON STAGE
+                        <DropdownMenuItem onClick={() => generateCallSheetPDF(events.filter(e => e.category === 'ON STAGE'))}>
+                            All ON STAGE Call Sheets
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => generateScoreSheetPDF(events.filter(e => e.category === 'OFF STAGE'))}>
-                            All OFF STAGE
+                        <DropdownMenuItem onClick={() => generateCallSheetPDF(events.filter(e => e.category === 'OFF STAGE'))}>
+                            All OFF STAGE Call Sheets
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => generateCallSheetPDF(events)}>
+                            All Events Call Sheets
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                 {/* NEW: BULK PARTICIPANT LIST EXPORT */}
+                {/* JUDGMENT / SCORE SHEET (Single & Bulk) */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="gap-2 border-navy/15 text-navy hover:bg-navy/5 font-semibold">
+                            {generatingPdf ? <Loader2 className="size-4 animate-spin"/> : <FileText className="size-4"/>}
+                            Score Sheets <ChevronDown className="size-3 opacity-50"/>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="surface-elevated rounded-2xl border-navy/10 p-2">
+                        <DropdownMenuItem
+                          disabled={!selectedEventId}
+                          onClick={() => { const e = events.find(ev => ev.id === selectedEventId); if(e) generateScoreSheetPDF([e]) }}
+                        >
+                            Single Selected Event Score Sheet
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => generateScoreSheetPDF(events.filter(e => e.category === 'ON STAGE'))}>
+                            All ON STAGE Score Sheets
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => generateScoreSheetPDF(events.filter(e => e.category === 'OFF STAGE'))}>
+                            All OFF STAGE Score Sheets
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                 {/* PARTICIPANTS LIST EXPORT */}
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2">
+                        <Button variant="outline" className="gap-2 border-navy/15 text-navy hover:bg-navy/5 font-semibold">
                             {generatingList ? <Loader2 className="size-4 animate-spin"/> : <Download className="size-4" />}
                             Participants List <ChevronDown className="size-3 opacity-50"/>
                         </Button>

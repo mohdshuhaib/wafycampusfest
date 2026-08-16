@@ -135,7 +135,7 @@ export default function PublicTimerRevealPage({ params }: { params: Promise<{ id
         } else {
           slots = slots.map((s) => ({
             ...s,
-            programme: eventsMap.get(s.programme_id),
+            programme: s.programme || row.programme || eventsMap.get(s.programme_id),
           }))
         }
 

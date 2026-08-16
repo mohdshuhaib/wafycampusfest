@@ -48,3 +48,39 @@ export async function imageUrlToDataUrl(url?: string | null): Promise<string> {
     return ""
   }
 }
+
+export async function getCroppedSquareImageDataUrl(url?: string | null, targetSize: number = 300): Promise<string> {
+  const dataUrl = await imageUrlToDataUrl(url)
+  if (!dataUrl || typeof window === "undefined") return ""
+
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas")
+        canvas.width = targetSize
+        canvas.height = targetSize
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          resolve(dataUrl)
+          return
+        }
+
+        const srcWidth = img.width
+        const srcHeight = img.height
+        const minDim = Math.min(srcWidth, srcHeight)
+        const srcX = (srcWidth - minDim) / 2
+        const srcY = (srcHeight - minDim) / 2
+
+        ctx.drawImage(img, srcX, srcY, minDim, minDim, 0, 0, targetSize, targetSize)
+        resolve(canvas.toDataURL("image/jpeg", 0.92))
+      } catch (e) {
+        console.warn("Canvas cropping failed, using original data URL:", e)
+        resolve(dataUrl)
+      }
+    }
+    img.onerror = () => resolve(dataUrl)
+    img.src = dataUrl
+  })
+}
