@@ -375,6 +375,35 @@ export interface Database {
           updated_at?: string
         }
       }
+      seating_arrangements: {
+        Row: {
+          id: string
+          title: string
+          programme_ids: any[]
+          seats_per_row: number
+          layout_grid: any[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          programme_ids?: any[]
+          seats_per_row: number
+          layout_grid?: any[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          programme_ids?: any[]
+          seats_per_row?: number
+          layout_grid?: any[]
+          created_at?: string
+          updated_at?: string
+        }
+      }
       participations: {
         Row: {
           id: string

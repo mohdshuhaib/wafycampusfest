@@ -25,6 +25,7 @@ import {
   Sparkles,
   BookOpen,
   Clock,
+  LayoutGrid,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -39,6 +40,7 @@ const adminLinks = [
   { href: "/admin/topic-assign", label: "Topic Assign", icon: BookOpen },
   { href: "/admin/timer", label: "Timer", icon: Clock },
   { href: "/admin/schedule", label: "Schedule", icon: CalendarClock },
+  { href: "/admin/seating", label: "Seating", icon: LayoutGrid },
   { href: "/admin/scoring", label: "Scoring", icon: Trophy },
   { href: "/admin/replacement", label: "Replacement", icon: Replace },
   { href: "/admin/reports", label: "Reports", icon: ScrollText },
