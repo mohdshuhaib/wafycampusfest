@@ -24,16 +24,26 @@ export async function proxy(request: NextRequest) {
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
+            response.cookies.set(name, value, {
+              ...options,
+              sameSite: "lax",
+              path: "/",
+            })
           );
         },
       },
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data) {
+      user = data.user;
+    }
+  } catch (err) {
+    user = null;
+  }
 
   const url = request.nextUrl.clone();
   const isAdminPath = url.pathname.startsWith("/admin");
@@ -53,22 +63,26 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isAdminPath || isCaptainPath) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
-    const role = profile?.role;
+      const role = profile?.role;
 
-    if (isAdminPath && role !== "admin") {
-      url.pathname = "/captain";
-      return NextResponse.redirect(url);
-    }
+      if (isAdminPath && role !== "admin") {
+        url.pathname = "/captain";
+        return NextResponse.redirect(url);
+      }
 
-    if (isCaptainPath && role !== "captain") {
-      url.pathname = "/admin";
-      return NextResponse.redirect(url);
+      if (isCaptainPath && role !== "captain") {
+        url.pathname = "/admin";
+        return NextResponse.redirect(url);
+      }
+    } catch (e) {
+      console.warn("Middleware profile lookup warning:", e);
     }
   }
 

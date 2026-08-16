@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,16 +18,15 @@ import {
   Plus,
   Search,
   LayoutGrid,
-  Edit2,
   Trash2,
   Loader2,
   Sparkles,
   Check,
   FileDown,
   AlertTriangle,
-  Users,
   Grid,
-  Calendar,
+  Shuffle,
+  Save,
 } from "lucide-react"
 import jsPDF from "jspdf"
 
@@ -61,6 +60,81 @@ interface SeatingArrangementRecord {
   programmes_summary?: string
 }
 
+// --- 2D CONSTRAINT-AWARE MIXED SHUFFLE ALGORITHM ---
+// Penalizes horizontal, vertical column, and diagonal matches of team or programme
+function compute2DPenalty(grid: SeatItem[], seatsPerRow: number): number {
+  let penalty = 0
+  for (let i = 0; i < grid.length; i++) {
+    const r = Math.floor(i / seatsPerRow)
+    const c = i % seatsPerRow
+
+    // Left neighbor (same row)
+    if (c > 0) {
+      const left = grid[i - 1]
+      if (left.teamName === grid[i].teamName) penalty += 10
+      if (left.eventCode === grid[i].eventCode) penalty += 4
+    }
+
+    // Top neighbor (previous row, SAME COLUMN) -> High Penalty!
+    if (r > 0) {
+      const top = grid[i - seatsPerRow]
+      if (top.teamName === grid[i].teamName) penalty += 25
+      if (top.eventCode === grid[i].eventCode) penalty += 8
+    }
+
+    // Top-left diagonal
+    if (r > 0 && c > 0) {
+      const topLeft = grid[i - seatsPerRow - 1]
+      if (topLeft.teamName === grid[i].teamName) penalty += 3
+    }
+
+    // Top-right diagonal
+    if (r > 0 && c < seatsPerRow - 1) {
+      const topRight = grid[i - seatsPerRow + 1]
+      if (topRight.teamName === grid[i].teamName) penalty += 3
+    }
+  }
+  return penalty
+}
+
+function generateMixed2DLayout(items: any[], seatsPerRow: number): SeatItem[] {
+  if (items.length === 0) return []
+
+  let bestGrid: SeatItem[] = []
+  let bestPenalty = Infinity
+
+  // Evaluate 500 candidate permutations
+  for (let iter = 0; iter < 500; iter++) {
+    const shuffled = [...items]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+
+    const candidateGrid: SeatItem[] = shuffled.map((p, idx) => ({
+      seatNo: idx + 1,
+      rowIdx: Math.floor(idx / seatsPerRow),
+      colIdx: idx % seatsPerRow,
+      studentId: p.studentId,
+      studentName: p.studentName,
+      chestNo: p.chestNo,
+      teamName: p.teamName,
+      teamColor: p.teamColor,
+      eventCode: p.eventCode,
+      eventName: p.eventName,
+    }))
+
+    const p = compute2DPenalty(candidateGrid, seatsPerRow)
+    if (p < bestPenalty) {
+      bestPenalty = p
+      bestGrid = candidateGrid
+      if (p === 0) break // Perfect 2D separation
+    }
+  }
+
+  return bestGrid
+}
+
 export default function AdminSeatingPage() {
   const [events, setEvents] = useState<ProgrammeEvent[]>([])
   const [arrangements, setArrangements] = useState<SeatingArrangementRecord[]>([])
@@ -69,6 +143,8 @@ export default function AdminSeatingPage() {
 
   // Active viewing arrangement
   const [activeArrangement, setActiveArrangement] = useState<SeatingArrangementRecord | null>(null)
+  const [hasUnsavedShuffle, setHasUnsavedShuffle] = useState(false)
+  const [savingShuffle, setSavingShuffle] = useState(false)
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -157,7 +233,7 @@ export default function AdminSeatingPage() {
     )
   }
 
-  // Generate Smart Interleaved Seating Layout
+  // Generate 2D Mixed Seating Layout
   const handleGenerateLayout = async () => {
     if (selectedProgrammeIds.length === 0) {
       toast.error("Please select at least one programme")
@@ -201,49 +277,8 @@ export default function AdminSeatingPage() {
       return
     }
 
-    // Group participants by teamId
-    const teamGroups = new Map<string, typeof rawList>()
-    rawList.forEach((p) => {
-      if (!teamGroups.has(p.teamId)) {
-        teamGroups.set(p.teamId, [])
-      }
-      teamGroups.get(p.teamId)!.push(p)
-    })
-
-    // Round-robin interleave across teams
-    const interleaved: typeof rawList = []
-    const groupsArray = Array.from(teamGroups.values())
-
-    let maxLength = 0
-    groupsArray.forEach((g) => {
-      if (g.length > maxLength) maxLength = g.length
-    })
-
-    for (let i = 0; i < maxLength; i++) {
-      for (let g = 0; g < groupsArray.length; g++) {
-        if (i < groupsArray[g].length) {
-          interleaved.push(groupsArray[g][i])
-        }
-      }
-    }
-
-    // Build grid seats with rowIdx & colIdx
-    const layoutGrid: SeatItem[] = interleaved.map((p, index) => {
-      const rowIdx = Math.floor(index / seatsPerRow)
-      const colIdx = index % seatsPerRow
-      return {
-        seatNo: index + 1,
-        rowIdx,
-        colIdx,
-        studentId: p.studentId,
-        studentName: p.studentName,
-        chestNo: p.chestNo,
-        teamName: p.teamName,
-        teamColor: p.teamColor,
-        eventCode: p.eventCode,
-        eventName: p.eventName,
-      }
-    })
+    // Generate 2D Mixed Grid
+    const layoutGrid = generateMixed2DLayout(rawList, seatsPerRow)
 
     // Summary of selected programme names
     const selectedEvents = events.filter((e) => selectedProgrammeIds.includes(e.id))
@@ -276,13 +311,56 @@ export default function AdminSeatingPage() {
         ...insertedData,
         programmes_summary: progSummary,
       }
-      toast.success("Seating arrangement generated successfully!")
+      toast.success("2D Mixed Seating arrangement generated successfully!")
       setIsModalOpen(false)
       setActiveArrangement(newRecord)
+      setHasUnsavedShuffle(false)
       fetchData()
     }
 
     setGenerating(false)
+  }
+
+  // SHUFFLE LAYOUT IN SAVED ARRANGEMENT
+  const handleShuffleLayout = () => {
+    if (!activeArrangement || !activeArrangement.layout_grid) return
+
+    const currentSeats = activeArrangement.layout_grid
+    const seatsPerRowVal = activeArrangement.seats_per_row || 3
+
+    // Run 2D Mixed Shuffler on existing seats
+    const shuffledGrid = generateMixed2DLayout(currentSeats, seatsPerRowVal)
+
+    setActiveArrangement({
+      ...activeArrangement,
+      layout_grid: shuffledGrid,
+    })
+    setHasUnsavedShuffle(true)
+    toast.success("Seating layout shuffled into new 2D mixed arrangement! Click 'Save Shuffled Layout' to persist.")
+  }
+
+  // SAVE SHUFFLED LAYOUT TO DATABASE
+  const handleSaveShuffledLayout = async () => {
+    if (!activeArrangement) return
+
+    setSavingShuffle(true)
+
+    const { error } = await (supabase.from("seating_arrangements") as any)
+      .update({
+        layout_grid: activeArrangement.layout_grid,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", activeArrangement.id)
+
+    if (error) {
+      toast.error("Failed to save shuffled layout: " + error.message)
+    } else {
+      toast.success("Shuffled seating layout saved successfully!")
+      setHasUnsavedShuffle(false)
+      fetchData()
+    }
+
+    setSavingShuffle(false)
   }
 
   // Delete Seating Arrangement
@@ -342,7 +420,6 @@ export default function AdminSeatingPage() {
       doc.setFont("helvetica", "bold")
       const subHeadingText = `Seating Arrangement for ${recordToPrint.programmes_summary || "Selected Programmes"}`
 
-      // Split subheading if too long
       const splitSub = doc.splitTextToSize(subHeadingText, pageWidth - margin * 2)
       doc.text(splitSub, pageWidth / 2, yPos, { align: "center" })
       yPos += splitSub.length * 6 + 4
@@ -365,12 +442,11 @@ export default function AdminSeatingPage() {
 
       const gap = 4
       const boxWidth = (pageWidth - margin * 2 - (seatsPerRow - 1) * gap) / seatsPerRow
-      const boxHeight = 28 // mm height per box
+      const boxHeight = 28
 
       const totalRows = Math.ceil(totalSeats / seatsPerRow)
 
       for (let r = 0; r < totalRows; r++) {
-        // Check page overflow
         if (yPos + boxHeight > pageHeight - 15) {
           doc.addPage()
           yPos = 15
@@ -386,7 +462,7 @@ export default function AdminSeatingPage() {
           // Draw Seat Box Container
           doc.setDrawColor(10, 29, 44)
           doc.setLineWidth(0.3)
-          doc.setFillColor(248, 246, 240) // Cream/Ivory box bg
+          doc.setFillColor(248, 246, 240)
           doc.roundedRect(x, yPos, boxWidth, boxHeight, 2, 2, "FD")
 
           // Box Header Bar: Seat # Left, Chest No Right
@@ -460,7 +536,7 @@ export default function AdminSeatingPage() {
             Seating Arrangements
           </h1>
           <p className="text-sm text-slatebrand mt-1">
-            Create smart seating layouts for events, interleave teams to prevent adjacent seating, and export PDF seating grids.
+            Create 2D mixed seating layouts, interleave teams & programmes across rows/columns, shuffle layouts, and export PDF grid plans.
           </p>
         </div>
 
@@ -522,7 +598,10 @@ export default function AdminSeatingPage() {
                 return (
                   <div
                     key={arr.id}
-                    onClick={() => setActiveArrangement(arr)}
+                    onClick={() => {
+                      setActiveArrangement(arr)
+                      setHasUnsavedShuffle(false)
+                    }}
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer space-y-2 ${
                       isSelected
                         ? "bg-navy text-ivory border-2 border-gold ring-2 ring-gold/30 shadow-md"
@@ -579,7 +658,7 @@ export default function AdminSeatingPage() {
             </div>
           ) : (
             <div className="rounded-3xl border border-navy/10 bg-ivory/80 p-5 sm:p-6 shadow-xs space-y-6">
-              {/* Header Bar */}
+              {/* Header Bar with Shuffle & Export Controls */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-navy/10">
                 <div>
                   <div className="flex items-center gap-2">
@@ -595,18 +674,47 @@ export default function AdminSeatingPage() {
                   </h2>
                 </div>
 
-                <Button
-                  onClick={() => exportPDF(activeArrangement)}
-                  disabled={exportingPdf}
-                  className="bg-navy hover:bg-navy/90 text-ivory gap-2 rounded-xl h-11 px-5 font-bold cursor-pointer shadow-premium shrink-0"
-                >
-                  {exportingPdf ? (
-                    <Loader2 className="size-4 animate-spin text-gold" />
-                  ) : (
-                    <FileDown className="size-4 text-gold" />
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* SHUFFLE BUTTON */}
+                  <Button
+                    onClick={handleShuffleLayout}
+                    variant="outline"
+                    className="border-gold/30 bg-gold/10 text-navy hover:bg-gold/20 gap-2 rounded-xl h-11 px-4 font-extrabold cursor-pointer"
+                  >
+                    <Shuffle className="size-4 text-gold" />
+                    <span>Shuffle Layout</span>
+                  </Button>
+
+                  {/* SAVE SHUFFLED LAYOUT BUTTON */}
+                  {hasUnsavedShuffle && (
+                    <Button
+                      onClick={handleSaveShuffledLayout}
+                      disabled={savingShuffle}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 rounded-xl h-11 px-4 font-bold cursor-pointer shadow-md animate-pulse"
+                    >
+                      {savingShuffle ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Save className="size-4" />
+                      )}
+                      <span>Save Shuffled Layout</span>
+                    </Button>
                   )}
-                  <span>Export Seating PDF</span>
-                </Button>
+
+                  {/* EXPORT PDF BUTTON */}
+                  <Button
+                    onClick={() => exportPDF(activeArrangement)}
+                    disabled={exportingPdf}
+                    className="bg-navy hover:bg-navy/90 text-ivory gap-2 rounded-xl h-11 px-4 font-bold cursor-pointer shadow-premium shrink-0"
+                  >
+                    {exportingPdf ? (
+                      <Loader2 className="size-4 animate-spin text-gold" />
+                    ) : (
+                      <FileDown className="size-4 text-gold" />
+                    )}
+                    <span>Export Seating PDF</span>
+                  </Button>
+                </div>
               </div>
 
               {/* Subheading Badge */}
@@ -621,9 +729,17 @@ export default function AdminSeatingPage() {
 
               {/* Dynamic Grid Seats Display */}
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-navy">
-                  On-Screen Seating Grid Layout ({activeArrangement.seats_per_row} Columns)
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-navy">
+                    2D Mixed Seating Grid Layout ({activeArrangement.seats_per_row} Columns)
+                  </Label>
+
+                  {hasUnsavedShuffle && (
+                    <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                      <Sparkles className="size-3.5" /> Shuffled (Unsaved)
+                    </span>
+                  )}
+                </div>
 
                 <div
                   className={`grid gap-3 ${
@@ -688,7 +804,7 @@ export default function AdminSeatingPage() {
               Create Seating Arrangement
             </DialogTitle>
             <DialogDescription className="text-slatebrand text-sm">
-              Select one or multiple programmes, pick row width (2, 3, or 4), and automatically interleave team seats.
+              Select one or multiple programmes, pick row width (2, 3, or 4), and generate 2D mixed team seats.
             </DialogDescription>
           </DialogHeader>
 
