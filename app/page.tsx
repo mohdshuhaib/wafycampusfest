@@ -58,7 +58,7 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center">
             <div>
-              <div className="text-title text-base">Wafy Campus Kalikkav</div>
+              <div className="text-title text-base">Wafy Campus kalikavu</div>
               <div className="hidden text-[10px] font-bold uppercase tracking-[0.18em] text-slatebrand sm:block">
                 Arts Fest Portal
               </div>
@@ -82,7 +82,7 @@ export default function LandingPage() {
         <div className="relative z-10 flex h-full min-h-[calc(100vh-4rem)] w-screen flex-col px-0 py-5 sm:py-7">
           <div className="shrink-0 px-4 text-center sm:px-6 lg:px-8">
             <h1 className="text-display mx-auto max-w-4xl text-4xl text-navy sm:text-5xl lg:text-6xl">
-              Wafy Campus Kalikkav Arts Fest
+              Wafy Campus kalikavu Arts Fest
             </h1>
           </div>
 

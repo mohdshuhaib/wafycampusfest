@@ -63,7 +63,7 @@ function BrandMark() {
   return (
     <div className="flex items-center">
       <div className="min-w-0">
-        <div className="text-title text-[1.05rem] text-navy">Wafy Campus Kalikkav</div>
+        <div className="text-title text-[1.05rem] text-navy">Wafy Campus kalikavu</div>
         <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slatebrand">Arts Fest Portal</div>
       </div>
     </div>

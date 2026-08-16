@@ -58,7 +58,7 @@ export default async function DashboardLayout({
 
           <div className="md:hidden flex items-center gap-2">
             <MobileSidebar role={profile.role} />
-            <span className="text-title whitespace-nowrap text-lg text-navy">Wafy Campus Kalikkav</span>
+            <span className="text-title whitespace-nowrap text-lg text-navy">Wafy Campus kalikavu</span>
           </div>
 
           <div className="flex-1" />

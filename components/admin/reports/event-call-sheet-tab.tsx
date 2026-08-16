@@ -314,7 +314,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         doc.setTextColor(255, 255, 255)
         doc.setFontSize(15)
         doc.setFont("helvetica", "bold")
-        doc.text("WAFY CAMPUS KALIKKAV ARTS FEST 2026", pageWidth / 2, yPos + 9, { align: "center" })
+        doc.text("WAFY CAMPUS kalikavu ARTS FEST 2026", pageWidth / 2, yPos + 9, { align: "center" })
         doc.setFontSize(8.5)
         doc.setFont("helvetica", "normal")
         doc.text("OFFICIAL EVENT CALL SHEET & PHYSICAL ATTENDANCE REGISTER", pageWidth / 2, yPos + 16, { align: "center" })
@@ -443,7 +443,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         } else {
              doc.setFontSize(16);
              doc.setFont("helvetica", "bold");
-             doc.text("WAFY CAMPUS KALIKKAV ARTS FEST 2026", pageWidth / 2, yPos, { align: 'center' });
+             doc.text("WAFY CAMPUS kalikavu ARTS FEST 2026", pageWidth / 2, yPos, { align: 'center' });
              yPos += 10;
         }
 
@@ -579,7 +579,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
       doc.setFontSize(22);
       doc.text(`PARTICIPANT LIST - ${category}`, 105, 100, { align: 'center' });
       doc.setFontSize(14);
-      doc.text("WAFY CAMPUS KALIKKAV ARTS FEST 2026", 105, 115, { align: 'center' });
+      doc.text("WAFY CAMPUS kalikavu ARTS FEST 2026", 105, 115, { align: 'center' });
       doc.addPage();
 
       for (const event of filteredEvents) {

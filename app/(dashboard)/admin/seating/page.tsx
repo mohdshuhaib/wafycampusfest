@@ -401,13 +401,13 @@ export default function AdminSeatingPage() {
       const margin = 14
       let yPos = 14
 
-      // 1. Heading (Centered): "WAFY CAMPUS KALIKKAV ARTS FEST 2026"
+      // 1. Heading (Centered): "WAFY CAMPUS kalikavu ARTS FEST 2026"
       doc.setFillColor(10, 29, 44)
       doc.roundedRect(margin, yPos, pageWidth - margin * 2, 22, 3, 3, "F")
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(16)
       doc.setFont("helvetica", "bold")
-      doc.text("WAFY CAMPUS KALIKKAV ARTS FEST 2026", pageWidth / 2, yPos + 9, { align: "center" })
+      doc.text("WAFY CAMPUS kalikavu ARTS FEST 2026", pageWidth / 2, yPos + 9, { align: "center" })
 
       doc.setFontSize(9)
       doc.setFont("helvetica", "normal")

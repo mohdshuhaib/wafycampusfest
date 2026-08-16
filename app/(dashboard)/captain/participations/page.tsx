@@ -174,7 +174,7 @@ export default function CaptainParticipations() {
           doc.setTextColor(255, 255, 255)
           doc.setFontSize(20)
           doc.setFont("helvetica", "bold")
-          doc.text("WAFY CAMPUS KALIKKAV", pageWidth / 2, 23, { align: "center" })
+          doc.text("WAFY CAMPUS kalikavu", pageWidth / 2, 23, { align: "center" })
           doc.setFontSize(10)
           doc.text("ARTS FEST PORTAL", pageWidth / 2, 31, { align: "center" })
         }
@@ -275,7 +275,7 @@ export default function CaptainParticipations() {
         doc.setTextColor(90, 109, 126)
         doc.setFont("helvetica", "italic")
         doc.text(`Printed on ${now}`, margin, pageHeight - 12)
-        doc.text("© Wafy Campus Kalikkav Arts Fest Portal", pageWidth / 2, pageHeight - 12, { align: "center" })
+        doc.text("© Wafy Campus kalikavu Arts Fest Portal", pageWidth / 2, pageHeight - 12, { align: "center" })
         doc.text(`Page ${index + 1} of ${itemsToPrint.length}`, pageWidth - margin, pageHeight - 12, { align: "right" })
       }
 
