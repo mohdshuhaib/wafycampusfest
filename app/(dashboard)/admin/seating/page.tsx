@@ -407,7 +407,7 @@ export default function AdminSeatingPage() {
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(16)
       doc.setFont("helvetica", "bold")
-      doc.text("WAFY CAMPUS kalikavu ARTS FEST 2026", pageWidth / 2, yPos + 9, { align: "center" })
+      doc.text("WAFY CAMPUS KALIKAVU ARTS FEST 2026", pageWidth / 2, yPos + 9, { align: "center" })
 
       doc.setFontSize(9)
       doc.setFont("helvetica", "normal")

@@ -118,7 +118,7 @@ export default function PublicSchedulePage() {
           <Link href="/" className="flex items-center gap-2">
             <CalendarClock className="size-6 text-gold" />
             <div>
-              <div className="font-extrabold text-navy text-base">Wafy Campus kalikavu</div>
+              <div className="font-extrabold text-navy text-base">Wafy Campus Kalikavu</div>
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slatebrand">
                 Arts Fest Official Schedule
               </div>

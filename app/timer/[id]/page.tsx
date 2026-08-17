@@ -349,7 +349,7 @@ export default function PublicTimerRevealPage({ params }: { params: Promise<{ id
       <div className="w-full shrink-0 pt-1 pb-2 flex justify-center">
         <div className="bg-amber-400 text-slate-950 px-6 sm:px-8 py-1.5 sm:py-2 rounded-full font-black text-xs sm:text-base shadow-[0_0_30px_rgba(251,191,36,0.6)] uppercase tracking-[0.25em] flex items-center gap-2 border-2 border-amber-300">
           <Sparkles className="size-4 fill-slate-950 text-slate-950 shrink-0" />
-          <span>WAFY CAMPUS kalikavu FEST 2026</span>
+          <span>WAFY CAMPUS KALIKAVU FEST 2026</span>
         </div>
       </div>
 
