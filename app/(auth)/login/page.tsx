@@ -19,7 +19,7 @@ import Link from 'next/link';
 
 interface UserProfile {
   id: string;
-  role: 'admin' | 'captain';
+  role: 'admin' | 'captain' | 'judge';
   team_id: string | null;
   full_name: string | null;
 }
@@ -67,6 +67,7 @@ export default function LoginPage() {
       setRedirecting(true);
       if (profile.role === 'admin') router.replace('/admin/dashboard');
       else if (profile.role === 'captain') router.replace('/captain/dashboard');
+      else if (profile.role === 'judge') router.replace('/judge');
       else router.replace('/');
       router.refresh();
 

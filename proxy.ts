@@ -48,10 +48,11 @@ export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
   const isAdminPath = url.pathname.startsWith("/admin");
   const isCaptainPath = url.pathname.startsWith("/captain");
+  const isJudgePath = url.pathname.startsWith("/judge");
   const isLoginPage = url.pathname === "/login";
 
   if (!user) {
-    if (isAdminPath || isCaptainPath) {
+    if (isAdminPath || isCaptainPath || isJudgePath) {
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
@@ -62,7 +63,7 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  if (isAdminPath || isCaptainPath) {
+  if (isAdminPath || isCaptainPath || isJudgePath) {
     try {
       const { data: profile } = await supabase
         .from("profiles")
@@ -73,12 +74,17 @@ export async function proxy(request: NextRequest) {
       const role = profile?.role;
 
       if (isAdminPath && role !== "admin") {
-        url.pathname = "/captain";
+        url.pathname = role === "judge" ? "/judge" : "/captain";
         return NextResponse.redirect(url);
       }
 
       if (isCaptainPath && role !== "captain") {
-        url.pathname = "/admin";
+        url.pathname = role === "judge" ? "/judge" : "/admin";
+        return NextResponse.redirect(url);
+      }
+
+      if (isJudgePath && role !== "judge" && role !== "admin") {
+        url.pathname = role === "captain" ? "/captain" : "/admin";
         return NextResponse.redirect(url);
       }
     } catch (e) {

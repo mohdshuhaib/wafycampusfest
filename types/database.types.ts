@@ -122,21 +122,21 @@ export interface Database {
       profiles: {
         Row: {
           id: string
-          role: 'admin' | 'captain'
+          role: 'admin' | 'captain' | 'judge'
           team_id: string | null
           full_name: string | null
           created_at: string
         }
         Insert: {
           id: string
-          role?: 'admin' | 'captain'
+          role?: 'admin' | 'captain' | 'judge'
           team_id?: string | null
           full_name?: string | null
           created_at?: string
         }
         Update: {
           id?: string
-          role?: 'admin' | 'captain'
+          role?: 'admin' | 'captain' | 'judge'
           team_id?: string | null
           full_name?: string | null
           created_at?: string
@@ -504,6 +504,135 @@ export interface Database {
           id?: number
           last_ping?: string
         }
+      }
+      judges: {
+        Row: {
+          id: string
+          user_id: string | null
+          name: string
+          email: string
+          phone: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          name: string
+          email: string
+          phone?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          name?: string
+          email?: string
+          phone?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      judge_assignments: {
+        Row: {
+          id: string
+          judge_id: string
+          event_id: string
+          rule_criterion_1: string
+          rule_criterion_2: string
+          rule_criterion_3: string
+          rule_criterion_4: string
+          overall_remarks: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          judge_id: string
+          event_id: string
+          rule_criterion_1?: string
+          rule_criterion_2?: string
+          rule_criterion_3?: string
+          rule_criterion_4?: string
+          overall_remarks?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          judge_id?: string
+          event_id?: string
+          rule_criterion_1?: string
+          rule_criterion_2?: string
+          rule_criterion_3?: string
+          rule_criterion_4?: string
+          overall_remarks?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      judge_evaluations: {
+        Row: {
+          id: string
+          assignment_id: string | null
+          judge_id: string
+          event_id: string
+          chest_no: string
+          student_id: string | null
+          student_name: string | null
+          team_name: string | null
+          mark_criterion_1: number
+          mark_criterion_2: number
+          mark_criterion_3: number
+          mark_criterion_4: number
+          total_marks: number
+          grade: string
+          positive_remarks: string | null
+          negative_remarks: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          assignment_id?: string | null
+          judge_id: string
+          event_id: string
+          chest_no: string
+          student_id?: string | null
+          student_name?: string | null
+          team_name?: string | null
+          mark_criterion_1: number
+          mark_criterion_2: number
+          mark_criterion_3: number
+          mark_criterion_4: number
+          total_marks: number
+          grade: string
+          positive_remarks?: string | null
+          negative_remarks?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          assignment_id?: string | null
+          judge_id?: string
+          event_id?: string
+          chest_no?: string
+          student_id?: string | null
+          student_name?: string | null
+          team_name?: string | null
+          mark_criterion_1?: number
+          mark_criterion_2?: number
+          mark_criterion_3?: number
+          mark_criterion_4?: number
+          total_marks?: number
+          grade?: string
+          positive_remarks?: string | null
+          negative_remarks?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
   }

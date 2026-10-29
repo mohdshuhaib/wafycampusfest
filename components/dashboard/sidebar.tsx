@@ -26,6 +26,7 @@ import {
   BookOpen,
   Clock,
   LayoutGrid,
+  Scale,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -41,6 +42,7 @@ const adminLinks = [
   { href: "/admin/timer", label: "Timer", icon: Clock },
   { href: "/admin/schedule", label: "Schedule", icon: CalendarClock },
   { href: "/admin/seating", label: "Seating", icon: LayoutGrid },
+  { href: "/admin/judges", label: "Judges", icon: Scale },
   { href: "/admin/scoring", label: "Scoring", icon: Trophy },
   { href: "/admin/replacement", label: "Replacement", icon: Replace },
   { href: "/admin/reports", label: "Reports", icon: ScrollText },
