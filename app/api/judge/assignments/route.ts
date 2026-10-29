@@ -55,44 +55,8 @@ export async function GET(request: NextRequest) {
 
       const assignmentData = assignment as any
 
-      // Also fetch registered participants for this event to populate chest numbers / participant names
-      let registeredParticipants: any[] = []
-      if (assignmentData?.event_id) {
-        const { data: parts } = await supabase
-          .from('participations')
-          .select(`
-            id,
-            student_id,
-            student:students (
-              id,
-              name,
-              chest_no,
-              class_grade,
-              team:teams (
-                name,
-                color_hex
-              )
-            ),
-            team:teams (
-              name,
-              color_hex
-            )
-          `)
-          .eq('event_id', assignmentData.event_id)
-
-        registeredParticipants = (parts || []).map((p: any) => ({
-          student_id: p.student_id,
-          name: p.student?.name || 'Participant',
-          chest_no: p.student?.chest_no || '',
-          class_grade: p.student?.class_grade || '',
-          team_name: p.student?.team?.name || p.team?.name || '',
-          team_color: p.student?.team?.color_hex || p.team?.color_hex || '#D4AF37',
-        })).filter((p) => Boolean(p.chest_no))
-      }
-
       return NextResponse.json({
         assignment,
-        registeredParticipants,
       })
     }
 

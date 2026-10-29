@@ -27,15 +27,6 @@ import {
   Search,
 } from "lucide-react"
 
-interface RegisteredParticipant {
-  student_id: string
-  name: string
-  chest_no: string
-  class_grade: string
-  team_name: string
-  team_color: string
-}
-
 interface AssignedProgramme {
   id: string
   judge_id: string
@@ -90,7 +81,6 @@ export default function JudgeScoringPage() {
   const assignmentId = params?.id as string
 
   const [assignment, setAssignment] = useState<AssignedProgramme | null>(null)
-  const [registeredParticipants, setRegisteredParticipants] = useState<RegisteredParticipant[]>([])
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState(true)
   const [savingEvaluation, setSavingEvaluation] = useState(false)
@@ -102,8 +92,6 @@ export default function JudgeScoringPage() {
   // Current Evaluation Form State
   const [editingId, setEditingId] = useState<string | null>(null)
   const [chestNo, setChestNo] = useState("")
-  const [studentName, setStudentName] = useState("")
-  const [teamName, setTeamName] = useState("")
   const [mark1, setMark1] = useState<string>("")
   const [mark2, setMark2] = useState<string>("")
   const [mark3, setMark3] = useState<string>("")
@@ -117,7 +105,7 @@ export default function JudgeScoringPage() {
   const loadData = async () => {
     setLoading(true)
     try {
-      // 1. Fetch assignment details and registered participants
+      // 1. Fetch assignment details
       const res = await fetch(`/api/judge/assignments?id=${assignmentId}`)
       const data = await res.json()
       if (!res.ok || data.error) {
@@ -125,7 +113,6 @@ export default function JudgeScoringPage() {
       }
 
       setAssignment(data.assignment)
-      setRegisteredParticipants(data.registeredParticipants || [])
       setOverallRemarks(data.assignment?.overall_remarks || "")
 
       // 2. Fetch existing evaluations
@@ -148,18 +135,9 @@ export default function JudgeScoringPage() {
     }
   }, [assignmentId])
 
-  // When chest number changes, auto-detect participant name and team
+  // Handle chest number change
   const handleChestNoChange = (val: string) => {
-    const formatted = val.trim().toUpperCase()
-    setChestNo(formatted)
-
-    const match = registeredParticipants.find(
-      (p) => p.chest_no.toUpperCase() === formatted
-    )
-    if (match) {
-      setStudentName(match.name)
-      setTeamName(match.team_name)
-    }
+    setChestNo(val.trim().toUpperCase())
   }
 
   // Calculate live total and grade
@@ -175,8 +153,6 @@ export default function JudgeScoringPage() {
   const handleResetForm = () => {
     setEditingId(null)
     setChestNo("")
-    setStudentName("")
-    setTeamName("")
     setMark1("")
     setMark2("")
     setMark3("")
@@ -191,7 +167,7 @@ export default function JudgeScoringPage() {
     setFormError(null)
 
     if (!chestNo.trim()) {
-      setFormError("Please enter or select a Chest Number.")
+      setFormError("Please enter the participant Chest Number.")
       chestInputRef.current?.focus()
       return
     }
@@ -219,8 +195,6 @@ export default function JudgeScoringPage() {
           judge_id: assignment.judge_id,
           event_id: assignment.event_id,
           chest_no: chestNo.trim().toUpperCase(),
-          student_name: studentName.trim() || undefined,
-          team_name: teamName.trim() || undefined,
           mark_criterion_1: num1,
           mark_criterion_2: num2,
           mark_criterion_3: num3,
@@ -261,8 +235,6 @@ export default function JudgeScoringPage() {
   const handleEditEvaluation = (item: Evaluation) => {
     setEditingId(item.id)
     setChestNo(item.chest_no)
-    setStudentName(item.student_name || "")
-    setTeamName(item.team_name || "")
     setMark1(item.mark_criterion_1.toString())
     setMark2(item.mark_criterion_2.toString())
     setMark3(item.mark_criterion_3.toString())
@@ -469,72 +441,29 @@ export default function JudgeScoringPage() {
             </div>
           )}
 
-          {/* Participant Details: Chest No, Name, Team */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {/* Chest Number */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-navy flex items-center justify-between">
-                <span>Chest Number *</span>
-                {registeredParticipants.length > 0 && (
-                  <span className="text-[10px] text-slatebrand font-normal">
-                    ({registeredParticipants.length} registered)
-                  </span>
-                )}
+          {/* Participant Chest Number Input (Blind Judging) */}
+          <div className="max-w-md space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-navy flex items-center gap-1.5">
+                <span>Participant Chest Number *</span>
               </label>
-
-              <div className="flex gap-2">
-                <Input
-                  ref={chestInputRef}
-                  type="text"
-                  placeholder="e.g. 102"
-                  value={chestNo}
-                  onChange={(e) => handleChestNoChange(e.target.value)}
-                  className="font-mono font-bold text-navy uppercase text-sm bg-mist/50 border-navy/20"
-                />
-
-                {/* Dropdown Quick Pick if registered participants exist */}
-                {registeredParticipants.length > 0 && (
-                  <select
-                    className="rounded-lg border border-navy/20 bg-white px-2 py-1 text-xs text-navy focus:outline-none focus:ring-1 focus:ring-navy"
-                    onChange={(e) => {
-                      if (e.target.value) handleChestNoChange(e.target.value)
-                    }}
-                    value=""
-                  >
-                    <option value="">Pick...</option>
-                    {registeredParticipants.map((p) => (
-                      <option key={p.chest_no} value={p.chest_no}>
-                        #{p.chest_no} - {p.name} ({p.team_name})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+              <span className="text-[10px] text-slatebrand bg-navy/5 px-2.5 py-0.5 rounded-full font-bold">
+                Blind Judging • Names & Teams Hidden
+              </span>
             </div>
 
-            {/* Student Name */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-navy">Student / Participant Name</label>
-              <Input
-                type="text"
-                placeholder="Participant Name"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                className="text-sm bg-mist/50 border-navy/20"
-              />
-            </div>
-
-            {/* Team Name */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-navy">Team / Group</label>
-              <Input
-                type="text"
-                placeholder="Team / Group"
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                className="text-sm bg-mist/50 border-navy/20"
-              />
-            </div>
+            <Input
+              ref={chestInputRef}
+              type="text"
+              placeholder="Type Chest Number (e.g. 102)"
+              value={chestNo}
+              onChange={(e) => handleChestNoChange(e.target.value)}
+              className="font-mono font-bold text-navy uppercase text-base bg-white border-navy/25 h-11 px-3 shadow-inner"
+              autoFocus
+            />
+            <p className="text-[11px] text-slatebrand">
+              Enter the chest number of the participant to submit their scores.
+            </p>
           </div>
 
           {/* 4 Divided Marks (30, 30, 20, 20) with Rules explicitly displayed */}
@@ -862,9 +791,7 @@ export default function JudgeScoringPage() {
                   <thead className="bg-navy text-white text-[11px] uppercase tracking-wider font-semibold">
                     <tr>
                       <th className="py-3 px-3 text-center">Sl</th>
-                      <th className="py-3 px-3">Chest</th>
-                      <th className="py-3 px-3">Student Name</th>
-                      <th className="py-3 px-3">Team</th>
+                      <th className="py-3 px-3">Chest No</th>
                       <th className="py-3 px-2 text-center" title={assignment.rule_criterion_1}>
                         C1 (30)
                       </th>
@@ -893,8 +820,6 @@ export default function JudgeScoringPage() {
                         <td className="py-2.5 px-3 font-mono font-bold text-navy">
                           #{item.chest_no}
                         </td>
-                        <td className="py-2.5 px-3 font-bold">{item.student_name || "—"}</td>
-                        <td className="py-2.5 px-3 text-slatebrand">{item.team_name || "—"}</td>
                         <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_1}</td>
                         <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_2}</td>
                         <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_3}</td>
@@ -977,16 +902,13 @@ export default function JudgeScoringPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="rounded bg-navy px-2 py-0.5 font-mono text-xs font-bold text-gold">
-                            #{item.chest_no}
+                          <span className="rounded bg-navy px-2.5 py-1 font-mono text-sm font-bold text-gold">
+                            Chest #{item.chest_no}
                           </span>
-                          <span className="font-bold text-sm text-navy">
-                            {item.student_name || "Participant"}
+                          <span className="text-xs text-slatebrand font-medium">
+                            Evaluation #{idx + 1}
                           </span>
                         </div>
-                        {item.team_name && (
-                          <div className="text-xs text-slatebrand mt-0.5">{item.team_name}</div>
-                        )}
                       </div>
 
                       <div className="flex items-center gap-2">
