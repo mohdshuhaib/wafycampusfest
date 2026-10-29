@@ -479,7 +479,7 @@ export default function AdminJudgesPage() {
             setFormError(null)
             setIsAddJudgeOpen(true)
           }}
-          className="bg-navy hover:bg-deepblue text-white shadow-md transition-all hover:scale-[1.02]"
+          className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white shadow-md transition-all hover:scale-[1.02] font-bold"
         >
           <Plus className="mr-2 size-4" />
           Add New Judge
@@ -617,7 +617,7 @@ export default function AdminJudgesPage() {
                           setAssignEventId("")
                           setIsAssignModalOpen(true)
                         }}
-                        className="bg-navy hover:bg-deepblue text-white text-xs h-8"
+                        className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white text-xs h-8 font-bold"
                       >
                         <Plus className="mr-1.5 size-3.5" />
                         Assign Programme
@@ -664,7 +664,7 @@ export default function AdminJudgesPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => setIsAssignModalOpen(true)}
-                      className="mt-3 text-xs border-gold text-navy"
+                      className="mt-3 text-xs bg-white text-navy border-gold hover:bg-gold/10 font-bold"
                     >
                       <Plus className="mr-1 size-3" />
                       Assign a Programme
@@ -741,9 +741,13 @@ export default function AdminJudgesPage() {
 
                               <Button
                                 size="sm"
-                                variant={isProgSelected ? "default" : "outline"}
+                                variant="outline"
                                 onClick={() => setSelectedAssignment(assignment)}
-                                className={`text-xs h-8 ${isProgSelected ? "bg-navy text-white" : ""}`}
+                                className={`text-xs h-8 font-bold ${
+                                  isProgSelected
+                                    ? "bg-[#0A1D2C] text-white border-[#0A1D2C]"
+                                    : "bg-white text-navy border-navy/20 hover:bg-navy/5"
+                                }`}
                               >
                                 <Eye className="mr-1.5 size-3.5" />
                                 {isProgSelected ? "Viewing" : "View Results"}
@@ -790,7 +794,7 @@ export default function AdminJudgesPage() {
                         size="sm"
                         onClick={handleExportPDF}
                         disabled={assignmentEvaluations.length === 0}
-                        className="bg-navy hover:bg-deepblue text-white text-xs h-8 shadow"
+                        className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white text-xs h-8 shadow font-bold"
                       >
                         <Printer className="mr-1.5 size-3.5" />
                         Export Score Sheet (PDF)
@@ -984,13 +988,14 @@ export default function AdminJudgesPage() {
                 variant="outline"
                 onClick={() => setIsAddJudgeOpen(false)}
                 disabled={creatingJudge}
+                className="bg-white text-navy border-navy/20 hover:bg-navy/5 font-semibold"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={creatingJudge}
-                className="bg-navy hover:bg-deepblue text-white"
+                className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white font-bold"
               >
                 {creatingJudge ? (
                   <>
@@ -1135,13 +1140,14 @@ export default function AdminJudgesPage() {
                 variant="outline"
                 onClick={() => setIsAssignModalOpen(false)}
                 disabled={assigningProgramme}
+                className="bg-white text-navy border-navy/20 hover:bg-navy/5 font-semibold"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={assigningProgramme || !assignEventId}
-                className="bg-navy hover:bg-deepblue text-white"
+                className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white font-bold"
               >
                 {assigningProgramme ? (
                   <>

@@ -415,7 +415,7 @@ export default function JudgeScoringPage() {
               size="sm"
               onClick={handleSaveOverallRemarks}
               disabled={savingRemarks}
-              className="bg-navy hover:bg-deepblue text-white text-xs h-8 shadow-sm"
+              className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white text-xs h-8 shadow-sm font-bold"
             >
               {savingRemarks ? (
                 <>
@@ -452,7 +452,7 @@ export default function JudgeScoringPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleResetForm}
-                className="text-xs h-8 border-navy/20 self-start sm:self-auto"
+                className="text-xs h-8 bg-white text-navy border-navy/20 hover:bg-navy/5 font-semibold self-start sm:self-auto"
               >
                 <RotateCcw className="mr-1 size-3" />
                 Cancel Edit
@@ -790,7 +790,7 @@ export default function JudgeScoringPage() {
               type="button"
               variant="outline"
               onClick={handleResetForm}
-              className="w-full sm:w-auto text-xs"
+              className="w-full sm:w-auto text-xs bg-white text-navy border-navy/20 hover:bg-navy/5 font-semibold"
             >
               Reset Form
             </Button>
@@ -799,8 +799,8 @@ export default function JudgeScoringPage() {
               type="button"
               onClick={() => handleSubmitEvaluation(false)}
               disabled={savingEvaluation}
-              variant="secondary"
-              className="w-full sm:w-auto text-xs font-bold"
+              variant="outline"
+              className="w-full sm:w-auto text-xs font-bold bg-navy/10 text-navy border-navy/20 hover:bg-navy/15"
             >
               {savingEvaluation ? (
                 <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -814,7 +814,7 @@ export default function JudgeScoringPage() {
               type="button"
               onClick={() => handleSubmitEvaluation(true)}
               disabled={savingEvaluation}
-              className="w-full sm:w-auto bg-navy hover:bg-deepblue text-white text-xs font-bold shadow-md hover:scale-[1.02] transition-all"
+              className="w-full sm:w-auto bg-[#0A1D2C] hover:bg-[#123B4F] text-white text-xs font-bold shadow-md hover:scale-[1.02] transition-all"
             >
               {savingEvaluation ? (
                 <>

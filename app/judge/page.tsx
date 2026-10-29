@@ -84,10 +84,9 @@ export default function JudgeDashboard() {
           </div>
 
           <Button
-            variant="outline"
             size="sm"
             onClick={fetchAssignments}
-            className="self-start sm:self-center border-gold/40 text-black hover:bg-gold/10 text-xs"
+            className="self-start sm:self-center bg-gold hover:bg-[#c9a22e] text-navy font-bold text-xs shadow-md border-0"
           >
             <RefreshCw className={`mr-1.5 size-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh List

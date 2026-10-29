@@ -8,6 +8,18 @@
 }
 
 @import "tailwindcss";
+@config "../tailwind.config.ts";
+
+@theme {
+  --color-navy: #0A1D2C;
+  --color-deepblue: #123B4F;
+  --color-slatebrand: #5A6D7E;
+  --color-gold: #D4AF37;
+  --color-ivory: #F6F2E8;
+  --color-parchment: #EDE7D9;
+  --color-mist: #F5F8FA;
+  --color-charcoal: #1B2127;
+}
 
 @layer base {
   body {

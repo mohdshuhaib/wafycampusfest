@@ -9,15 +9,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-navy text-ivory shadow-premium hover:-translate-y-0.5 hover:bg-deepblue active:translate-y-0",
+        default: "bg-navy text-white shadow-premium hover:-translate-y-0.5 hover:bg-deepblue active:translate-y-0",
         destructive:
           "bg-destructive text-destructive-foreground shadow-[0_14px_30px_rgb(185_28_28/0.18)] hover:-translate-y-0.5 hover:bg-destructive/90 active:translate-y-0",
         outline:
-          "border border-navy/15 bg-ivory/55 text-navy shadow-[inset_0_1px_0_rgb(255_255_255/0.55)] backdrop-blur-xl hover:-translate-y-0.5 hover:border-gold/45 hover:bg-ivory active:translate-y-0",
+          "border border-navy/20 bg-white text-navy shadow-sm hover:-translate-y-0.5 hover:border-gold/60 hover:bg-mist active:translate-y-0",
         secondary:
-          "bg-deepblue/10 text-navy hover:-translate-y-0.5 hover:bg-deepblue/15 active:translate-y-0",
+          "border border-navy/15 bg-navy/5 text-navy hover:-translate-y-0.5 hover:bg-navy/10 active:translate-y-0",
         ghost:
-          "text-slatebrand hover:bg-navy/7 hover:text-navy active:bg-navy/10",
+          "text-navy hover:bg-navy/10 active:bg-navy/15",
         link: "rounded-md px-0 text-navy underline-offset-4 hover:text-deepblue hover:underline",
         success: "bg-success text-success-foreground shadow-[0_14px_30px_rgb(46_125_84/0.18)] hover:-translate-y-0.5 hover:bg-success/90 active:translate-y-0",
         warning: "bg-gold text-navy shadow-gold hover:-translate-y-0.5 hover:bg-[#c9a22e] active:translate-y-0",
