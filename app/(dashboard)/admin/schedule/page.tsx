@@ -14,6 +14,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 import {
   Plus,
   Search,
@@ -29,6 +31,7 @@ import {
   Filter,
   Check,
   AlertCircle,
+  Download,
 } from "lucide-react"
 
 interface ProgrammeEvent {
@@ -121,6 +124,7 @@ export default function AdminSchedulePage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [programmeSearch, setProgrammeSearch] = useState("")
+  const [modalCategoryFilter, setModalCategoryFilter] = useState<string>("ALL")
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null)
   const [selectedProgrammeId, setSelectedProgrammeId] = useState<string>("")
   const [scheduleDate, setScheduleDate] = useState<string>("")
@@ -325,6 +329,7 @@ export default function AdminSchedulePage() {
       setEndTime("10:00")
     }
     setProgrammeSearch("")
+    setModalCategoryFilter("ALL")
     setIsModalOpen(true)
   }
 
@@ -452,19 +457,172 @@ export default function AdminSchedulePage() {
     })
   }, [schedules, selectedDateFilter, searchQuery])
 
-  // Filter modal programmes
-  const filteredModalEvents = events.filter((e) => {
-    const q = programmeSearch.toLowerCase()
-    return (
-      (e.name && e.name.toLowerCase().includes(q)) ||
-      (e.event_code && e.event_code.toLowerCase().includes(q))
-    )
-  })
+  // Filter modal programmes by search text & category tab
+  const filteredModalEvents = useMemo(() => {
+    const q = programmeSearch.toLowerCase().trim()
+    return events.filter((e) => {
+      // Category filter
+      if (modalCategoryFilter !== "ALL") {
+        if (e.category?.toUpperCase() !== modalCategoryFilter.toUpperCase()) {
+          return false
+        }
+      }
+
+      if (!q) return true
+      return (
+        (e.name && e.name.toLowerCase().includes(q)) ||
+        (e.event_code && e.event_code.toLowerCase().includes(q)) ||
+        (e.category && e.category.toLowerCase().includes(q))
+      )
+    })
+  }, [events, programmeSearch, modalCategoryFilter])
 
   // Set of scheduled programme IDs
   const scheduledProgrammeIds = useMemo(() => {
     return new Set(schedules.map((s) => s.programme_id))
   }, [schedules])
+
+  // Export Schedule to PDF
+  const handleExportPDF = () => {
+    if (schedules.length === 0) {
+      toast.error("No schedule entries to export")
+      return
+    }
+
+    // Determine items to export:
+    // If a specific date is selected, export for that date, otherwise export all
+    const itemsToExport =
+      selectedDateFilter !== "ALL"
+        ? schedules.filter((s) => s.schedule_date === selectedDateFilter)
+        : [...schedules]
+
+    if (itemsToExport.length === 0) {
+      toast.error("No schedule entries found for the selected filter")
+      return
+    }
+
+    // Sort chronologically: Date ASC -> Start Time ASC -> End Time ASC
+    itemsToExport.sort((a, b) => {
+      if (a.schedule_date !== b.schedule_date) {
+        return a.schedule_date.localeCompare(b.schedule_date)
+      }
+      const startA = timeToMinutes(a.start_time)
+      const startB = timeToMinutes(b.start_time)
+      if (startA !== startB) {
+        return startA - startB
+      }
+      return timeToMinutes(a.end_time) - timeToMinutes(b.end_time)
+    })
+
+    const doc = new jsPDF("p", "mm", "a4")
+
+    // Top Header Banner
+    doc.setFillColor(10, 29, 44) // #0A1D2C Midnight Navy
+    doc.rect(0, 0, 210, 28, "F")
+
+    // Gold Accent Stripe
+    doc.setFillColor(212, 175, 55) // #D4AF37 Gold
+    doc.rect(0, 28, 210, 1.5, "F")
+
+    // Fest Header Title
+    doc.setTextColor(212, 175, 55)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(14)
+    doc.text("WAFY CAMPUS KALIKAVU ARTS FEST 2026", 105, 12, { align: "center" })
+
+    // Subtitle
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(10)
+    doc.setFont("helvetica", "bold")
+    doc.text("OFFICIAL PROGRAMME SCHEDULE", 105, 19, { align: "center" })
+
+    // Subtext
+    doc.setFontSize(7.5)
+    doc.setFont("helvetica", "normal")
+    doc.setTextColor(203, 213, 225)
+    const filterText =
+      selectedDateFilter !== "ALL"
+        ? `Schedule for: ${formatDateLabel(selectedDateFilter)}`
+        : "Complete Event Schedule Across All Dates"
+    doc.text(filterText, 105, 24.5, { align: "center" })
+
+    // Details Strip
+    doc.setFillColor(248, 250, 252)
+    doc.setDrawColor(226, 232, 240)
+    doc.roundedRect(14, 34, 182, 10, 2, 2, "FD")
+
+    doc.setFontSize(8)
+    doc.setTextColor(71, 85, 105)
+    const genDateStr = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    doc.text(`Generated: ${genDateStr}`, 18, 40.5)
+    doc.setFont("helvetica", "bold")
+    doc.text(`Total Scheduled Programmes: ${itemsToExport.length}`, 192, 40.5, { align: "right" })
+
+    // Table Data (without status column)
+    const tableData = itemsToExport.map((s, idx) => {
+      const formattedDate = formatDateLabel(s.schedule_date)
+      const timeSlot = `${format12Hour(s.start_time)} - ${format12Hour(s.end_time)}`
+      const code = s.programme?.event_code || "—"
+      const name = s.programme?.name || "Unnamed Event"
+      const category = s.programme?.category || "Standard"
+
+      return [idx + 1, formattedDate, timeSlot, code, name, category]
+    })
+
+    autoTable(doc, {
+      startY: 48,
+      head: [["#", "Date", "Time Slot", "Code", "Programme Name", "Category"]],
+      body: tableData,
+      theme: "grid",
+      margin: { left: 14, right: 14 },
+      headStyles: {
+        fillColor: [10, 29, 44],
+        textColor: [255, 255, 255],
+        fontSize: 8.5,
+        fontStyle: "bold",
+        halign: "center",
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      styles: {
+        fontSize: 8,
+        textColor: [15, 23, 42],
+        cellPadding: 2.8,
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2,
+      },
+      columnStyles: {
+        0: { halign: "center", cellWidth: 10, fontStyle: "bold" },
+        1: { halign: "center", cellWidth: 32 },
+        2: { halign: "center", cellWidth: 38, fontStyle: "bold" },
+        3: { halign: "center", cellWidth: 20, fontStyle: "bold" },
+        4: { halign: "left", cellWidth: 57, fontStyle: "bold" },
+        5: { halign: "center", cellWidth: 25 },
+      },
+    })
+
+    // Footer with Page Numbers
+    const totalPages = (doc as any).internal.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFontSize(7)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(148, 163, 184)
+      doc.text("Wafy Campus Kalikavu Arts Fest 2026 • Official Festival Schedule", 14, 290)
+      doc.text(`Page ${i} of ${totalPages}`, 196, 290, { align: "right" })
+    }
+
+    const fileSuffix = selectedDateFilter !== "ALL" ? selectedDateFilter : "Full"
+    doc.save(`ArtsFest_Schedule_${fileSuffix}.pdf`)
+    toast.success("Schedule PDF exported successfully")
+  }
 
   return (
     <div className="space-y-6 font-sans">
@@ -482,9 +640,19 @@ export default function AdminSchedulePage() {
 
         <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
           <Button
+            onClick={handleExportPDF}
+            disabled={schedules.length === 0}
+            className="bg-ivory hover:bg-gold/15 text-navy border border-navy/15 gap-2 rounded-xl h-11 px-4 font-bold shadow-xs cursor-pointer"
+            title="Download formatted schedule PDF"
+          >
+            <Download className="size-4 text-gold" />
+            <span>Export PDF</span>
+          </Button>
+
+          <Button
             onClick={() => runClashAnalysis(schedules, true)}
             disabled={checkingClashes}
-            className="bg-ivory hover:bg-gold/15 text-navy border border-navy/15 gap-2 rounded-xl h-11 px-5 font-bold shadow-xs cursor-pointer"
+            className="bg-ivory hover:bg-gold/15 text-navy border border-navy/15 gap-2 rounded-xl h-11 px-4 font-bold shadow-xs cursor-pointer"
           >
             {checkingClashes ? (
               <Loader2 className="size-4 animate-spin text-gold" />
@@ -767,9 +935,64 @@ export default function AdminSchedulePage() {
           <div className="space-y-4 py-3">
             {/* 1. Programme Selector */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-navy">
-                Select Programme
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold uppercase tracking-wider text-navy">
+                  Select Programme
+                </Label>
+                <span className="text-[11px] font-semibold text-slatebrand">
+                  {filteredModalEvents.length} available
+                </span>
+              </div>
+
+              {/* Category Filter Tabs: Off Stage / On Stage / All */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {[
+                  { id: "ALL", label: "All" },
+                  { id: "OFF STAGE", label: "Off Stage" },
+                  { id: "ON STAGE", label: "On Stage" },
+                  { id: "GENERAL", label: "General" },
+                  { id: "SPECIAL", label: "Special" },
+                ]
+                  .filter(
+                    (tab) =>
+                      tab.id === "ALL" ||
+                      tab.id === "OFF STAGE" ||
+                      tab.id === "ON STAGE" ||
+                      events.some((e) => e.category?.toUpperCase() === tab.id)
+                  )
+                  .map((tab) => {
+                    const count =
+                      tab.id === "ALL"
+                        ? events.length
+                        : events.filter((e) => e.category?.toUpperCase() === tab.id).length
+                    const isActive = modalCategoryFilter === tab.id
+
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setModalCategoryFilter(tab.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                          isActive
+                            ? "bg-navy text-ivory border-navy shadow-xs"
+                            : "bg-white/80 border-navy/15 text-slatebrand hover:text-navy hover:bg-white"
+                        }`}
+                      >
+                        <span>{tab.label}</span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                            isActive
+                              ? "bg-gold text-navy font-black"
+                              : "bg-navy/8 text-slatebrand"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    )
+                  })}
+              </div>
+
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slatebrand" />
                 <Input
@@ -784,7 +1007,7 @@ export default function AdminSchedulePage() {
               <div className="max-h-44 overflow-y-auto rounded-2xl border border-navy/15 bg-white/80 p-1.5 space-y-1 scrollbar-thin">
                 {filteredModalEvents.length === 0 ? (
                   <p className="p-3 text-xs text-center text-slatebrand">
-                    No programmes found matching search.
+                    No programmes found in this category matching search.
                   </p>
                 ) : (
                   filteredModalEvents.map((evt) => {
@@ -816,7 +1039,14 @@ export default function AdminSchedulePage() {
                           >
                             {evt.event_code || "N/A"}
                           </span>
-                          <span className={`truncate ${isSelected ? "text-ivory font-black text-sm" : ""}`}>{evt.name}</span>
+                          <div className="min-w-0 flex flex-col">
+                            <span className={`truncate ${isSelected ? "text-ivory font-black text-sm" : "font-semibold"}`}>
+                              {evt.name}
+                            </span>
+                            <span className={`text-[10px] uppercase font-bold ${isSelected ? "text-ivory/70" : "text-slatebrand"}`}>
+                              {evt.category}
+                            </span>
+                          </div>
                         </div>
 
                         {isSelected ? (
