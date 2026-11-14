@@ -47,7 +47,6 @@ interface ParticipantResult {
   event_code: string
   category: "ON STAGE" | "OFF STAGE" | "GENERAL" | "SPECIAL"
   points_earned: number
-  total_marks: number | null
   performance_grade: string | null
   result_position: string | null
   has_result: boolean
@@ -1120,9 +1119,9 @@ export default function ArtsFestResultsPage() {
                                 <span className="font-mono text-sm font-black text-cyan-700">
                                   +{p.points_earned} pts
                                 </span>
-                              ) : p.total_marks !== null ? (
-                                <span className="font-mono text-sm font-black text-cyan-700">
-                                  {p.total_marks}/100m
+                              ) : p.has_result ? (
+                                <span className="text-xs text-slate-500 font-semibold">
+                                  Completed
                                 </span>
                               ) : (
                                 <span className="text-xs text-slate-400 flex items-center justify-end gap-1 font-sans">
@@ -1189,10 +1188,8 @@ export default function ArtsFestResultsPage() {
                               <span className="font-mono text-xs font-black text-cyan-700">
                                 +{p.points_earned} pts
                               </span>
-                            ) : p.total_marks !== null ? (
-                              <span className="font-mono text-xs font-black text-cyan-700">
-                                {p.total_marks}/100m
-                              </span>
+                            ) : p.has_result ? (
+                              <span className="text-[10px] text-slate-500 font-medium">Completed</span>
                             ) : (
                               <span className="text-[10px] text-slate-400">Pending</span>
                             )}

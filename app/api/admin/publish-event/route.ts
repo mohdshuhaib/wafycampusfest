@@ -99,7 +99,7 @@ export async function GET() {
     const events = rawEvents || []
     const eventIds = events.map((e: any) => e.id)
 
-    // 2. Fetch participations that have marked scores or positions
+    // 2. Fetch participations that have marked scores or positions from Scoring Studio
     const { data: rawParts } = await supabase
       .from("participations")
       .select(`
@@ -113,14 +113,7 @@ export async function GET() {
       `)
       .in("event_id", eventIds)
 
-    // 3. Fetch judge evaluations
-    const { data: rawJudgeEvals } = await supabase
-      .from("judge_evaluations")
-      .select("id, event_id, total_marks, grade")
-      .in("event_id", eventIds)
-
     const parts = rawParts || []
-    const judgeEvals = rawJudgeEvals || []
 
     // Group results by event
     const eventResultsMap: Record<string, {
@@ -150,6 +143,7 @@ export async function GET() {
       const hasGrade = Boolean(p.performance_grade && p.performance_grade !== "NONE")
       const hasPoints = Number(p.points_earned || 0) > 0
 
+      // Only count as evaluated if officially marked in Scoring Studio
       if (hasPosition || hasGrade || hasPoints) {
         stats.evaluatedCount += 1
       }
@@ -164,13 +158,6 @@ export async function GET() {
         stats.secondWinner = participantLabel
       } else if (p.result_position === "THIRD" && !stats.thirdWinner) {
         stats.thirdWinner = participantLabel
-      }
-    })
-
-    judgeEvals.forEach((je: any) => {
-      const stats = eventResultsMap[je.event_id]
-      if (stats && stats.evaluatedCount === 0) {
-        stats.evaluatedCount += 1
       }
     })
 

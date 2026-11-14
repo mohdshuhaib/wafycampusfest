@@ -71,39 +71,8 @@ export async function GET() {
 
     if (partsErr) throw partsErr
 
-    // 3. Fetch Judge Evaluations
-    const { data: rawJudgeEvals } = await supabase
-      .from('judge_evaluations')
-      .select(`
-        id,
-        event_id,
-        chest_no,
-        student_name,
-        team_name,
-        mark_criterion_1,
-        mark_criterion_2,
-        mark_criterion_3,
-        mark_criterion_4,
-        total_marks,
-        grade,
-        event:events (
-          id,
-          name,
-          event_code,
-          category
-        )
-      `)
-
     const teams = rawTeams || []
     const allParts = rawParts || []
-    const judgeEvals = rawJudgeEvals || []
-
-    // Map judge evaluations by event_id + chest_no
-    const judgeEvalMap: Record<string, any> = {}
-    judgeEvals.forEach((je: any) => {
-      const key = `${je.event_id}_${(je.chest_no || '').trim().toUpperCase()}`
-      judgeEvalMap[key] = je
-    })
 
     // Filter participations strictly to PUBLISHED events
     const publishedParts = allParts.filter((p: any) => publishedEventIds.has(p.event_id))
@@ -241,21 +210,18 @@ export async function GET() {
 
     // Build Detailed Results for Individual & Item-wise display
     // ONLY show published events in results table as requested!
+    // Results come strictly from the official Scoring Studio (participations table)
     const detailedResults = publishedParts.map((p: any) => {
       const chestNo = p.student?.chest_no || ''
-      const key = `${p.event_id}_${chestNo.trim().toUpperCase()}`
-      const jEval = judgeEvalMap[key]
-
-      const effectiveGrade = p.performance_grade || jEval?.grade || null
+      const effectiveGrade = p.performance_grade && p.performance_grade !== 'NONE' ? p.performance_grade : null
       const effectivePosition = p.result_position || null
       const effectivePoints = Number(p.points_earned || 0)
-      const totalMarks = jEval?.total_marks ? Number(jEval.total_marks) : null
 
       return {
         id: p.id,
         chest_no: chestNo,
-        student_name: p.student?.name || jEval?.student_name || 'Participant',
-        team_name: p.team?.name || jEval?.team_name || 'Team',
+        student_name: p.student?.name || 'Participant',
+        team_name: p.team?.name || 'Team',
         team_color: p.team?.color_hex || '#3b82f6',
         team_slug: p.team?.slug || '',
         event_id: p.event?.id || p.event_id,
@@ -263,10 +229,9 @@ export async function GET() {
         event_code: p.event?.event_code || '',
         category: p.event?.category || 'OFF STAGE',
         points_earned: effectivePoints,
-        total_marks: totalMarks,
         performance_grade: effectiveGrade,
         result_position: effectivePosition,
-        has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition || totalMarks !== null),
+        has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition),
       }
     })
 
