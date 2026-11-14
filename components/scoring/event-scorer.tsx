@@ -469,10 +469,19 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
             </div>
 
             {selectedEvent && (
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                     <Badge variant={mode === 'TEAM' ? 'gold' : 'outline'} className="h-9 px-3 text-xs">
                        {mode === 'TEAM' ? <><Users className="mr-1 size-3"/> Team Event - Grade {selectedEvent.grade_type}</> : <><User className="mr-1 size-3"/> Individual - Grade {selectedEvent.grade_type}</>}
                     </Badge>
+                    <Button
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="h-9 gap-1.5 rounded-xl px-4 font-bold shadow-md"
+                    >
+                        {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                        Save
+                    </Button>
                 </div>
             )}
         </div>
@@ -639,22 +648,22 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                         )}
                     </CardContent>
                 </Card>
-                <div className="h-16"></div> {/* Spacer for fixed save button */}
-            </div>
-        )}
 
-        {/* BOTTOM FLOATING SAVE */}
-        {selectedEventId && (
-             <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-4 md:right-8">
-                 <Button
-                    size="lg"
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="h-12 rounded-full border-2 border-ivory px-6 shadow-2xl ring-4 ring-navy/8"
-                  >
-                    {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
-                    Save Scores
-                 </Button>
+                {/* INLINE SAVE BUTTON SECTION */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-gold/30 bg-gold/10 p-4 shadow-sm">
+                    <div className="text-xs text-navy font-medium">
+                        Make sure to review all positions and grades before saving. Scores update immediately for published events.
+                    </div>
+                    <Button
+                        size="lg"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="w-full sm:w-auto h-12 rounded-xl border border-navy/20 px-8 text-base font-bold shadow-lg"
+                    >
+                        {saving ? <Loader2 className="mr-2 size-5 animate-spin" /> : <Save className="mr-2 size-5" />}
+                        Save Scores
+                    </Button>
+                </div>
             </div>
         )}
     </div>
