@@ -479,10 +479,10 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
 
         {/* MAIN SCORING AREA */}
         {selectedEventId && (
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-3xl bg-mist/50 p-2 md:p-4">
+            <div className="space-y-6 rounded-3xl bg-mist/50 p-3 md:p-5">
 
                 {/* 1. TOP 3 WINNERS */}
-                <div className="grid gap-3 md:gap-4 lg:grid-cols-3">
+                <div className="grid gap-4 lg:grid-cols-3">
                     {['FIRST', 'SECOND', 'THIRD'].map(pos => {
                         // @ts-ignore
                         const basePts = pointsTable[selectedEvent?.grade_type || 'A']?.[pos] || 0
@@ -496,7 +496,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                         }[pos as 'FIRST'|'SECOND'|'THIRD']
 
                         return (
-                            <Card key={pos} className={cn("flex h-[420px] flex-col border-t-4 shadow-premium", style.border, style.bg)}>
+                            <Card key={pos} className={cn("flex flex-col border-t-4 shadow-premium min-h-[220px]", style.border, style.bg)}>
                                 <CardHeader className="shrink-0 border-b border-navy/10 px-4 py-3">
                                     <div className="flex items-center justify-between">
                                         <CardTitle className={cn("flex items-center gap-2 text-sm", style.icon)}>
@@ -505,7 +505,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                                         <Badge variant="outline" className="h-6 font-mono text-[10px]">Base {basePts} + Grade</Badge>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="flex-1 space-y-2 overflow-y-auto p-3">
+                                <CardContent className="space-y-2.5 p-3 sm:p-4">
                                     {itemList.map((item: any) => {
                                         const id = mode === 'INDIVIDUAL' ? item.id : item.id
                                         const isSelected = selectedMap.has(id)

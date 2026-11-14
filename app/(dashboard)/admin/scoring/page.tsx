@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import { EventScorer } from "@/components/scoring/event-scorer"
+import { PublishManager } from "@/components/scoring/publish-manager"
 import { GradeSettingsDialog } from "@/components/scoring/grade-settings-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -13,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal } from "lucide-react"
+import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal, Globe } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -348,8 +349,8 @@ export default function ScoringPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col gap-5 overflow-hidden pb-2">
-      <section className="surface-dark relative shrink-0 overflow-hidden rounded-[2rem] p-5 sm:p-6">
+    <div className="flex min-h-screen flex-col gap-6 pb-20 font-sans">
+      <section className="surface-dark relative shrink-0 overflow-hidden rounded-[2rem] p-5 sm:p-6 shadow-sm">
 
         <div className="relative grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
           <div>
@@ -359,7 +360,7 @@ export default function ScoringPage() {
             </div>
             <h1 className="text-display mt-4 text-3xl text-ivory sm:text-4xl">Register winners with confidence.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ivory/62">
-              Choose an event, rank winners, apply performance grades, and export official reports.
+              Choose an event, rank winners, apply performance grades, publish marked results live, and export official reports.
             </p>
           </div>
 
@@ -415,29 +416,38 @@ export default function ScoringPage() {
         </div>
       </section>
 
-      <div className="surface-elevated flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem]">
-           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+      <div className="surface-elevated flex flex-col rounded-[2rem] border border-navy/10 shadow-xs">
+           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col">
 
-             <div className="shrink-0 border-b border-navy/10 bg-ivory/60 px-3 pt-3">
+             <div className="shrink-0 border-b border-navy/10 bg-ivory/60 px-3 pt-3 rounded-t-[2rem]">
                 <div className="overflow-x-auto pb-2 scrollbar-none">
                     <TabsList className="h-auto w-max justify-start gap-2 rounded-2xl bg-navy/6 p-1">
                         {SECTIONS.map(sec => (
                             <TabsTrigger
                                 key={sec.id}
                                 value={sec.id}
-                                className="rounded-xl px-4 py-2 text-xs font-bold text-slatebrand transition-all duration-200 hover:bg-gold/12 hover:text-navy data-[state=active]:bg-gold data-[state=active]:text-navy data-[state=active]:shadow-gold md:text-sm"
+                                className="rounded-xl px-4 py-2 text-xs font-bold text-slatebrand transition-all duration-200 hover:bg-gold/12 hover:text-navy data-[state=active]:bg-gold data-[state=active]:text-navy data-[state=active]:shadow-gold md:text-sm cursor-pointer"
                             >
                                 <SlidersHorizontal className="mr-2 hidden size-3.5 sm:inline" />
                                 {sec.label}
                             </TabsTrigger>
                         ))}
+
+                        {/* New Publish Results Tab */}
+                        <TabsTrigger
+                            value="PUBLISH"
+                            className="rounded-xl px-4 py-2 text-xs font-bold text-slatebrand transition-all duration-200 hover:bg-emerald-500/15 hover:text-emerald-800 data-[state=active]:bg-navy data-[state=active]:text-ivory data-[state=active]:shadow-premium md:text-sm cursor-pointer flex items-center gap-1.5"
+                        >
+                            <Globe className="size-3.5 text-gold" />
+                            <span>Publish Results</span>
+                        </TabsTrigger>
                     </TabsList>
                 </div>
              </div>
 
-             <div className="relative flex-1 overflow-y-auto bg-mist/45">
+             <div className="relative bg-mist/45 p-3 md:p-6 rounded-b-[2rem]">
                 {SECTIONS.map(sec => (
-                    <TabsContent key={sec.id} value={sec.id} className="mt-0 h-full p-2 md:p-4 data-[state=inactive]:hidden">
+                    <TabsContent key={sec.id} value={sec.id} className="mt-0 data-[state=inactive]:hidden">
                         <EventScorer
                             section={sec.section}
                             category={sec.cat}
@@ -445,6 +455,11 @@ export default function ScoringPage() {
                         />
                     </TabsContent>
                 ))}
+
+                {/* Publish Tab Content */}
+                <TabsContent value="PUBLISH" className="mt-0 data-[state=inactive]:hidden">
+                    <PublishManager onPublishChanged={handleScoreUpdate} />
+                </TabsContent>
              </div>
            </Tabs>
       </div>

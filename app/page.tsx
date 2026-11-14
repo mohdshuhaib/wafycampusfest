@@ -17,6 +17,8 @@ import {
   Flame,
   Clock,
   Users,
+  User,
+  Sparkles,
 } from "lucide-react"
 
 interface TeamScore {
@@ -59,10 +61,37 @@ interface GroupedEvent {
   participants: ParticipantResult[]
 }
 
+interface TopStudentScorer {
+  id: string
+  name: string
+  chest_no: string
+  image_link: string | null
+  team_name: string
+  team_color: string
+  team_slug: string
+  total_points: number
+  off_stage_points: number
+  on_stage_points: number
+  general_points: number
+  special_points: number
+  rank: number
+}
+
+// Convert Google Drive share link into high-speed direct image URL
+function getStudentPhotoUrl(rawUrl: string | null | undefined): string | null {
+  if (!rawUrl) return null
+  const driveMatch = rawUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || rawUrl.match(/id=([a-zA-Z0-9_-]+)/)
+  if (driveMatch && driveMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`
+  }
+  return rawUrl
+}
+
 export default function ArtsFestResultsPage() {
   // Data states
   const [teams, setTeams] = useState<TeamScore[]>([])
   const [results, setResults] = useState<ParticipantResult[]>([])
+  const [topStudents, setTopStudents] = useState<TopStudentScorer[]>([])
   const [loading, setLoading] = useState(true)
   const [hasAnyResults, setHasAnyResults] = useState(false)
   const [totalEvents, setTotalEvents] = useState(55)
@@ -80,6 +109,7 @@ export default function ArtsFestResultsPage() {
         if (res.ok) {
           const data = await res.json()
           setTeams(data.teams || [])
+          setTopStudents(data.topStudents || [])
           setResults(data.detailedResults || [])
           setHasAnyResults(Boolean(data.hasAnyResults))
           if (data.totalEvents) setTotalEvents(data.totalEvents)
@@ -278,13 +308,13 @@ export default function ArtsFestResultsPage() {
             className="max-w-4xl mx-auto flex flex-col items-center"
           >
             {/* Main Prominent Title */}
-            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight uppercase leading-[1.08]">
+            <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight uppercase leading-[1.02]">
               <span className="bg-gradient-to-b from-slate-950 via-slate-800 to-slate-700 bg-clip-text text-transparent">
                 Wafy Campus
               </span>
               <br />
-              <span className="bg-gradient-to-r from-cyan-700 via-blue-600 to-teal-700 bg-clip-text text-transparent drop-shadow-xs">
-                Arts Fest Results
+              <span className="bg-gradient-to-r from-cyan-700 via-blue-600 to-teal-700 bg-clip-text text-transparent drop-shadow-sm">
+                Arts Fest
               </span>
             </h1>
 
@@ -351,10 +381,10 @@ export default function ArtsFestResultsPage() {
         </div>
 
         {/* 3D PODIUM DISPLAY */}
-        {/* Top team in MIDDLE, 2nd on RIGHT, 3rd on LEFT (little below 1st prize) */}
+        {/* Top team in MIDDLE, 2nd on LEFT, 3rd on RIGHT */}
         <div className="relative mb-16">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-8 items-end max-w-5xl mx-auto">
-            {/* LEFT: 3RD PLACE TEAM (Little below 1st) */}
+            {/* LEFT: 2ND PLACE TEAM (Little below 1st) */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -367,25 +397,24 @@ export default function ArtsFestResultsPage() {
                 <div
                   className="flex size-14 sm:size-16 items-center justify-center rounded-2xl border-2 shadow-md mb-2 bg-white"
                   style={{
-                    borderColor: thirdTeam.color_hex,
-                    boxShadow: `0 4px 20px ${thirdTeam.color_hex}25`,
+                    borderColor: secondTeam.color_hex,
+                    boxShadow: `0 4px 20px ${secondTeam.color_hex}25`,
                   }}
                 >
-                  <Medal className="size-7 sm:size-8" style={{ color: thirdTeam.color_hex }} />
+                  <Medal className="size-7 sm:size-8" style={{ color: secondTeam.color_hex }} />
                 </div>
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-0.5 text-[11px] font-black text-emerald-800 mb-1">
-                  🥉 3RD PLACE
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-300 px-3 py-0.5 text-[11px] font-black text-slate-800 mb-1">
+                  🥈 2ND PLACE
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900">{thirdTeam.name}</h3>
-                <span className="text-xs font-bold text-slate-500">{thirdTeam.slug}</span>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900">{secondTeam.name}</h3>
               </div>
 
               {/* Pedestal Block */}
-              <div className="w-full rounded-3xl border border-slate-200/90 bg-white p-5 shadow-lg shadow-slate-200/50 flex flex-col justify-between min-h-[220px]">
+              <div className="w-full rounded-3xl border border-slate-200/90 bg-white p-5 shadow-lg shadow-slate-200/50 flex flex-col justify-between min-h-[250px]">
                 <div className="text-center pt-2">
                   <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Score</div>
                   <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 mt-1">
-                    {thirdTeam.total}
+                    {secondTeam.total}
                     <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
                   </div>
                 </div>
@@ -394,11 +423,11 @@ export default function ArtsFestResultsPage() {
                 <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px]">
                   <div className="rounded-xl bg-slate-50 p-2 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[10px]">Off Stage</span>
-                    <span className="font-bold text-slate-800 font-mono">{thirdTeam.offStage}</span>
+                    <span className="font-bold text-slate-800 font-mono">{secondTeam.offStage}</span>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-2 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[10px]">On Stage</span>
-                    <span className="font-bold text-slate-800 font-mono">{thirdTeam.onStage}</span>
+                    <span className="font-bold text-slate-800 font-mono">{secondTeam.onStage}</span>
                   </div>
                 </div>
               </div>
@@ -431,7 +460,6 @@ export default function ArtsFestResultsPage() {
                   👑 1ST PLACE
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{firstTeam.name}</h3>
-                <span className="text-xs font-bold text-slate-500">{firstTeam.slug}</span>
               </div>
 
               {/* Pedestal Block - Tallest */}
@@ -460,7 +488,7 @@ export default function ArtsFestResultsPage() {
               </div>
             </motion.div>
 
-            {/* RIGHT: 2ND PLACE TEAM (Little below 1st) */}
+            {/* RIGHT: 3RD PLACE TEAM (Little below 1st) */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -473,25 +501,24 @@ export default function ArtsFestResultsPage() {
                 <div
                   className="flex size-14 sm:size-16 items-center justify-center rounded-2xl border-2 shadow-md mb-2 bg-white"
                   style={{
-                    borderColor: secondTeam.color_hex,
-                    boxShadow: `0 4px 20px ${secondTeam.color_hex}25`,
+                    borderColor: thirdTeam.color_hex,
+                    boxShadow: `0 4px 20px ${thirdTeam.color_hex}25`,
                   }}
                 >
-                  <Medal className="size-7 sm:size-8" style={{ color: secondTeam.color_hex }} />
+                  <Medal className="size-7 sm:size-8" style={{ color: thirdTeam.color_hex }} />
                 </div>
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-300 px-3 py-0.5 text-[11px] font-black text-slate-800 mb-1">
-                  🥈 2ND PLACE
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-0.5 text-[11px] font-black text-emerald-800 mb-1">
+                  🥉 3RD PLACE
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900">{secondTeam.name}</h3>
-                <span className="text-xs font-bold text-slate-500">{secondTeam.slug}</span>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900">{thirdTeam.name}</h3>
               </div>
 
               {/* Pedestal Block */}
-              <div className="w-full rounded-3xl border border-slate-200/90 bg-white p-5 shadow-lg shadow-slate-200/50 flex flex-col justify-between min-h-[240px]">
+              <div className="w-full rounded-3xl border border-slate-200/90 bg-white p-5 shadow-lg shadow-slate-200/50 flex flex-col justify-between min-h-[220px]">
                 <div className="text-center pt-2">
                   <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Score</div>
                   <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 mt-1">
-                    {secondTeam.total}
+                    {thirdTeam.total}
                     <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
                   </div>
                 </div>
@@ -500,11 +527,11 @@ export default function ArtsFestResultsPage() {
                 <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px]">
                   <div className="rounded-xl bg-slate-50 p-2 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[10px]">Off Stage</span>
-                    <span className="font-bold text-slate-800 font-mono">{secondTeam.offStage}</span>
+                    <span className="font-bold text-slate-800 font-mono">{thirdTeam.offStage}</span>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-2 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[10px]">On Stage</span>
-                    <span className="font-bold text-slate-800 font-mono">{secondTeam.onStage}</span>
+                    <span className="font-bold text-slate-800 font-mono">{thirdTeam.onStage}</span>
                   </div>
                 </div>
               </div>
@@ -567,7 +594,6 @@ export default function ArtsFestResultsPage() {
                         />
                         <div>
                           <div className="font-bold text-slate-900 text-base leading-tight">{t.name}</div>
-                          <span className="text-xs text-slate-500">{t.slug}</span>
                         </div>
                       </div>
                     </td>
@@ -587,6 +613,302 @@ export default function ArtsFestResultsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================
+          TOP STUDENTS OF THE FEST (PODIUM & STANDINGS)
+      ======================================================== */}
+      <section id="top-students-section" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        {/* Section Header */}
+        <div className="text-center max-w-3xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-50 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-amber-900 mb-3 shadow-xs">
+            <Sparkles className="size-3.5 text-amber-600" />
+            <span>Individual Champions</span>
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+            Top Students of the Fest
+          </h2>
+          <p className="mt-2 text-sm sm:text-base text-slate-600">
+            Festival individual toppers with cumulative points across all published competitions.
+          </p>
+        </div>
+
+        {/* 3D PODIUM FOR TOP 3 STUDENTS */}
+        {/* Top student in MIDDLE, 2nd on LEFT, 3rd on RIGHT */}
+        <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-end max-w-5xl mx-auto">
+            {/* LEFT: 2ND PLACE TOP SCORER */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="relative flex flex-col items-center order-2 md:order-1"
+            >
+              {/* Animated Silver / Cyan Glowing Border Wrapper */}
+              <div className="w-full rounded-3xl p-[2.5px] bg-gradient-to-tr from-cyan-400 via-slate-300 to-blue-500 shadow-[0_0_30px_rgba(6,182,212,0.25)] animate-pulse">
+                <div className="w-full rounded-[22px] bg-white p-5 sm:p-6 flex flex-col items-center justify-between text-center min-h-[370px]">
+                  {/* Standing Badge */}
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-300 px-3 py-0.5 text-[11px] font-black text-slate-800 mb-3 shadow-xs">
+                    🥈 2ND SCORER
+                  </div>
+
+                  {/* Student Image */}
+                  <div className="relative size-24 sm:size-28 rounded-2xl overflow-hidden border-2 border-cyan-400/80 shadow-md bg-slate-50 flex items-center justify-center shrink-0">
+                    {topStudents[1]?.image_link ? (
+                      <img
+                        src={getStudentPhotoUrl(topStudents[1].image_link) || ""}
+                        alt={topStudents[1].name}
+                        className="size-full object-cover"
+                        onError={(e) => {
+                          // Fallback to avatar icon on image load failure
+                          (e.target as HTMLElement).style.display = "none"
+                        }}
+                      />
+                    ) : (
+                      <User className="size-12 text-slate-300" />
+                    )}
+                  </div>
+
+                  {/* Student Name & Chest */}
+                  <div className="mt-3">
+                    <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug">
+                      {topStudents[1]?.name || (topStudents.length === 0 ? "Awaiting Results" : "Top Scorer #2")}
+                    </h3>
+                    <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
+                      <span className="font-mono text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                        #{topStudents[1]?.chest_no || "—"}
+                      </span>
+                      {topStudents[1]?.team_name && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-800"
+                          style={{
+                            backgroundColor: `${topStudents[1].team_color}20`,
+                            borderColor: topStudents[1].team_color,
+                            borderWidth: 1,
+                          }}
+                        >
+                          <span
+                            className="size-1.5 rounded-full"
+                            style={{ backgroundColor: topStudents[1].team_color }}
+                          />
+                          {topStudents[1].team_name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Total Points */}
+                  <div className="mt-3 pt-3 border-t border-slate-100 w-full">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Total Points
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 mt-0.5">
+                      {topStudents[1]?.total_points || 0}
+                      <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                    </div>
+                  </div>
+
+                  {/* Category Breakdown: Off Stage & On Stage */}
+                  <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100 w-full text-xs">
+                    <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
+                      <span className="text-[10px] text-slate-500 font-bold block">Off Stage</span>
+                      <span className="font-mono font-black text-slate-800 text-sm">
+                        {topStudents[1]?.off_stage_points || 0} pts
+                      </span>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
+                      <span className="text-[10px] text-slate-500 font-bold block">On Stage</span>
+                      <span className="font-mono font-black text-slate-800 text-sm">
+                        {topStudents[1]?.on_stage_points || 0} pts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* MIDDLE: 1ST PLACE CHAMPION TOP SCORER (TALLEST) */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="relative flex flex-col items-center order-1 md:order-2 -mt-6 sm:-mt-10"
+            >
+              {/* Animated Gold Glowing Border Wrapper */}
+              <div className="w-full rounded-3xl p-[3px] bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 shadow-[0_0_35px_rgba(245,158,11,0.35)] animate-pulse">
+                <div className="w-full rounded-[22px] bg-gradient-to-b from-amber-50/70 via-white to-white p-6 sm:p-7 flex flex-col items-center justify-between text-center min-h-[420px]">
+                  {/* Standing Badge */}
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-300 px-3.5 py-1 text-xs font-black text-amber-900 shadow-xs mb-3">
+                    👑 1ST SCORER
+                  </div>
+
+                  {/* Student Image (Big) */}
+                  <div className="relative size-28 sm:size-32 rounded-3xl overflow-hidden border-3 border-amber-400 shadow-xl bg-amber-50 flex items-center justify-center shrink-0">
+                    {topStudents[0]?.image_link ? (
+                      <img
+                        src={getStudentPhotoUrl(topStudents[0].image_link) || ""}
+                        alt={topStudents[0].name}
+                        className="size-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none"
+                        }}
+                      />
+                    ) : (
+                      <User className="size-14 text-amber-400" />
+                    )}
+                  </div>
+
+                  {/* Student Name & Chest */}
+                  <div className="mt-3">
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
+                      {topStudents[0]?.name || (topStudents.length === 0 ? "Awaiting Results" : "Top Scorer #1")}
+                    </h3>
+                    <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
+                      <span className="font-mono text-xs font-extrabold text-amber-900 bg-amber-100/90 px-2.5 py-0.5 rounded-md border border-amber-300">
+                        #{topStudents[0]?.chest_no || "—"}
+                      </span>
+                      {topStudents[0]?.team_name && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-slate-800"
+                          style={{
+                            backgroundColor: `${topStudents[0].team_color}20`,
+                            borderColor: topStudents[0].team_color,
+                            borderWidth: 1,
+                          }}
+                        >
+                          <span
+                            className="size-1.5 rounded-full"
+                            style={{ backgroundColor: topStudents[0].team_color }}
+                          />
+                          {topStudents[0].team_name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Total Points */}
+                  <div className="mt-3 pt-3 border-t border-amber-200/60 w-full">
+                    <div className="text-xs font-bold uppercase tracking-wider text-amber-800">
+                      Total Points
+                    </div>
+                    <div className="text-4xl sm:text-5xl font-black font-mono text-amber-700 mt-0.5">
+                      {topStudents[0]?.total_points || 0}
+                      <span className="text-sm font-sans font-bold text-slate-500 ml-1">pts</span>
+                    </div>
+                  </div>
+
+                  {/* Category Breakdown: Off Stage & On Stage */}
+                  <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-amber-200/50 w-full text-xs">
+                    <div className="rounded-xl bg-amber-50/80 p-2.5 border border-amber-200/60">
+                      <span className="text-[10px] text-amber-800 font-bold block">Off Stage</span>
+                      <span className="font-mono font-black text-slate-900 text-sm">
+                        {topStudents[0]?.off_stage_points || 0} pts
+                      </span>
+                    </div>
+                    <div className="rounded-xl bg-amber-50/80 p-2.5 border border-amber-200/60">
+                      <span className="text-[10px] text-amber-800 font-bold block">On Stage</span>
+                      <span className="font-mono font-black text-slate-900 text-sm">
+                        {topStudents[0]?.on_stage_points || 0} pts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* RIGHT: 3RD PLACE TOP SCORER */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="relative flex flex-col items-center order-3"
+            >
+              {/* Animated Bronze / Emerald Glowing Border Wrapper */}
+              <div className="w-full rounded-3xl p-[2.5px] bg-gradient-to-tr from-emerald-400 via-teal-300 to-emerald-600 shadow-[0_0_30px_rgba(16,185,129,0.25)] animate-pulse">
+                <div className="w-full rounded-[22px] bg-white p-5 sm:p-6 flex flex-col items-center justify-between text-center min-h-[360px]">
+                  {/* Standing Badge */}
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-0.5 text-[11px] font-black text-emerald-800 mb-3 shadow-xs">
+                    🥉 3RD SCORER
+                  </div>
+
+                  {/* Student Image */}
+                  <div className="relative size-24 sm:size-28 rounded-2xl overflow-hidden border-2 border-emerald-400/80 shadow-md bg-slate-50 flex items-center justify-center shrink-0">
+                    {topStudents[2]?.image_link ? (
+                      <img
+                        src={getStudentPhotoUrl(topStudents[2].image_link) || ""}
+                        alt={topStudents[2].name}
+                        className="size-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none"
+                        }}
+                      />
+                    ) : (
+                      <User className="size-12 text-slate-300" />
+                    )}
+                  </div>
+
+                  {/* Student Name & Chest */}
+                  <div className="mt-3">
+                    <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug">
+                      {topStudents[2]?.name || (topStudents.length === 0 ? "Awaiting Results" : "Top Scorer #3")}
+                    </h3>
+                    <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
+                      <span className="font-mono text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                        #{topStudents[2]?.chest_no || "—"}
+                      </span>
+                      {topStudents[2]?.team_name && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-800"
+                          style={{
+                            backgroundColor: `${topStudents[2].team_color}20`,
+                            borderColor: topStudents[2].team_color,
+                            borderWidth: 1,
+                          }}
+                        >
+                          <span
+                            className="size-1.5 rounded-full"
+                            style={{ backgroundColor: topStudents[2].team_color }}
+                          />
+                          {topStudents[2].team_name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Total Points */}
+                  <div className="mt-3 pt-3 border-t border-slate-100 w-full">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Total Points
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 mt-0.5">
+                      {topStudents[2]?.total_points || 0}
+                      <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                    </div>
+                  </div>
+
+                  {/* Category Breakdown: Off Stage & On Stage */}
+                  <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100 w-full text-xs">
+                    <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
+                      <span className="text-[10px] text-slate-500 font-bold block">Off Stage</span>
+                      <span className="font-mono font-black text-slate-800 text-sm">
+                        {topStudents[2]?.off_stage_points || 0} pts
+                      </span>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
+                      <span className="text-[10px] text-slate-500 font-bold block">On Stage</span>
+                      <span className="font-mono font-black text-slate-800 text-sm">
+                        {topStudents[2]?.on_stage_points || 0} pts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>

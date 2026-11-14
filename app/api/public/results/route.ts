@@ -1,11 +1,31 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { getPublishedEventIds } from '@/app/api/admin/publish-event/route'
 
 export const dynamic = 'force-dynamic'
+
+export interface TopStudentScorer {
+  id: string
+  name: string
+  chest_no: string
+  image_link: string | null
+  team_name: string
+  team_color: string
+  team_slug: string
+  total_points: number
+  off_stage_points: number
+  on_stage_points: number
+  general_points: number
+  special_points: number
+  rank: number
+}
 
 export async function GET() {
   try {
     const supabase = createAdminClient()
+
+    // 0. Get Published Event IDs
+    const publishedEventIds = await getPublishedEventIds()
 
     // 1. Fetch Teams
     const { data: rawTeams, error: teamsErr } = await supabase
@@ -15,7 +35,7 @@ export async function GET() {
 
     if (teamsErr) throw teamsErr
 
-    // 2. Fetch Participations with Events and Students
+    // 2. Fetch Participations with Events and Students (including student image_link)
     const { data: rawParts, error: partsErr } = await supabase
       .from('participations')
       .select(`
@@ -38,7 +58,8 @@ export async function GET() {
           id,
           name,
           chest_no,
-          class_grade
+          class_grade,
+          image_link
         ),
         team:teams (
           id,
@@ -50,7 +71,7 @@ export async function GET() {
 
     if (partsErr) throw partsErr
 
-    // 3. Fetch Judge Evaluations (if any scores entered via judge portal)
+    // 3. Fetch Judge Evaluations
     const { data: rawJudgeEvals } = await supabase
       .from('judge_evaluations')
       .select(`
@@ -74,10 +95,20 @@ export async function GET() {
       `)
 
     const teams = rawTeams || []
-    const parts = rawParts || []
+    const allParts = rawParts || []
     const judgeEvals = rawJudgeEvals || []
 
-    // Build team scores
+    // Map judge evaluations by event_id + chest_no
+    const judgeEvalMap: Record<string, any> = {}
+    judgeEvals.forEach((je: any) => {
+      const key = `${je.event_id}_${(je.chest_no || '').trim().toUpperCase()}`
+      judgeEvalMap[key] = je
+    })
+
+    // Filter participations strictly to PUBLISHED events
+    const publishedParts = allParts.filter((p: any) => publishedEventIds.has(p.event_id))
+
+    // Build team scores (only counting PUBLISHED events)
     const teamScoresMap: Record<string, {
       id: string
       name: string
@@ -106,8 +137,8 @@ export async function GET() {
       }
     })
 
-    // Accumulate points from participations
-    parts.forEach((p: any) => {
+    // Accumulate points from published participations
+    publishedParts.forEach((p: any) => {
       const teamId = p.team_id
       if (!teamScoresMap[teamId]) return
 
@@ -130,13 +161,13 @@ export async function GET() {
       }
     })
 
-    // Check if all scores are 0 (no results entered yet)
+    // Check if any published results exist
     const hasAnyResults = teamScores.some((t) => t.total > 0)
 
     if (hasAnyResults) {
       teamScores.sort((a, b) => b.total - a.total)
     } else {
-      // Default order: Telos (1st), Ethos (2nd), Thymos (3rd) if matches exist, or by default array order
+      // Default order: Telos (1st), Ethos (2nd), Thymos (3rd)
       const defaultOrder: Record<string, number> = {
         telos: 1,
         grp1: 1,
@@ -158,15 +189,59 @@ export async function GET() {
       rank: idx + 1,
     }))
 
-    // Build Detailed Results for Individual & Item-wise display
-    // Map judge evaluations by event_id + chest_no for rapid lookup
-    const judgeEvalMap: Record<string, any> = {}
-    judgeEvals.forEach((je: any) => {
-      const key = `${je.event_id}_${(je.chest_no || '').trim().toUpperCase()}`
-      judgeEvalMap[key] = je
+    // Build TOP STUDENTS (Top Scorers) strictly from PUBLISHED events
+    const studentScoreMap: Record<string, TopStudentScorer> = {}
+
+    publishedParts.forEach((p: any) => {
+      const student = p.student
+      if (!student || !student.id) return
+
+      const pts = Number(p.points_earned || 0)
+      if (pts <= 0) return
+
+      const cat = p.event?.category
+
+      if (!studentScoreMap[student.id]) {
+        studentScoreMap[student.id] = {
+          id: student.id,
+          name: student.name || 'Participant',
+          chest_no: student.chest_no || '—',
+          image_link: student.image_link || null,
+          team_name: p.team?.name || 'Team',
+          team_color: p.team?.color_hex || '#3b82f6',
+          team_slug: p.team?.slug || '',
+          total_points: 0,
+          off_stage_points: 0,
+          on_stage_points: 0,
+          general_points: 0,
+          special_points: 0,
+          rank: 0,
+        }
+      }
+
+      const st = studentScoreMap[student.id]
+      st.total_points += pts
+      if (cat === 'OFF STAGE') st.off_stage_points += pts
+      else if (cat === 'ON STAGE') st.on_stage_points += pts
+      else if (cat === 'GENERAL') st.general_points += pts
+      else if (cat === 'SPECIAL') st.special_points += pts
     })
 
-    const detailedResults = parts.map((p: any) => {
+    const topStudentsList = Object.values(studentScoreMap)
+      .filter((s) => s.total_points > 0)
+      .sort((a, b) => {
+        if (b.total_points !== a.total_points) return b.total_points - a.total_points
+        if (b.on_stage_points !== a.on_stage_points) return b.on_stage_points - a.on_stage_points
+        return (Number(a.chest_no) || 0) - (Number(b.chest_no) || 0)
+      })
+      .map((s, idx) => ({
+        ...s,
+        rank: idx + 1,
+      }))
+
+    // Build Detailed Results for Individual & Item-wise display
+    // ONLY show published events in results table as requested!
+    const detailedResults = publishedParts.map((p: any) => {
       const chestNo = p.student?.chest_no || ''
       const key = `${p.event_id}_${chestNo.trim().toUpperCase()}`
       const jEval = judgeEvalMap[key]
@@ -206,9 +281,11 @@ export async function GET() {
     return NextResponse.json({
       teams: rankedTeams,
       hasAnyResults,
+      topStudents: topStudentsList,
       detailedResults,
-      totalEvents: new Set(parts.map((p: any) => p.event_id)).size,
-      totalParticipants: new Set(parts.map((p: any) => p.student_id)).size,
+      publishedEventsCount: publishedEventIds.size,
+      totalEvents: new Set(allParts.map((p: any) => p.event_id)).size,
+      totalParticipants: new Set(allParts.map((p: any) => p.student_id)).size,
     })
   } catch (error: any) {
     console.error('Error in /api/public/results:', error)
