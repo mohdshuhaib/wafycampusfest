@@ -89,6 +89,44 @@ function getStudentPhotoUrl(rawUrl: string | null | undefined): string | null {
   return rawUrl
 }
 
+function StudentAvatar({
+  imageLink,
+  name,
+  className = "size-full object-cover",
+  fallbackIconSize = "size-10",
+}: {
+  imageLink?: string | null
+  name?: string
+  className?: string
+  fallbackIconSize?: string
+}) {
+  const [useProxy, setUseProxy] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
+
+  const directUrl = getStudentPhotoUrl(imageLink)
+  const src = useProxy && directUrl ? `/api/image-proxy?url=${encodeURIComponent(directUrl)}` : directUrl
+
+  if (!src || loadFailed) {
+    return <User className={`${fallbackIconSize} text-slate-300`} />
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name || "Student"}
+      referrerPolicy="no-referrer"
+      className={className}
+      onError={() => {
+        if (!useProxy) {
+          setUseProxy(true)
+        } else {
+          setLoadFailed(true)
+        }
+      }}
+    />
+  )
+}
+
 export default function ArtsFestResultsPage() {
   // Data states
   const [teams, setTeams] = useState<TeamScore[]>([])
@@ -667,19 +705,11 @@ export default function ArtsFestResultsPage() {
 
                   {/* Student Image */}
                   <div className="relative size-24 sm:size-28 rounded-2xl overflow-hidden border-2 border-cyan-400/80 shadow-md bg-slate-50 flex items-center justify-center shrink-0">
-                    {topStudents[1]?.image_link ? (
-                      <img
-                        src={getStudentPhotoUrl(topStudents[1].image_link) || ""}
-                        alt={topStudents[1].name}
-                        className="size-full object-cover"
-                        onError={(e) => {
-                          // Fallback to avatar icon on image load failure
-                          (e.target as HTMLElement).style.display = "none"
-                        }}
-                      />
-                    ) : (
-                      <User className="size-12 text-slate-300" />
-                    )}
+                    <StudentAvatar
+                      imageLink={topStudents[1]?.image_link}
+                      name={topStudents[1]?.name}
+                      fallbackIconSize="size-12"
+                    />
                   </div>
 
                   {/* Student Name & Chest */}
@@ -758,18 +788,11 @@ export default function ArtsFestResultsPage() {
 
                   {/* Student Image (Big) */}
                   <div className="relative size-28 sm:size-32 rounded-3xl overflow-hidden border-3 border-amber-400 shadow-xl bg-amber-50 flex items-center justify-center shrink-0">
-                    {topStudents[0]?.image_link ? (
-                      <img
-                        src={getStudentPhotoUrl(topStudents[0].image_link) || ""}
-                        alt={topStudents[0].name}
-                        className="size-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none"
-                        }}
-                      />
-                    ) : (
-                      <User className="size-14 text-amber-400" />
-                    )}
+                    <StudentAvatar
+                      imageLink={topStudents[0]?.image_link}
+                      name={topStudents[0]?.name}
+                      fallbackIconSize="size-14 text-amber-400"
+                    />
                   </div>
 
                   {/* Student Name & Chest */}
@@ -848,18 +871,11 @@ export default function ArtsFestResultsPage() {
 
                   {/* Student Image */}
                   <div className="relative size-24 sm:size-28 rounded-2xl overflow-hidden border-2 border-emerald-400/80 shadow-md bg-slate-50 flex items-center justify-center shrink-0">
-                    {topStudents[2]?.image_link ? (
-                      <img
-                        src={getStudentPhotoUrl(topStudents[2].image_link) || ""}
-                        alt={topStudents[2].name}
-                        className="size-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none"
-                        }}
-                      />
-                    ) : (
-                      <User className="size-12 text-slate-300" />
-                    )}
+                    <StudentAvatar
+                      imageLink={topStudents[2]?.image_link}
+                      name={topStudents[2]?.name}
+                      fallbackIconSize="size-12"
+                    />
                   </div>
 
                   {/* Student Name & Chest */}
@@ -1163,18 +1179,11 @@ export default function ArtsFestResultsPage() {
 
                               {/* Student Photo */}
                               <div className="relative size-20 sm:size-24 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-md bg-white flex items-center justify-center shrink-0 mb-3">
-                                {winner.image_link ? (
-                                  <img
-                                    src={getStudentPhotoUrl(winner.image_link) || ""}
-                                    alt={winner.student_name}
-                                    className="size-full object-cover"
-                                    onError={(e) => {
-                                      (e.target as HTMLElement).style.display = "none"
-                                    }}
-                                  />
-                                ) : (
-                                  <User className="size-10 text-slate-300" />
-                                )}
+                                <StudentAvatar
+                                  imageLink={winner.image_link}
+                                  name={winner.student_name}
+                                  fallbackIconSize="size-10"
+                                />
                               </div>
 
                               {/* Student Name & Chest */}
@@ -1259,8 +1268,19 @@ export default function ArtsFestResultsPage() {
                                   #{p.chest_no}
                                 </span>
                               </td>
-                              <td className="py-3 px-3 text-slate-900 font-bold text-sm">
-                                {p.student_name}
+                              <td className="py-3 px-3">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="relative size-8 rounded-xl overflow-hidden border border-slate-200/90 bg-slate-100 shrink-0 shadow-xs flex items-center justify-center">
+                                    <StudentAvatar
+                                      imageLink={p.image_link}
+                                      name={p.student_name}
+                                      fallbackIconSize="size-4"
+                                    />
+                                  </div>
+                                  <span className="text-slate-900 font-bold text-sm">
+                                    {p.student_name}
+                                  </span>
+                                </div>
                               </td>
                               <td className="py-3 px-3">
                                 <span
@@ -1343,13 +1363,24 @@ export default function ArtsFestResultsPage() {
                           className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 space-y-2 shadow-xs"
                         >
                           <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="bg-white border border-slate-200 px-2 py-0.5 rounded-lg font-mono text-xs font-black text-slate-900">
-                                #{p.chest_no}
-                              </span>
-                              <span className="font-bold text-slate-900 text-sm">
-                                {p.student_name}
-                              </span>
+                            <div className="flex items-center gap-2.5">
+                              <div className="relative size-9 rounded-xl overflow-hidden border border-slate-200/90 bg-white shrink-0 shadow-xs flex items-center justify-center">
+                                <StudentAvatar
+                                  imageLink={p.image_link}
+                                  name={p.student_name}
+                                  fallbackIconSize="size-4"
+                                />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono text-[10px] font-black text-slate-900">
+                                    #{p.chest_no}
+                                  </span>
+                                  <span className="font-bold text-slate-900 text-sm">
+                                    {p.student_name}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
 
                             <span

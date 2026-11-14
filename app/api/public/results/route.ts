@@ -232,6 +232,7 @@ export async function GET() {
         performance_grade: effectiveGrade,
         result_position: effectivePosition,
         has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition),
+        image_link: p.student?.image_link || null,
       }
     })
 
