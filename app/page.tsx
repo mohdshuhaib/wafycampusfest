@@ -290,22 +290,53 @@ export default function ArtsFestResultsPage() {
 
   return (
     <div className="relative min-h-screen bg-[#F8FAFC] text-slate-900 font-['Anek_Malayalam',sans-serif] selection:bg-cyan-100 selection:text-cyan-900 overflow-x-hidden">
-      {/* Background Ambient Gradients - Light Mode */}
+      {/* ========================================================
+          3D DYNAMIC STYLISH BACKGROUND (THEMED TO FEST LOGO)
+          Teal (#0A4258), Cyan (#06B6D4), Coral (#E06D53), Gold (#F59E0B)
+          ======================================================== */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[600px] w-[600px] sm:w-[850px] rounded-full bg-gradient-to-br from-cyan-200/50 via-blue-100/40 to-transparent blur-[120px]" />
-        <div className="absolute top-[40%] -left-36 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-amber-100/50 via-teal-100/40 to-transparent blur-[130px]" />
-        <div className="absolute top-[65%] -right-36 h-[560px] w-[560px] rounded-full bg-gradient-to-bl from-cyan-100/60 via-indigo-100/40 to-transparent blur-[140px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(#0f172a08_1px,transparent_1px)] [background-size:24px_24px]" />
+        {/* Ambient Multi-Stop Gradient Meshes */}
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-[650px] w-[650px] sm:w-[950px] rounded-full bg-gradient-to-br from-cyan-400/35 via-teal-300/25 via-[#0A4258]/15 to-transparent blur-[120px]" />
+        <div className="absolute top-[20%] -left-36 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-amber-300/35 via-orange-300/25 via-[#E06D53]/20 to-transparent blur-[130px]" />
+        <div className="absolute top-[35%] -right-40 h-[650px] w-[650px] rounded-full bg-gradient-to-bl from-rose-400/35 via-[#E06D53]/30 via-cyan-400/20 to-transparent blur-[140px]" />
+        <div className="absolute top-[70%] left-[20%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-teal-200/40 via-cyan-100/30 to-transparent blur-[120px]" />
+
+        {/* 3D Floating Realistic Glossy Spheres */}
+        {/* 1. Top-Left Floating 3D Teal Sphere */}
+        <div className="sphere-3d-teal size-28 sm:size-36 rounded-full animate-float-slow absolute top-20 -left-6 sm:left-12 opacity-85 blur-[0.5px] pointer-events-none" />
+
+        {/* 2. Top-Right Floating 3D Coral Sphere */}
+        <div className="sphere-3d-coral size-32 sm:size-44 rounded-full animate-float-reverse absolute top-36 -right-10 sm:right-16 opacity-85 pointer-events-none" />
+
+        {/* 3. Mid-Left Floating 3D Gold / Amber Sphere */}
+        <div className="sphere-3d-gold size-24 sm:size-32 rounded-full animate-float-gentle absolute bottom-36 left-4 sm:left-24 opacity-80 pointer-events-none" />
+
+        {/* 4. Bottom-Right Floating Glass Prism Orb */}
+        <div className="size-24 sm:size-28 rounded-full glass-card-3d border-2 border-white/70 animate-float-slow absolute bottom-24 right-8 sm:right-32 opacity-75 shadow-2xl pointer-events-none" />
+
+        {/* 3D Floating Mini Stardust Particles */}
+        <div className="absolute top-[28%] left-[24%] size-3 rounded-full bg-cyan-400 shadow-[0_0_15px_#22d3ee] animate-pulse" />
+        <div className="absolute top-[42%] right-[22%] size-3.5 rounded-full bg-[#E06D53] shadow-[0_0_18px_#f43f5e] animate-pulse delay-700" />
+        <div className="absolute top-[60%] left-[16%] size-2.5 rounded-full bg-amber-400 shadow-[0_0_12px_#fbbf24] animate-pulse delay-1000" />
+        <div className="absolute top-[18%] right-[32%] size-2 rounded-full bg-teal-400 shadow-[0_0_10px_#14b8a6] animate-pulse delay-500" />
+
+        {/* 3D Perspective Floor Grid Matrix at base */}
+        <div className="absolute -bottom-8 inset-x-0 h-80 perspective-grid-3d pointer-events-none opacity-45" />
+
+        {/* Subtle dot overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(#0a425812_1.2px,transparent_1.2px)] [background-size:28px_28px] opacity-70" />
       </div>
 
-      {/* FULL SCREEN HERO SECTION */}
-      <section className="relative z-10 flex min-h-screen w-full flex-col justify-between px-4 sm:px-6 lg:px-8 py-5">
+      {/* ========================================================
+          FULL SCREEN 3D MODERN FESTIVAL LANDING PAGE HERO
+          ======================================================== */}
+      <section className="relative z-10 flex min-h-screen lg:h-screen w-full flex-col justify-between px-4 sm:px-6 lg:px-8 py-3 sm:py-5 overflow-hidden">
         {/* Top Header Bar */}
-        <header className="w-full max-w-7xl mx-auto flex items-center justify-between pt-2">
+        <header className="w-full max-w-7xl mx-auto flex items-center justify-between pt-1 sm:pt-2">
           {/* Logo & Brand Mark */}
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-90">
-              <div className="relative size-12 sm:size-14 rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white p-1 backdrop-blur-md">
+            <Link href="/" className="flex items-center gap-3 transition-transform hover:scale-[1.02]">
+              <div className="relative size-12 sm:size-14 rounded-2xl overflow-hidden shadow-lg border border-white/80 bg-white/90 p-1.5 backdrop-blur-xl ring-2 ring-cyan-500/20">
                 <Image
                   src="/logo.png"
                   alt="Wafy Arts Fest Logo"
@@ -316,12 +347,14 @@ export default function ArtsFestResultsPage() {
                 />
               </div>
               <div>
-                <div className="text-base sm:text-lg font-black tracking-tight text-slate-900 leading-tight">
+                <div className="text-base sm:text-lg font-black tracking-tight text-slate-900 leading-tight font-['Plus_Jakarta_Sans',sans-serif]">
                   WAFY CAMPUS KALIKAVU
                 </div>
-                <div className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-cyan-700 flex items-center gap-1.5">
-                  <span className="size-1.5 rounded-full bg-cyan-600 animate-pulse" />
-                  Arts Fest 2026
+                <div className="text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.22em] text-[#0A4258] flex items-center gap-1.5 font-['Plus_Jakarta_Sans',sans-serif]">
+                  <span className="size-2 rounded-full bg-[#E06D53] animate-ping" />
+                  <span className="bg-gradient-to-r from-[#0A4258] to-[#E06D53] bg-clip-text text-transparent font-black">
+                    Arts Fest 2026
+                  </span>
                 </div>
               </div>
             </Link>
@@ -331,81 +364,115 @@ export default function ArtsFestResultsPage() {
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/schedule"
-              className="hidden md:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs backdrop-blur-md transition-all hover:bg-slate-100 hover:text-slate-900"
+              className="hidden md:inline-flex items-center gap-1.5 rounded-2xl border border-slate-200/90 bg-white/85 px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-xl transition-all hover:bg-white hover:text-cyan-800 hover:shadow-md hover:border-cyan-400 font-['Plus_Jakarta_Sans',sans-serif]"
             >
-              <Calendar className="size-3.5 text-cyan-600" />
+              <Calendar className="size-3.5 text-[#0A4258]" />
               Schedule
             </Link>
 
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-xs font-black text-white shadow-md shadow-cyan-600/20 transition-all hover:shadow-lg hover:shadow-cyan-600/30 hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#0A4258] via-[#0891B2] to-[#E06D53] px-4 sm:px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-cyan-900/25 transition-all hover:shadow-xl hover:shadow-cyan-900/35 hover:scale-[1.03] active:scale-[0.98] font-['Plus_Jakarta_Sans',sans-serif]"
             >
-              <span>Dashboard</span>
+              <span>Portal Login</span>
               <ArrowRight className="size-3.5" />
             </Link>
           </div>
         </header>
 
-        {/* HERO CENTERPIECE: Clean Text Fading Animation */}
-        <div className="relative flex flex-1 flex-col items-center justify-center text-center my-auto py-8">
+        {/* HERO CENTERPIECE: Clean Prominent 3D Colorful Title & Action Bar */}
+        <div className="relative flex flex-1 flex-col items-center justify-center text-center my-auto py-4 sm:py-6">
           <motion.div
-            initial={{ opacity: 0, y: 22 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.85, ease: "easeOut" }}
-            className="max-w-4xl mx-auto flex flex-col items-center"
+            className="max-w-5xl mx-auto flex flex-col items-center"
           >
-            {/* Main Prominent Title */}
-            <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight uppercase leading-[1.02]">
-              <span className="bg-gradient-to-b from-slate-950 via-slate-800 to-slate-700 bg-clip-text text-transparent">
+            {/* Main Prominent 3D Colorful Title */}
+            <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight uppercase leading-[0.96] font-['Plus_Jakarta_Sans',sans-serif]">
+              {/* Line 1: Teal to Cyan */}
+              <span className="inline-block bg-gradient-to-r from-[#0A4258] via-[#0891B2] via-[#0284C7] to-[#06B6D4] bg-clip-text text-transparent drop-shadow-[0_6px_20px_rgba(6,182,212,0.35)]">
                 Wafy Campus
               </span>
               <br />
-              <span className="bg-gradient-to-r from-cyan-700 via-blue-600 to-teal-700 bg-clip-text text-transparent drop-shadow-sm">
+              {/* Line 2: Coral to Sunset Rose to Gold */}
+              <span className="inline-block bg-gradient-to-r from-[#E06D53] via-[#F43F5E] via-[#FB7185] to-[#F59E0B] bg-clip-text text-transparent drop-shadow-[0_8px_30px_rgba(224,109,83,0.45)]">
                 Arts Fest
               </span>
             </h1>
 
-            {/* Subtitle */}
-            <p className="mt-5 max-w-2xl text-sm sm:text-base md:text-lg text-slate-600 leading-relaxed font-medium">
-              Live team standings, category points, and item-wise participant evaluations in real-time.
-            </p>
+            {/* 3D Glass Metric Highlight Cards */}
+            <div className="mt-8 sm:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4 w-full max-w-4xl text-left font-['Plus_Jakarta_Sans',sans-serif]">
+              {/* 1. Teams Card */}
+              <div className="glass-card-3d rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 border border-white/80 shadow-md hover:border-amber-400/60 transition-all hover:scale-[1.02] min-w-0">
+                <div className="flex size-10 sm:size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md shadow-amber-500/25 shrink-0">
+                  <Crown className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
+                    Contending Teams
+                  </div>
+                  <div className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5 mt-0.5">
+                    <span>3 Teams</span>
+                    <div className="flex items-center gap-1 ml-1 shrink-0">
+                      <span className="size-2 rounded-full bg-blue-600" title="Telos" />
+                      <span className="size-2 rounded-full bg-amber-500" title="Ethos" />
+                      <span className="size-2 rounded-full bg-emerald-600" title="Thymos" />
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-            {/* Metric Badges */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs font-bold">
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-2.5 backdrop-blur-md shadow-xs text-slate-800">
-                <Crown className="size-4 text-amber-500" />
-                <span>3 Contending Teams</span>
+              {/* 2. Events Card - Count & Text in One Line */}
+              <div className="glass-card-3d rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 border border-white/80 shadow-md hover:border-cyan-400/60 transition-all hover:scale-[1.02] min-w-0">
+                <div className="flex size-10 sm:size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-[#0A4258] text-white shadow-md shadow-cyan-600/25 shrink-0">
+                  <Flame className="size-5" />
+                </div>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs sm:text-sm font-extrabold text-slate-700 truncate">
+                    Festival Events:
+                  </span>
+                  <span className="font-mono text-base sm:text-lg font-black text-[#0A4258] shrink-0">
+                    {totalEvents}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-2.5 backdrop-blur-md shadow-xs text-slate-800">
-                <Flame className="size-4 text-cyan-600" />
-                <span>{totalEvents} Events</span>
-              </div>
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-2.5 backdrop-blur-md shadow-xs text-slate-800">
-                <Award className="size-4 text-emerald-600" />
-                <span>{totalParticipants}+ Participants</span>
+
+              {/* 3. Participants Card - 130+ to 150+ */}
+              <div className="glass-card-3d rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 border border-white/80 shadow-md hover:border-rose-400/60 transition-all hover:scale-[1.02] min-w-0">
+                <div className="flex size-10 sm:size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E06D53] to-rose-600 text-white shadow-md shadow-rose-500/25 shrink-0">
+                  <Sparkles className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
+                    Festival Talent
+                  </div>
+                  <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5 truncate">
+                    130+ to 150+
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
         </div>
 
         {/* BOTTOM: Animated Scroll Down Button */}
-        <div className="w-full flex flex-col items-center justify-center pb-4 pt-2">
+        <div className="w-full flex flex-col items-center justify-center pb-2 pt-1 font-['Plus_Jakarta_Sans',sans-serif]">
           <motion.button
             onClick={handleScrollToResults}
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
-            className="group flex flex-col items-center gap-2.5 focus:outline-none cursor-pointer"
+            whileTap={{ scale: 0.95 }}
+            className="group flex flex-col items-center gap-1.5 focus:outline-none cursor-pointer"
           >
-            <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 group-hover:text-cyan-700 transition-colors">
-              Explore Results & Standings
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.24em] bg-gradient-to-r from-[#0A4258] to-[#E06D53] bg-clip-text text-transparent group-hover:opacity-80 transition-opacity">
+              Scroll to Results
             </span>
-            <div className="flex size-12 items-center justify-center rounded-full border border-slate-200 bg-white text-cyan-600 shadow-md shadow-slate-200/60 backdrop-blur-md transition-all group-hover:border-cyan-400 group-hover:text-cyan-700 group-hover:shadow-lg">
+            <div className="flex size-10 sm:size-11 items-center justify-center rounded-full glass-card-3d text-[#0A4258] shadow-lg shadow-slate-200/80 transition-all group-hover:border-cyan-400 group-hover:text-[#E06D53] group-hover:shadow-xl group-hover:scale-105">
               <motion.div
-                animate={{ y: [0, 5, 0] }}
+                animate={{ y: [0, 4, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
               >
-                <ChevronDown className="size-6" />
+                <ChevronDown className="size-5" />
               </motion.div>
             </div>
           </motion.button>
