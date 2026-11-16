@@ -149,7 +149,7 @@ export default function OverviewPage() {
       const studentMap = new Map()
       participations.forEach((p: any) => {
         if (!p.student || p.student.section !== "Senior") return
-        if (p.event?.grade_type === "D") return
+        if (p.event?.grade_type === "D" || p.event?.grade_type === "C" || p.event?.category === "SPECIAL" || p.event?.category === "GENERAL") return
 
         const sid = p.student.id
         if (!studentMap.has(sid)) {

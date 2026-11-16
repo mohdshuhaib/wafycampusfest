@@ -106,7 +106,7 @@ export default function ScoringPage() {
 
           typedEvents.forEach((event) => {
               const eventResults = (results as Array<{ event_id: string; result_position: string; student: { name: string; chest_no: string }; team: { name: string } }>)?.filter(r => r.event_id === event.id) || [];
-              const isTeamEvent = event.grade_type === 'D' || event.category === 'SPECIAL';
+              const isTeamEvent = event.grade_type === 'D' || event.grade_type === 'C' || event.category === 'SPECIAL' || event.category === 'GENERAL';
 
               const getWinners = (pos: string) => {
                   // Filter for ALL winners in this position (handles ties)
@@ -303,7 +303,7 @@ export default function ScoringPage() {
 
               typedEvents.forEach(event => {
                   const eventResults = typedResults.filter(r => r.event_id === event.id) || [];
-                  const isTeamEvent = event.grade_type === 'D' || event.category === 'SPECIAL';
+                  const isTeamEvent = event.grade_type === 'D' || event.grade_type === 'C' || event.category === 'SPECIAL' || event.category === 'GENERAL';
 
                   // Sort results by position rank
                   const positionRank: Record<string, number> = { 'FIRST': 1, 'SECOND': 2, 'THIRD': 3 };

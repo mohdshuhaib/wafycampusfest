@@ -490,7 +490,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
 
         yPos += 2;
 
-        const isCategoryC = event.grade_type === 'D';
+        const isCategoryC = event.grade_type === 'D' || event.grade_type === 'C' || event.category === 'SPECIAL' || event.category === 'GENERAL';
         let effectiveCount = 0;
 
         if (isCategoryC) {

@@ -1258,9 +1258,15 @@ export default function ArtsFestResultsPage() {
                                 {winner.student_name}
                               </h5>
                               <div className="flex items-center gap-1.5 mt-1.5">
-                                <span className="font-mono text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                                  #{winner.chest_no}
-                                </span>
+                                {winner.chest_no ? (
+                                  <span className="font-mono text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                                    #{winner.chest_no}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                                    Team Entry
+                                  </span>
+                                )}
                                 <span
                                   className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-800"
                                   style={{
@@ -1331,9 +1337,13 @@ export default function ArtsFestResultsPage() {
                                 {pIdx + 1}
                               </td>
                               <td className="py-3 px-3 font-mono font-bold text-slate-900">
-                                <span className="bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-lg">
-                                  #{p.chest_no}
-                                </span>
+                                {p.chest_no ? (
+                                  <span className="bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-lg">
+                                    #{p.chest_no}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 text-xs font-semibold">—</span>
+                                )}
                               </td>
                               <td className="py-3 px-3">
                                 <div className="flex items-center gap-2.5">
@@ -1440,9 +1450,11 @@ export default function ArtsFestResultsPage() {
                               </div>
                               <div>
                                 <div className="flex items-center gap-1.5">
-                                  <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono text-[10px] font-black text-slate-900">
-                                    #{p.chest_no}
-                                  </span>
+                                  {p.chest_no && (
+                                    <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono text-[10px] font-black text-slate-900">
+                                      #{p.chest_no}
+                                    </span>
+                                  )}
                                   <span className="font-bold text-slate-900 text-sm">
                                     {p.student_name}
                                   </span>

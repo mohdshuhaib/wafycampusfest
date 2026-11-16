@@ -98,9 +98,9 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
         .order('name')
 
       if (category === 'GENERAL') {
-        eventsQuery = eventsQuery.eq('grade_type', 'C')
+        eventsQuery = eventsQuery.or('grade_type.eq.C,category.eq.GENERAL')
       } else if (category === 'SPECIAL') {
-        eventsQuery = eventsQuery.eq('grade_type', 'D')
+        eventsQuery = eventsQuery.or('grade_type.eq.D,category.eq.SPECIAL')
       } else {
         eventsQuery = eventsQuery.eq('category', category).not('grade_type', 'in', '("C","D")')
       }
@@ -162,7 +162,8 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
     }
 
     const event = events.find(e => e.id === selectedEventId)
-    setMode(event?.category === 'SPECIAL' || event?.grade_type === 'D' ? 'TEAM' : 'INDIVIDUAL')
+    const isTeamEvent = event?.category === 'SPECIAL' || event?.category === 'GENERAL' || event?.grade_type === 'D' || event?.grade_type === 'C'
+    setMode(isTeamEvent ? 'TEAM' : 'INDIVIDUAL')
 
     async function loadParts() {
       setLoading(true)
@@ -191,9 +192,14 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
         const newOtherGrades = new Map<string, string>()
 
         mapped.forEach((p: any) => {
-            const key = p.student_id ? p.id : p.team.id // Use participant ID for individual, Team ID for team events
+            const key = isTeamEvent ? (p.team?.id || p.team_id) : p.id
 
-            if (p.result_position) {
+            // When in team mode, ignore individual student rows
+            if (isTeamEvent && p.student_id) return
+            // When in individual mode, ignore team rows
+            if (!isTeamEvent && !p.student_id) return
+
+            if (p.result_position && (p.result_position === 'FIRST' || p.result_position === 'SECOND' || p.result_position === 'THIRD')) {
                 // @ts-ignore
                 newWinners[p.result_position].set(key, p.performance_grade || 'NONE')
             } else if (p.performance_grade) {
@@ -337,6 +343,14 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
           // Clear existing team results for this event
           await supabase.from('participations').delete().eq('event_id', selectedEventId).is('student_id', null)
 
+          // Reset any individual rows for this event so they don't hold positions or points
+          await (supabase.from('participations') as any).update({
+              result_position: null,
+              performance_grade: null,
+              points_earned: 0,
+              status: 'registered'
+          }).eq('event_id', selectedEventId).not('student_id', 'is', null)
+
           const newResults: any[] = []
 
           // Helper to add results
@@ -357,9 +371,9 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
           }
 
           // Process Winners
-          winners.FIRST.forEach((perf, teamId) => addResult(teamId, 'FIRST', perf, basePoints.FIRST))
-          winners.SECOND.forEach((perf, teamId) => addResult(teamId, 'SECOND', perf, basePoints.SECOND))
-          winners.THIRD.forEach((perf, teamId) => addResult(teamId, 'THIRD', perf, basePoints.THIRD))
+          winners.FIRST.forEach((perf, teamId) => addResult(teamId, 'FIRST', perf, basePoints?.FIRST || 0))
+          winners.SECOND.forEach((perf, teamId) => addResult(teamId, 'SECOND', perf, basePoints?.SECOND || 0))
+          winners.THIRD.forEach((perf, teamId) => addResult(teamId, 'THIRD', perf, basePoints?.THIRD || 0))
 
           // Process Others (Teams not in winners)
           teams.forEach(t => {

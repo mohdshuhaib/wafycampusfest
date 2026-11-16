@@ -113,11 +113,12 @@ export async function GET() {
 
       const pts = Number(p.points_earned || 0)
       const cat = p.event?.category
+      const gradeType = p.event?.grade_type
 
       if (cat === 'OFF STAGE') teamScoresMap[teamId].offStage += pts
       else if (cat === 'ON STAGE') teamScoresMap[teamId].onStage += pts
-      else if (cat === 'GENERAL') teamScoresMap[teamId].general += pts
-      else if (cat === 'SPECIAL') teamScoresMap[teamId].special += pts
+      else if (cat === 'GENERAL' || gradeType === 'C') teamScoresMap[teamId].general += pts
+      else if (cat === 'SPECIAL' || gradeType === 'D') teamScoresMap[teamId].special += pts
     })
 
     // Compute totals
@@ -169,6 +170,10 @@ export async function GET() {
       if (pts <= 0) return
 
       const cat = p.event?.category
+      const gradeType = p.event?.grade_type
+
+      // Exclude team events (Grade C / GENERAL and Grade D / SPECIAL) from individual student ranking
+      if (cat === 'SPECIAL' || cat === 'GENERAL' || gradeType === 'C' || gradeType === 'D') return
 
       if (!studentScoreMap[student.id]) {
         studentScoreMap[student.id] = {
@@ -212,7 +217,9 @@ export async function GET() {
     // ONLY show published events in results table as requested!
     // Results come strictly from the official Scoring Studio (participations table)
     const detailedResults = publishedParts.map((p: any) => {
+      const isTeam = !p.student_id || p.event?.grade_type === 'C' || p.event?.grade_type === 'D' || p.event?.category === 'GENERAL' || p.event?.category === 'SPECIAL'
       const chestNo = p.student?.chest_no || ''
+      const studentName = isTeam ? (p.team?.name || 'Team') : (p.student?.name || 'Participant')
       const effectiveGrade = p.performance_grade && p.performance_grade !== 'NONE' ? p.performance_grade : null
       const effectivePosition = p.result_position || null
       const effectivePoints = Number(p.points_earned || 0)
@@ -220,7 +227,7 @@ export async function GET() {
       return {
         id: p.id,
         chest_no: chestNo,
-        student_name: p.student?.name || 'Participant',
+        student_name: studentName,
         team_name: p.team?.name || 'Team',
         team_color: p.team?.color_hex || '#3b82f6',
         team_slug: p.team?.slug || '',
@@ -233,6 +240,7 @@ export async function GET() {
         result_position: effectivePosition,
         has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition),
         image_link: p.student?.image_link || null,
+        is_team_entry: isTeam,
       }
     })
 
