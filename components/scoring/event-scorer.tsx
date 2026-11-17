@@ -378,8 +378,9 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
           // Process Others (Teams not in winners)
           teams.forEach(t => {
              const isWinner = winners.FIRST.has(t.id) || winners.SECOND.has(t.id) || winners.THIRD.has(t.id)
-             if (!isWinner && otherGrades.has(t.id)) {
-                 addResult(t.id, null, otherGrades.get(t.id) || 'NONE', 0)
+             if (!isWinner) {
+                 const grade = otherGrades.get(t.id) || 'NONE'
+                 addResult(t.id, null, grade === 'NONE' ? null : grade, 0)
              }
           })
 

@@ -115,10 +115,17 @@ export async function GET() {
       const cat = p.event?.category
       const gradeType = p.event?.grade_type
 
-      if (cat === 'OFF STAGE') teamScoresMap[teamId].offStage += pts
-      else if (cat === 'ON STAGE') teamScoresMap[teamId].onStage += pts
-      else if (cat === 'GENERAL' || gradeType === 'C') teamScoresMap[teamId].general += pts
-      else if (cat === 'SPECIAL' || gradeType === 'D') teamScoresMap[teamId].special += pts
+      // Always attribute General (Grade C) and Special (Grade D) points to their respective columns,
+      // regardless of whether their stage category is "ON STAGE" or "OFF STAGE"
+      if (gradeType === 'C' || cat === 'GENERAL') {
+        teamScoresMap[teamId].general += pts
+      } else if (gradeType === 'D' || cat === 'SPECIAL') {
+        teamScoresMap[teamId].special += pts
+      } else if (cat === 'OFF STAGE') {
+        teamScoresMap[teamId].offStage += pts
+      } else if (cat === 'ON STAGE') {
+        teamScoresMap[teamId].onStage += pts
+      }
     })
 
     // Compute totals
@@ -215,41 +222,129 @@ export async function GET() {
 
     // Build Detailed Results for Individual & Item-wise display
     // ONLY show published events in results table as requested!
-    // Results come strictly from the official Scoring Studio (participations table)
-    const detailedResults = publishedParts.map((p: any) => {
-      const isTeam = !p.student_id || p.event?.grade_type === 'C' || p.event?.grade_type === 'D' || p.event?.category === 'GENERAL' || p.event?.category === 'SPECIAL'
-      const chestNo = p.student?.chest_no || ''
-      const studentName = isTeam ? (p.team?.name || 'Team') : (p.student?.name || 'Participant')
-      const effectiveGrade = p.performance_grade && p.performance_grade !== 'NONE' ? p.performance_grade : null
-      const effectivePosition = p.result_position || null
-      const effectivePoints = Number(p.points_earned || 0)
+    // Fetch event metadata for all published events to guarantee clean structure
+    const publishedIdsArray = Array.from(publishedEventIds)
+    const { data: rawEvents } = publishedIdsArray.length > 0
+      ? await supabase
+          .from('events')
+          .select('id, name, event_code, category, grade_type')
+          .in('id', publishedIdsArray)
+          .order('event_code', { ascending: true })
+      : { data: [] }
+    const publishedEventsList = rawEvents || []
 
-      return {
-        id: p.id,
-        chest_no: chestNo,
-        student_name: studentName,
-        team_name: p.team?.name || 'Team',
-        team_color: p.team?.color_hex || '#3b82f6',
-        team_slug: p.team?.slug || '',
-        event_id: p.event?.id || p.event_id,
-        event_name: p.event?.name || 'Programme',
-        event_code: p.event?.event_code || '',
-        category: p.event?.category || 'OFF STAGE',
-        points_earned: effectivePoints,
-        performance_grade: effectiveGrade,
-        result_position: effectivePosition,
-        has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition),
-        image_link: p.student?.image_link || null,
-        is_team_entry: isTeam,
+    const detailedResults: any[] = []
+    const positionOrder: Record<string, number> = { FIRST: 1, SECOND: 2, THIRD: 3 }
+
+    publishedEventsList.forEach((ev: any) => {
+      const isTeamEvent =
+        ev.grade_type === 'C' ||
+        ev.grade_type === 'D' ||
+        ev.category === 'GENERAL' ||
+        ev.category === 'SPECIAL'
+
+      const effectiveCategory =
+        ev.grade_type === 'C'
+          ? 'GENERAL'
+          : ev.grade_type === 'D'
+          ? 'SPECIAL'
+          : ev.category || 'OFF STAGE'
+
+      if (isTeamEvent) {
+        // Team Event: ONLY show teams, NEVER show student participants
+        // For each team in teams, find its participation or create placeholder so 1,2,3 and 4th team appear
+        const teamEventResults: any[] = []
+
+        teams.forEach((t: any) => {
+          const part = publishedParts.find(
+            (p: any) => p.event_id === ev.id && !p.student_id && p.team_id === t.id
+          )
+
+          const effectivePoints = part ? Number(part.points_earned || 0) : 0
+          const effectiveGrade =
+            part && part.performance_grade && part.performance_grade !== 'NONE'
+              ? part.performance_grade
+              : null
+          const effectivePosition = part?.result_position || null
+
+          teamEventResults.push({
+            id: part?.id || `team-${t.id}-${ev.id}`,
+            chest_no: '',
+            student_name: t.name,
+            team_name: t.name,
+            team_color: t.color_hex || '#3b82f6',
+            team_slug: t.slug || '',
+            event_id: ev.id,
+            event_name: ev.name,
+            event_code: ev.event_code || '',
+            category: effectiveCategory,
+            stage_type: ev.category || 'OFF STAGE',
+            grade_type: ev.grade_type,
+            points_earned: effectivePoints,
+            performance_grade: effectiveGrade,
+            result_position: effectivePosition,
+            has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition),
+            image_link: null,
+            is_team_entry: true,
+          })
+        })
+
+        // Sort teams: 1st, 2nd, 3rd, then by points, then by name
+        teamEventResults.sort((a, b) => {
+          const rankA = a.result_position ? positionOrder[a.result_position] || 9 : 9
+          const rankB = b.result_position ? positionOrder[b.result_position] || 9 : 9
+          if (rankA !== rankB) return rankA - rankB
+          if (b.points_earned !== a.points_earned) return b.points_earned - a.points_earned
+          return a.team_name.localeCompare(b.team_name)
+        })
+
+        detailedResults.push(...teamEventResults)
+      } else {
+        // Individual Event: ONLY show student participants
+        const studentParts = publishedParts.filter(
+          (p: any) => p.event_id === ev.id && p.student_id
+        )
+
+        const studentResults = studentParts.map((p: any) => {
+          const chestNo = p.student?.chest_no || ''
+          const effectiveGrade =
+            p.performance_grade && p.performance_grade !== 'NONE' ? p.performance_grade : null
+          const effectivePosition = p.result_position || null
+          const effectivePoints = Number(p.points_earned || 0)
+
+          return {
+            id: p.id,
+            chest_no: chestNo,
+            student_name: p.student?.name || 'Participant',
+            team_name: p.team?.name || 'Team',
+            team_color: p.team?.color_hex || '#3b82f6',
+            team_slug: p.team?.slug || '',
+            event_id: ev.id,
+            event_name: ev.name,
+            event_code: ev.event_code || '',
+            category: effectiveCategory,
+            stage_type: ev.category || 'OFF STAGE',
+            grade_type: ev.grade_type,
+            points_earned: effectivePoints,
+            performance_grade: effectiveGrade,
+            result_position: effectivePosition,
+            has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition),
+            image_link: p.student?.image_link || null,
+            is_team_entry: false,
+          }
+        })
+
+        // Sort: FIRST, SECOND, THIRD, then points, then chest_no
+        studentResults.sort((a, b) => {
+          const rankA = a.result_position ? positionOrder[a.result_position] || 9 : 9
+          const rankB = b.result_position ? positionOrder[b.result_position] || 9 : 9
+          if (rankA !== rankB) return rankA - rankB
+          if (b.points_earned !== a.points_earned) return b.points_earned - a.points_earned
+          return (Number(a.chest_no) || 0) - (Number(b.chest_no) || 0)
+        })
+
+        detailedResults.push(...studentResults)
       }
-    })
-
-    // Sort detailed results: results with position/grade first, then by event code, then chest no
-    detailedResults.sort((a: any, b: any) => {
-      if (a.has_result && !b.has_result) return -1
-      if (!a.has_result && b.has_result) return 1
-      if (a.event_code !== b.event_code) return a.event_code.localeCompare(b.event_code)
-      return (Number(a.chest_no) || 0) - (Number(b.chest_no) || 0)
     })
 
     return NextResponse.json({

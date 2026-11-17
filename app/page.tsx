@@ -48,11 +48,14 @@ interface ParticipantResult {
   event_name: string
   event_code: string
   category: "ON STAGE" | "OFF STAGE" | "GENERAL" | "SPECIAL"
+  stage_type?: string
+  grade_type?: string
   points_earned: number
   performance_grade: string | null
   result_position: string | null
   has_result: boolean
   image_link?: string | null
+  is_team_entry?: boolean
 }
 
 interface GroupedEvent {
@@ -60,6 +63,9 @@ interface GroupedEvent {
   eventCode: string
   eventName: string
   category: "ON STAGE" | "OFF STAGE" | "GENERAL" | "SPECIAL"
+  stageType?: string
+  gradeType?: string
+  isTeamEvent: boolean
   participants: ParticipantResult[]
 }
 
@@ -225,11 +231,21 @@ export default function ArtsFestResultsPage() {
     results.forEach((item) => {
       const key = item.event_id || item.event_code || item.event_name
       if (!map.has(key)) {
+        const isTeam =
+          Boolean(item.is_team_entry) ||
+          item.category === "GENERAL" ||
+          item.category === "SPECIAL" ||
+          item.grade_type === "C" ||
+          item.grade_type === "D"
+
         map.set(key, {
           eventId: item.event_id,
           eventCode: item.event_code,
           eventName: item.event_name,
           category: item.category,
+          stageType: item.stage_type,
+          gradeType: item.grade_type,
+          isTeamEvent: isTeam,
           participants: [],
         })
       }
@@ -534,15 +550,23 @@ export default function ArtsFestResultsPage() {
                   </div>
                 </div>
 
-                {/* Score breakdown tags */}
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px]">
-                  <div className="rounded-xl bg-slate-50 p-2 text-center border border-slate-100">
-                    <span className="text-slate-500 block text-[10px]">Off Stage</span>
-                    <span className="font-bold text-slate-800 font-mono">{secondTeam.offStage}</span>
+                {/* Score breakdown tags across all 4 categories */}
+                <div className="grid grid-cols-4 gap-1.5 mt-4 pt-3 border-t border-slate-100 text-[10px]">
+                  <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
+                    <span className="text-slate-500 block text-[9px]">Off</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{secondTeam.offStage}</span>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-2 text-center border border-slate-100">
-                    <span className="text-slate-500 block text-[10px]">On Stage</span>
-                    <span className="font-bold text-slate-800 font-mono">{secondTeam.onStage}</span>
+                  <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
+                    <span className="text-slate-500 block text-[9px]">On</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{secondTeam.onStage}</span>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
+                    <span className="text-slate-500 block text-[9px]">Gen</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{secondTeam.general}</span>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
+                    <span className="text-slate-500 block text-[9px]">Spc</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{secondTeam.special}</span>
                   </div>
                 </div>
               </div>
@@ -589,15 +613,23 @@ export default function ArtsFestResultsPage() {
                   </div>
                 </div>
 
-                {/* Score breakdown tags */}
-                <div className="grid grid-cols-2 gap-2 mt-5 pt-3 border-t border-amber-200/60 text-xs">
-                  <div className="rounded-xl bg-amber-50/70 p-2.5 text-center border border-amber-200/50">
-                    <span className="text-amber-800 block text-[10px]">Off Stage</span>
-                    <span className="font-bold text-slate-900 font-mono text-sm">{firstTeam.offStage}</span>
+                {/* Score breakdown tags across all 4 categories */}
+                <div className="grid grid-cols-4 gap-1.5 mt-5 pt-3 border-t border-amber-200/60 text-xs">
+                  <div className="rounded-xl bg-amber-50/70 p-1.5 text-center border border-amber-200/50">
+                    <span className="text-amber-800 block text-[9px] font-bold">Off</span>
+                    <span className="font-bold text-slate-900 font-mono text-xs">{firstTeam.offStage}</span>
                   </div>
-                  <div className="rounded-xl bg-amber-50/70 p-2.5 text-center border border-amber-200/50">
-                    <span className="text-amber-800 block text-[10px]">On Stage</span>
-                    <span className="font-bold text-slate-900 font-mono text-sm">{firstTeam.onStage}</span>
+                  <div className="rounded-xl bg-amber-50/70 p-1.5 text-center border border-amber-200/50">
+                    <span className="text-amber-800 block text-[9px] font-bold">On</span>
+                    <span className="font-bold text-slate-900 font-mono text-xs">{firstTeam.onStage}</span>
+                  </div>
+                  <div className="rounded-xl bg-amber-50/70 p-1.5 text-center border border-amber-200/50">
+                    <span className="text-amber-800 block text-[9px] font-bold">Gen</span>
+                    <span className="font-bold text-slate-900 font-mono text-xs">{firstTeam.general}</span>
+                  </div>
+                  <div className="rounded-xl bg-amber-50/70 p-1.5 text-center border border-amber-200/50">
+                    <span className="text-amber-800 block text-[9px] font-bold">Spc</span>
+                    <span className="font-bold text-slate-900 font-mono text-xs">{firstTeam.special}</span>
                   </div>
                 </div>
               </div>
@@ -638,15 +670,23 @@ export default function ArtsFestResultsPage() {
                   </div>
                 </div>
 
-                {/* Score breakdown tags */}
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px]">
-                  <div className="rounded-xl bg-slate-50 p-2 text-center border border-slate-100">
-                    <span className="text-slate-500 block text-[10px]">Off Stage</span>
-                    <span className="font-bold text-slate-800 font-mono">{thirdTeam.offStage}</span>
+                {/* Score breakdown tags across all 4 categories */}
+                <div className="grid grid-cols-4 gap-1.5 mt-4 pt-3 border-t border-slate-100 text-[10px]">
+                  <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
+                    <span className="text-slate-500 block text-[9px]">Off</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{thirdTeam.offStage}</span>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-2 text-center border border-slate-100">
-                    <span className="text-slate-500 block text-[10px]">On Stage</span>
-                    <span className="font-bold text-slate-800 font-mono">{thirdTeam.onStage}</span>
+                  <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
+                    <span className="text-slate-500 block text-[9px]">On</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{thirdTeam.onStage}</span>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
+                    <span className="text-slate-500 block text-[9px]">Gen</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{thirdTeam.general}</span>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
+                    <span className="text-slate-500 block text-[9px]">Spc</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{thirdTeam.special}</span>
                   </div>
                 </div>
               </div>
@@ -1112,6 +1152,7 @@ export default function ArtsFestResultsPage() {
           const topWinners = [...firstWinners, ...secondWinners, ...thirdWinners]
           const topWinnerIds = new Set(topWinners.map(p => p.id))
           const otherParticipants = currentEvent.participants.filter(p => !topWinnerIds.has(p.id))
+          const isTeamEvent = currentEvent.isTeamEvent
 
           return (
             <div className="space-y-6">
@@ -1187,11 +1228,17 @@ export default function ArtsFestResultsPage() {
                           {currentEvent.eventName}
                         </h3>
                         <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
-                          <span className="font-bold text-cyan-700">{currentEvent.category}</span>
+                          <span className="font-bold text-cyan-700">
+                            {currentEvent.category === "GENERAL"
+                              ? `General • ${currentEvent.stageType || "Stage"}`
+                              : currentEvent.category === "SPECIAL"
+                              ? `Special • ${currentEvent.stageType || "Stage"}`
+                              : currentEvent.category}
+                          </span>
                           <span>•</span>
                           <span className="flex items-center gap-1 font-medium text-slate-600">
                             <Users className="size-3 text-cyan-600" />
-                            {currentEvent.participants.length} Total Participants
+                            {currentEvent.participants.length} {isTeamEvent ? "Contending Teams" : "Total Participants"}
                           </span>
                         </div>
                       </div>
@@ -1199,7 +1246,11 @@ export default function ArtsFestResultsPage() {
 
                     <div className="flex items-center gap-2 self-start sm:self-auto">
                       <span className="text-xs font-black uppercase tracking-wider text-slate-700 bg-slate-100 border border-slate-200 px-3.5 py-1.5 rounded-full">
-                        {currentEvent.category}
+                        {currentEvent.category === "GENERAL"
+                          ? `General (${currentEvent.stageType || "Stage"})`
+                          : currentEvent.category === "SPECIAL"
+                          ? `Special (${currentEvent.stageType || "Stage"})`
+                          : currentEvent.category}
                       </span>
                     </div>
                   </div>
@@ -1210,7 +1261,7 @@ export default function ArtsFestResultsPage() {
                       <div className="flex items-center gap-2 mb-4">
                         <Trophy className="size-4 text-amber-500" />
                         <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                          Top Winners & Highlights
+                          {isTeamEvent ? "Top Winning Teams" : "Top Winners & Highlights"}
                         </h4>
                       </div>
 
@@ -1244,44 +1295,77 @@ export default function ArtsFestResultsPage() {
                                 {isFirstPlace ? "👑 1st Place" : isSecondPlace ? "🥈 2nd Place" : "🥉 3rd Place"}
                               </div>
 
-                              {/* Student Photo */}
-                              <div className="relative size-20 sm:size-24 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-md bg-white flex items-center justify-center shrink-0 mb-3">
-                                <StudentAvatar
-                                  imageLink={winner.image_link}
-                                  name={winner.student_name}
-                                  fallbackIconSize="size-10"
-                                />
-                              </div>
-
-                              {/* Student Name & Chest */}
-                              <h5 className="text-base font-black text-slate-900 leading-tight">
-                                {winner.student_name}
-                              </h5>
-                              <div className="flex items-center gap-1.5 mt-1.5">
-                                {winner.chest_no ? (
-                                  <span className="font-mono text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                                    #{winner.chest_no}
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                                    Team Entry
-                                  </span>
-                                )}
-                                <span
-                                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-800"
+                              {/* Team Emblem or Student Photo */}
+                              {isTeamEvent ? (
+                                <div
+                                  className="relative size-20 sm:size-24 rounded-2xl flex flex-col items-center justify-center text-white font-black shadow-lg mb-3 border-2 border-white/80"
                                   style={{
-                                    backgroundColor: `${winner.team_color}20`,
-                                    borderColor: winner.team_color,
-                                    borderWidth: 1,
+                                    backgroundColor: winner.team_color,
+                                    boxShadow: `0 10px 25px ${winner.team_color}45`,
                                   }}
                                 >
-                                  <span
-                                    className="size-1.5 rounded-full"
-                                    style={{ backgroundColor: winner.team_color }}
+                                  <Users className="size-8 sm:size-9 mb-0.5 opacity-90" />
+                                  <span className="text-[10px] font-mono tracking-wider uppercase opacity-95">Team</span>
+                                </div>
+                              ) : (
+                                <div className="relative size-20 sm:size-24 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-md bg-white flex items-center justify-center shrink-0 mb-3">
+                                  <StudentAvatar
+                                    imageLink={winner.image_link}
+                                    name={winner.student_name}
+                                    fallbackIconSize="size-10"
                                   />
-                                  {winner.team_name}
-                                </span>
-                              </div>
+                                </div>
+                              )}
+
+                              {/* Student or Team Name */}
+                              <h5 className="text-base sm:text-lg font-black text-slate-900 leading-tight uppercase tracking-wide">
+                                {isTeamEvent ? winner.team_name : winner.student_name}
+                              </h5>
+
+                              {isTeamEvent ? (
+                                <div className="flex items-center gap-1.5 mt-1.5">
+                                  <span
+                                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-slate-800"
+                                    style={{
+                                      backgroundColor: `${winner.team_color}20`,
+                                      borderColor: winner.team_color,
+                                      borderWidth: 1,
+                                    }}
+                                  >
+                                    <span
+                                      className="size-1.5 rounded-full"
+                                      style={{ backgroundColor: winner.team_color }}
+                                    />
+                                    Contending Team
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 mt-1.5">
+                                  {winner.chest_no ? (
+                                    <span className="font-mono text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                                      #{winner.chest_no}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                                      Team Entry
+                                    </span>
+                                  )}
+                                  <span
+                                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-800"
+                                    style={{
+                                      backgroundColor: `${winner.team_color}20`,
+                                      borderColor: winner.team_color,
+                                      borderWidth: 1,
+                                    }}
+                                  >
+                                    <span
+                                      className="size-1.5 rounded-full"
+                                      style={{ backgroundColor: winner.team_color }}
+                                    />
+                                    {winner.team_name}
+                                  </span>
+                                </div>
+                              )}
 
                               {/* Points & Grade */}
                               <div className="mt-3 pt-3 border-t border-slate-200/60 w-full flex items-center justify-around text-xs">
@@ -1305,208 +1389,278 @@ export default function ArtsFestResultsPage() {
                     </div>
                   )}
 
-                  {/* 2. OTHER PARTICIPANTS TABLE (WITHOUT IMAGES, CLEAN & NORMAL) */}
+                  {/* 2. OTHER PARTICIPANTS / TEAMS TABLE */}
                   <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">
-                        {topWinners.length > 0 ? `Other Participants (${otherParticipants.length})` : `All Participants (${currentEvent.participants.length})`}
+                        {isTeamEvent
+                          ? topWinners.length > 0
+                            ? `Other Contending Teams (${otherParticipants.length})`
+                            : `All Contending Teams (${currentEvent.participants.length})`
+                          : topWinners.length > 0
+                          ? `Other Participants (${otherParticipants.length})`
+                          : `All Participants (${currentEvent.participants.length})`}
                       </h4>
                       <span className="text-[11px] text-slate-500 font-medium">
-                        Standard Table View
+                        {isTeamEvent ? "Official Team Standings" : "Standard Table View"}
                       </span>
                     </div>
 
-                    {/* Desktop / Tablet Table View */}
-                    <div className="hidden sm:block overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead>
-                          <tr className="border-b border-slate-100 text-[10px] uppercase tracking-wider text-slate-500 font-bold bg-slate-50/50">
-                            <th className="py-2.5 px-3 text-center w-12">Sl</th>
-                            <th className="py-2.5 px-3">Chest No</th>
-                            <th className="py-2.5 px-3">Participant Name</th>
-                            <th className="py-2.5 px-3">Team</th>
-                            <th className="py-2.5 px-3 text-center">Position</th>
-                            <th className="py-2.5 px-3 text-center">Grade</th>
-                            <th className="py-2.5 px-3 text-right">Marks / Points</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 font-medium">
-                          {(otherParticipants.length > 0 ? otherParticipants : currentEvent.participants).map((p, pIdx) => (
-                            <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
-                              <td className="py-3 px-3 text-center text-slate-400 font-mono">
-                                {pIdx + 1}
-                              </td>
-                              <td className="py-3 px-3 font-mono font-bold text-slate-900">
-                                {p.chest_no ? (
-                                  <span className="bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-lg">
-                                    #{p.chest_no}
-                                  </span>
+                    {isTeamEvent && otherParticipants.length === 0 ? (
+                      <div className="py-8 text-center text-xs font-bold text-slate-500 bg-slate-50/60 rounded-2xl border border-slate-200/70">
+                        All contending teams finished in the Top 3 podium standings.
+                      </div>
+                    ) : (
+                      <>
+                        {/* Desktop / Tablet Table View */}
+                        <div className="hidden sm:block overflow-x-auto">
+                          <table className="w-full text-left text-xs">
+                            <thead>
+                              <tr className="border-b border-slate-100 text-[10px] uppercase tracking-wider text-slate-500 font-bold bg-slate-50/50">
+                                <th className="py-2.5 px-3 text-center w-12">Sl</th>
+                                {isTeamEvent ? (
+                                  <th className="py-2.5 px-3">Contending Team</th>
                                 ) : (
-                                  <span className="text-slate-400 text-xs font-semibold">—</span>
+                                  <>
+                                    <th className="py-2.5 px-3">Chest No</th>
+                                    <th className="py-2.5 px-3">Participant Name</th>
+                                    <th className="py-2.5 px-3">Team</th>
+                                  </>
                                 )}
-                              </td>
-                              <td className="py-3 px-3">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="relative size-8 rounded-xl overflow-hidden border border-slate-200/90 bg-slate-100 shrink-0 shadow-xs flex items-center justify-center">
-                                    <StudentAvatar
-                                      imageLink={p.image_link}
-                                      name={p.student_name}
-                                      fallbackIconSize="size-4"
-                                    />
-                                  </div>
-                                  <span className="text-slate-900 font-bold text-sm">
-                                    {p.student_name}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="py-3 px-3">
-                                <span
-                                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-slate-800"
-                                  style={{
-                                    backgroundColor: `${p.team_color}18`,
-                                    borderColor: `${p.team_color}60`,
-                                    borderWidth: 1,
-                                  }}
-                                >
-                                  <span
-                                    className="size-1.5 rounded-full"
-                                    style={{ backgroundColor: p.team_color }}
-                                  />
-                                  {p.team_name}
-                                </span>
-                              </td>
-                              <td className="py-3 px-3 text-center">
-                                {p.result_position ? (
-                                  <span
-                                    className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-0.5 text-[11px] font-black ${
-                                      p.result_position === "FIRST"
-                                        ? "bg-amber-100 text-amber-900 border border-amber-300"
-                                        : p.result_position === "SECOND"
-                                        ? "bg-slate-200 text-slate-800 border border-slate-300"
-                                        : "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                                    }`}
-                                  >
-                                    🏆 {p.result_position}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400 font-mono">—</span>
-                                )}
-                              </td>
-                              <td className="py-3 px-3 text-center">
-                                {p.performance_grade ? (
-                                  <span
-                                    className={`rounded-lg px-2 py-0.5 font-mono text-[11px] font-black ${
-                                      p.performance_grade === "A+"
-                                        ? "bg-amber-100 text-amber-800 border border-amber-300"
-                                        : p.performance_grade === "A"
-                                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                        : p.performance_grade === "B"
-                                        ? "bg-blue-100 text-blue-800 border border-blue-300"
-                                        : "bg-purple-100 text-purple-800 border border-purple-300"
-                                    }`}
-                                  >
-                                    Grade {p.performance_grade}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400 font-mono">—</span>
-                                )}
-                              </td>
-                              <td className="py-3 px-3 text-right">
-                                {p.points_earned > 0 ? (
-                                  <span className="font-mono text-sm font-black text-cyan-700">
-                                    +{p.points_earned} pts
-                                  </span>
-                                ) : p.has_result ? (
-                                  <span className="text-xs text-slate-500 font-semibold">
-                                    Completed
-                                  </span>
-                                ) : (
-                                  <span className="text-xs font-semibold text-slate-400">
-                                    Nil
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                <th className="py-2.5 px-3 text-center">Standing / Position</th>
+                                <th className="py-2.5 px-3 text-center">Grade</th>
+                                <th className="py-2.5 px-3 text-right">Marks / Points</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-medium">
+                              {(otherParticipants.length > 0 ? otherParticipants : currentEvent.participants).map((p, pIdx) => {
+                                const rowSl = isTeamEvent && topWinners.length > 0 ? pIdx + 1 + topWinners.length : pIdx + 1
 
-                    {/* Mobile Cards View (< sm screens) */}
-                    <div className="grid grid-cols-1 gap-2.5 sm:hidden">
-                      {(otherParticipants.length > 0 ? otherParticipants : currentEvent.participants).map((p) => (
-                        <div
-                          key={p.id}
-                          className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 space-y-2 shadow-xs"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2.5">
-                              <div className="relative size-9 rounded-xl overflow-hidden border border-slate-200/90 bg-white shrink-0 shadow-xs flex items-center justify-center">
-                                <StudentAvatar
-                                  imageLink={p.image_link}
-                                  name={p.student_name}
-                                  fallbackIconSize="size-4"
-                                />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-1.5">
-                                  {p.chest_no && (
-                                    <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono text-[10px] font-black text-slate-900">
-                                      #{p.chest_no}
-                                    </span>
-                                  )}
-                                  <span className="font-bold text-slate-900 text-sm">
-                                    {p.student_name}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <span
-                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold text-slate-800 shrink-0"
-                              style={{
-                                backgroundColor: `${p.team_color}20`,
-                                borderColor: `${p.team_color}60`,
-                                borderWidth: 1,
-                              }}
-                            >
-                              <span
-                                className="size-1 rounded-full"
-                                style={{ backgroundColor: p.team_color }}
-                              />
-                              {p.team_name}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-1 border-t border-slate-200/70 text-xs">
-                            <div className="flex items-center gap-1.5">
-                              {p.result_position && (
-                                <span className="font-black text-amber-800 text-[11px] bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300">
-                                  🏆 {p.result_position}
-                                </span>
-                              )}
-                              {p.performance_grade && (
-                                <span className="font-mono font-bold text-cyan-800 text-[11px] bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200">
-                                  Grade {p.performance_grade}
-                                </span>
-                              )}
-                            </div>
-
-                            <div>
-                              {p.points_earned > 0 ? (
-                                <span className="font-mono text-xs font-black text-cyan-700">
-                                  +{p.points_earned} pts
-                                </span>
-                              ) : p.has_result ? (
-                                <span className="text-[10px] text-slate-500 font-medium">Completed</span>
-                              ) : (
-                                <span className="text-[11px] font-semibold text-slate-400">Nil</span>
-                              )}
-                            </div>
-                          </div>
+                                return (
+                                  <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                                    <td className="py-3 px-3 text-center text-slate-400 font-mono font-bold">
+                                      {rowSl}
+                                    </td>
+                                    {isTeamEvent ? (
+                                      <td className="py-3 px-3">
+                                        <div className="flex items-center gap-2.5">
+                                          <span
+                                            className="size-3.5 rounded-full shrink-0 shadow-xs"
+                                            style={{ backgroundColor: p.team_color }}
+                                          />
+                                          <span className="text-slate-900 font-black text-sm uppercase tracking-wide">
+                                            {p.team_name}
+                                          </span>
+                                          <span className="text-[10px] font-semibold text-slate-400">
+                                            Team Entry
+                                          </span>
+                                        </div>
+                                      </td>
+                                    ) : (
+                                      <>
+                                        <td className="py-3 px-3 font-mono font-bold text-slate-900">
+                                          {p.chest_no ? (
+                                            <span className="bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-lg">
+                                              #{p.chest_no}
+                                            </span>
+                                          ) : (
+                                            <span className="text-slate-400 text-xs font-semibold">—</span>
+                                          )}
+                                        </td>
+                                        <td className="py-3 px-3">
+                                          <div className="flex items-center gap-2.5">
+                                            <div className="relative size-8 rounded-xl overflow-hidden border border-slate-200/90 bg-slate-100 shrink-0 shadow-xs flex items-center justify-center">
+                                              <StudentAvatar
+                                                imageLink={p.image_link}
+                                                name={p.student_name}
+                                                fallbackIconSize="size-4"
+                                              />
+                                            </div>
+                                            <span className="text-slate-900 font-bold text-sm">
+                                              {p.student_name}
+                                            </span>
+                                          </div>
+                                        </td>
+                                        <td className="py-3 px-3">
+                                          <span
+                                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-slate-800"
+                                            style={{
+                                              backgroundColor: `${p.team_color}18`,
+                                              borderColor: `${p.team_color}60`,
+                                              borderWidth: 1,
+                                            }}
+                                          >
+                                            <span
+                                              className="size-1.5 rounded-full"
+                                              style={{ backgroundColor: p.team_color }}
+                                            />
+                                            {p.team_name}
+                                          </span>
+                                        </td>
+                                      </>
+                                    )}
+                                    <td className="py-3 px-3 text-center">
+                                      {p.result_position ? (
+                                        <span
+                                          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-0.5 text-[11px] font-black ${
+                                            p.result_position === "FIRST"
+                                              ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                              : p.result_position === "SECOND"
+                                              ? "bg-slate-200 text-slate-800 border border-slate-300"
+                                              : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                                          }`}
+                                        >
+                                          🏆 {p.result_position}
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-400 font-semibold text-xs">
+                                          {isTeamEvent ? (rowSl === 4 ? "4th Place" : "Unranked") : "—"}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="py-3 px-3 text-center">
+                                      {p.performance_grade ? (
+                                        <span
+                                          className={`rounded-lg px-2 py-0.5 font-mono text-[11px] font-black ${
+                                            p.performance_grade === "A+"
+                                              ? "bg-amber-100 text-amber-800 border border-amber-300"
+                                              : p.performance_grade === "A"
+                                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                              : p.performance_grade === "B"
+                                              ? "bg-blue-100 text-blue-800 border border-blue-300"
+                                              : "bg-purple-100 text-purple-800 border border-purple-300"
+                                          }`}
+                                        >
+                                          Grade {p.performance_grade}
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-400 font-mono">—</span>
+                                      )}
+                                    </td>
+                                    <td className="py-3 px-3 text-right">
+                                      {p.points_earned > 0 ? (
+                                        <span className="font-mono text-sm font-black text-cyan-700">
+                                          +{p.points_earned} pts
+                                        </span>
+                                      ) : p.has_result ? (
+                                        <span className="text-xs text-slate-500 font-semibold">
+                                          Completed
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs font-semibold text-slate-400">
+                                          Nil
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
                         </div>
-                      ))}
-                    </div>
+
+                        {/* Mobile Cards View (< sm screens) */}
+                        <div className="grid grid-cols-1 gap-2.5 sm:hidden">
+                          {(otherParticipants.length > 0 ? otherParticipants : currentEvent.participants).map((p, pIdx) => {
+                            const rowSl = isTeamEvent && topWinners.length > 0 ? pIdx + 1 + topWinners.length : pIdx + 1
+
+                            return (
+                              <div
+                                key={p.id}
+                                className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 space-y-2 shadow-xs"
+                              >
+                                <div className="flex items-start justify-between">
+                                  {isTeamEvent ? (
+                                    <div className="flex items-center gap-2.5">
+                                      <span
+                                        className="size-4 rounded-full shrink-0 shadow-xs"
+                                        style={{ backgroundColor: p.team_color }}
+                                      />
+                                      <div>
+                                        <span className="font-black text-slate-900 text-sm uppercase tracking-wide">
+                                          {p.team_name}
+                                        </span>
+                                        <div className="text-[10px] text-slate-400 font-semibold">
+                                          {rowSl === 4 ? "4th Place Team" : `Team #${rowSl}`}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="relative size-9 rounded-xl overflow-hidden border border-slate-200/90 bg-white shrink-0 shadow-xs flex items-center justify-center">
+                                        <StudentAvatar
+                                          imageLink={p.image_link}
+                                          name={p.student_name}
+                                          fallbackIconSize="size-4"
+                                        />
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1.5">
+                                          {p.chest_no && (
+                                            <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono text-[10px] font-black text-slate-900">
+                                              #{p.chest_no}
+                                            </span>
+                                          )}
+                                          <span className="font-bold text-slate-900 text-sm">
+                                            {p.student_name}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <span
+                                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold text-slate-800 shrink-0"
+                                    style={{
+                                      backgroundColor: `${p.team_color}20`,
+                                      borderColor: `${p.team_color}60`,
+                                      borderWidth: 1,
+                                    }}
+                                  >
+                                    <span
+                                      className="size-1.5 rounded-full"
+                                      style={{ backgroundColor: p.team_color }}
+                                    />
+                                    {p.team_name}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-1 border-t border-slate-200/70 text-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    {p.result_position ? (
+                                      <span className="font-black text-amber-800 text-[11px] bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300">
+                                        🏆 {p.result_position}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400 font-medium text-[10px]">
+                                        {isTeamEvent ? (rowSl === 4 ? "4th Place" : "Unranked") : "—"}
+                                      </span>
+                                    )}
+                                    {p.performance_grade && (
+                                      <span className="font-mono font-bold text-cyan-800 text-[11px] bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200">
+                                        Grade {p.performance_grade}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    {p.points_earned > 0 ? (
+                                      <span className="font-mono text-xs font-black text-cyan-700">
+                                        +{p.points_earned} pts
+                                      </span>
+                                    ) : p.has_result ? (
+                                      <span className="text-[10px] text-slate-500 font-medium">Completed</span>
+                                    ) : (
+                                      <span className="text-[11px] font-semibold text-slate-400">Nil</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* BOTTOM PROGRAMME NAVIGATION */}
