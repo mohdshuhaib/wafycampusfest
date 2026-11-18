@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { attachCriteriaToAssignments } from '@/lib/judge-criteria'
 
 export async function GET(request: NextRequest) {
   try {
@@ -53,10 +54,10 @@ export async function GET(request: NextRequest) {
 
       if (assignErr) throw assignErr
 
-      const assignmentData = assignment as any
+      const enriched = await attachCriteriaToAssignments(supabase, [assignment])
 
       return NextResponse.json({
-        assignment,
+        assignment: enriched[0] || assignment,
       })
     }
 
@@ -93,7 +94,9 @@ export async function GET(request: NextRequest) {
       .eq('judge_id', effectiveJudgeId)
 
     const evalList = (evaluations as any[]) || []
-    const enriched = ((assignments as any[]) || []).map((a) => {
+    const enrichedWithCriteria = await attachCriteriaToAssignments(supabase, assignments || [])
+
+    const enriched = enrichedWithCriteria.map((a) => {
       const evalCount = evalList.filter((e) => e.assignment_id === a.id || e.event_id === a.event_id).length
       return {
         ...a,
@@ -101,9 +104,11 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ assignments: enriched })
+    return NextResponse.json({
+      assignments: enriched,
+    })
   } catch (error: any) {
-    console.error('Error in /api/judge/assignments:', error)
+    console.error('Error fetching judge assignments:', error)
     return NextResponse.json(
       { error: error?.message || 'Failed to fetch assignments' },
       { status: 500 }

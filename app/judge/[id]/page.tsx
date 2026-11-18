@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -24,8 +24,8 @@ import {
   Award,
   Loader2,
   RotateCcw,
-  Search,
 } from "lucide-react"
+import { Criterion, buildFallbackCriteria, calculateGrade } from "@/lib/judge-criteria"
 
 interface AssignedProgramme {
   id: string
@@ -35,6 +35,7 @@ interface AssignedProgramme {
   rule_criterion_2: string
   rule_criterion_3: string
   rule_criterion_4: string
+  criteria?: Criterion[]
   overall_remarks?: string | null
   created_at: string
   event?: {
@@ -59,20 +60,12 @@ interface Evaluation {
   mark_criterion_2: number
   mark_criterion_3: number
   mark_criterion_4: number
+  marks_breakdown?: Record<string, number>
   total_marks: number
   grade: string
   positive_remarks: string | null
   negative_remarks: string | null
   created_at: string
-}
-
-// Automatic Grade Calculation according to the fest rules
-function calculateGrade(total: number): string {
-  if (total >= 90) return "A+"
-  if (total >= 80) return "A"
-  if (total >= 70) return "B"
-  if (total >= 60) return "C"
-  return "None"
 }
 
 export default function JudgeScoringPage() {
@@ -92,10 +85,7 @@ export default function JudgeScoringPage() {
   // Current Evaluation Form State
   const [editingId, setEditingId] = useState<string | null>(null)
   const [chestNo, setChestNo] = useState("")
-  const [mark1, setMark1] = useState<string>("")
-  const [mark2, setMark2] = useState<string>("")
-  const [mark3, setMark3] = useState<string>("")
-  const [mark4, setMark4] = useState<string>("")
+  const [marks, setMarks] = useState<Record<string, string>>({})
   const [positiveRemarks, setPositiveRemarks] = useState("")
   const [negativeRemarks, setNegativeRemarks] = useState("")
 
@@ -135,28 +125,53 @@ export default function JudgeScoringPage() {
     }
   }, [assignmentId])
 
+  // Active Criteria list
+  const criteriaList: Criterion[] = useMemo(() => {
+    if (!assignment) return []
+    if (assignment.criteria && assignment.criteria.length > 0) {
+      return assignment.criteria
+    }
+    return buildFallbackCriteria(assignment)
+  }, [assignment])
+
+  // Maximum total marks across all criteria
+  const maxTotalMarks = useMemo(() => {
+    return criteriaList.reduce((sum, c) => sum + (Number(c.maxMarks) || 0), 0)
+  }, [criteriaList])
+
   // Handle chest number change
   const handleChestNoChange = (val: string) => {
     setChestNo(val.trim().toUpperCase())
   }
 
-  // Calculate live total and grade
-  const num1 = Math.min(30, Math.max(0, parseFloat(mark1) || 0))
-  const num2 = Math.min(30, Math.max(0, parseFloat(mark2) || 0))
-  const num3 = Math.min(20, Math.max(0, parseFloat(mark3) || 0))
-  const num4 = Math.min(20, Math.max(0, parseFloat(mark4) || 0))
+  // Handle mark change for a specific criterion
+  const handleMarkChange = (critId: string, val: string) => {
+    setMarks((prev) => ({
+      ...prev,
+      [critId]: val,
+    }))
+  }
 
-  const totalMarks = Number((num1 + num2 + num3 + num4).toFixed(2))
-  const liveGrade = calculateGrade(totalMarks)
+  // Calculate live total and grade
+  const totalMarks = useMemo(() => {
+    const sum = criteriaList.reduce((acc, c) => {
+      const raw = parseFloat(marks[c.id] || "0")
+      if (isNaN(raw)) return acc
+      const clamped = Math.min(c.maxMarks, Math.max(0, raw))
+      return acc + clamped
+    }, 0)
+    return Number(sum.toFixed(2))
+  }, [criteriaList, marks])
+
+  const liveGrade = useMemo(() => {
+    return calculateGrade(totalMarks, maxTotalMarks)
+  }, [totalMarks, maxTotalMarks])
 
   // Reset current form
   const handleResetForm = () => {
     setEditingId(null)
     setChestNo("")
-    setMark1("")
-    setMark2("")
-    setMark3("")
-    setMark4("")
+    setMarks({})
     setPositiveRemarks("")
     setNegativeRemarks("")
     setFormError(null)
@@ -172,20 +187,35 @@ export default function JudgeScoringPage() {
       return
     }
 
-    if (mark1 === "" || mark2 === "" || mark3 === "" || mark4 === "") {
-      setFormError("Please fill in marks for all 4 criteria.")
-      return
-    }
-
-    if (num1 > 30 || num2 > 30 || num3 > 20 || num4 > 20) {
-      setFormError("Marks exceed the maximum limit for one or more criteria.")
-      return
+    // Verify all criteria have marks
+    for (let i = 0; i < criteriaList.length; i++) {
+      const c = criteriaList[i]
+      const valStr = marks[c.id]
+      if (valStr === undefined || valStr === "" || valStr.trim() === "") {
+        setFormError(`Please enter marks for Criterion ${i + 1} (${c.name}).`)
+        return
+      }
+      const val = parseFloat(valStr)
+      if (isNaN(val) || val < 0) {
+        setFormError(`Marks for Criterion ${i + 1} must be 0 or higher.`)
+        return
+      }
+      if (val > c.maxMarks) {
+        setFormError(`Marks for Criterion ${i + 1} cannot exceed ${c.maxMarks}.`)
+        return
+      }
     }
 
     if (!assignment) return
 
     setSavingEvaluation(true)
     try {
+      const numericMarks: Record<string, number> = {}
+      criteriaList.forEach((c) => {
+        const val = parseFloat(marks[c.id] || "0") || 0
+        numericMarks[c.id] = Math.min(c.maxMarks, Math.max(0, val))
+      })
+
       const res = await fetch("/api/judge/evaluations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -195,10 +225,12 @@ export default function JudgeScoringPage() {
           judge_id: assignment.judge_id,
           event_id: assignment.event_id,
           chest_no: chestNo.trim().toUpperCase(),
-          mark_criterion_1: num1,
-          mark_criterion_2: num2,
-          mark_criterion_3: num3,
-          mark_criterion_4: num4,
+          marks: numericMarks,
+          max_marks: maxTotalMarks,
+          mark_criterion_1: numericMarks.c1 ?? 0,
+          mark_criterion_2: numericMarks.c2 ?? 0,
+          mark_criterion_3: numericMarks.c3 ?? 0,
+          mark_criterion_4: numericMarks.c4 ?? 0,
           positive_remarks: positiveRemarks,
           negative_remarks: negativeRemarks,
         }),
@@ -216,7 +248,7 @@ export default function JudgeScoringPage() {
         setEvaluations(evalData.evaluations)
       }
 
-      // If add next or saved, reset form
+      // Reset form
       handleResetForm()
       if (addNext) {
         setTimeout(() => {
@@ -235,10 +267,17 @@ export default function JudgeScoringPage() {
   const handleEditEvaluation = (item: Evaluation) => {
     setEditingId(item.id)
     setChestNo(item.chest_no)
-    setMark1(item.mark_criterion_1.toString())
-    setMark2(item.mark_criterion_2.toString())
-    setMark3(item.mark_criterion_3.toString())
-    setMark4(item.mark_criterion_4.toString())
+
+    const loadedMarks: Record<string, string> = {}
+    criteriaList.forEach((c, idx) => {
+      const val =
+        item.marks_breakdown?.[c.id] ??
+        (item as any)[`mark_criterion_${idx + 1}`] ??
+        ""
+      loadedMarks[c.id] = val !== "" && val !== null && val !== undefined ? val.toString() : ""
+    })
+
+    setMarks(loadedMarks)
     setPositiveRemarks(item.positive_remarks || "")
     setNegativeRemarks(item.negative_remarks || "")
     setFormError(null)
@@ -347,7 +386,7 @@ export default function JudgeScoringPage() {
         </div>
       </div>
 
-      {/* CARD 1: Overall Programme Remarks (General review of the total programme) */}
+      {/* CARD 1: Overall Programme Remarks */}
       <Card className="border border-navy/15 bg-ivory/70 shadow-sm">
         <CardHeader className="p-4 sm:p-5 pb-2">
           <div className="flex items-center justify-between">
@@ -466,142 +505,62 @@ export default function JudgeScoringPage() {
             </p>
           </div>
 
-          {/* 4 Divided Marks (30, 30, 20, 20) with Rules explicitly displayed */}
+          {/* Dynamic Criteria Marks with Rules explicitly displayed */}
           <div className="space-y-3 pt-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-black uppercase tracking-wider text-navy flex items-center gap-1.5">
                 <Award className="size-4 text-gold" />
-                Score Division & Rules Compliance (100 Marks Total)
+                Score Division & Rules Compliance ({maxTotalMarks} Marks Total)
               </label>
               <span className="text-[11px] text-slatebrand hidden sm:inline">
-                Evaluate whether participant obeys each specific rule
+                Evaluate whether participant obeys each specific rule ({criteriaList.length} Criteria)
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Criterion 1: Max 30 */}
-              <div className="rounded-2xl border border-navy/15 bg-ivory/50 p-3.5 space-y-2 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-black text-navy">Criterion 1</span>
-                    <Badge className="bg-navy text-gold text-[10px] font-bold">Max 30</Badge>
-                  </div>
-                  <div className="rounded-lg bg-navy/5 p-2 text-[11px] text-slatebrand leading-tight">
-                    <span className="font-bold text-navy">Rule: </span>
-                    {assignment.rule_criterion_1}
-                  </div>
-                </div>
+              {criteriaList.map((crit, idx) => {
+                const markVal = marks[crit.id] || ""
+                const numVal = Math.min(crit.maxMarks, Math.max(0, parseFloat(markVal) || 0))
 
-                <div className="space-y-1 pt-2">
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-slatebrand font-medium">Mark Awarded:</span>
-                    <span className="font-bold text-navy">{num1} / 30</span>
-                  </div>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="30"
-                    step="0.5"
-                    placeholder="0 - 30"
-                    value={mark1}
-                    onChange={(e) => setMark1(e.target.value)}
-                    className="font-mono text-center font-bold text-base bg-white border-navy/20"
-                  />
-                </div>
-              </div>
+                return (
+                  <div
+                    key={crit.id || idx}
+                    className="rounded-2xl border border-navy/15 bg-ivory/50 p-3.5 space-y-2 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-black text-navy">Criterion {idx + 1}</span>
+                        <Badge className="bg-navy text-gold text-[10px] font-bold">
+                          Max {crit.maxMarks}
+                        </Badge>
+                      </div>
+                      <div className="rounded-lg bg-navy/5 p-2 text-[11px] text-slatebrand leading-tight">
+                        <span className="font-bold text-navy">Rule: </span>
+                        {crit.name}
+                      </div>
+                    </div>
 
-              {/* Criterion 2: Max 30 */}
-              <div className="rounded-2xl border border-navy/15 bg-ivory/50 p-3.5 space-y-2 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-black text-navy">Criterion 2</span>
-                    <Badge className="bg-navy text-gold text-[10px] font-bold">Max 30</Badge>
+                    <div className="space-y-1 pt-2">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-slatebrand font-medium">Mark Awarded:</span>
+                        <span className="font-bold text-navy">
+                          {numVal} / {crit.maxMarks}
+                        </span>
+                      </div>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={crit.maxMarks}
+                        step="0.5"
+                        placeholder={`0 - ${crit.maxMarks}`}
+                        value={markVal}
+                        onChange={(e) => handleMarkChange(crit.id, e.target.value)}
+                        className="font-mono text-center font-bold text-base bg-white border-navy/20"
+                      />
+                    </div>
                   </div>
-                  <div className="rounded-lg bg-navy/5 p-2 text-[11px] text-slatebrand leading-tight">
-                    <span className="font-bold text-navy">Rule: </span>
-                    {assignment.rule_criterion_2}
-                  </div>
-                </div>
-
-                <div className="space-y-1 pt-2">
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-slatebrand font-medium">Mark Awarded:</span>
-                    <span className="font-bold text-navy">{num2} / 30</span>
-                  </div>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="30"
-                    step="0.5"
-                    placeholder="0 - 30"
-                    value={mark2}
-                    onChange={(e) => setMark2(e.target.value)}
-                    className="font-mono text-center font-bold text-base bg-white border-navy/20"
-                  />
-                </div>
-              </div>
-
-              {/* Criterion 3: Max 20 */}
-              <div className="rounded-2xl border border-navy/15 bg-ivory/50 p-3.5 space-y-2 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-black text-navy">Criterion 3</span>
-                    <Badge className="bg-navy text-gold text-[10px] font-bold">Max 20</Badge>
-                  </div>
-                  <div className="rounded-lg bg-navy/5 p-2 text-[11px] text-slatebrand leading-tight">
-                    <span className="font-bold text-navy">Rule: </span>
-                    {assignment.rule_criterion_3}
-                  </div>
-                </div>
-
-                <div className="space-y-1 pt-2">
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-slatebrand font-medium">Mark Awarded:</span>
-                    <span className="font-bold text-navy">{num3} / 20</span>
-                  </div>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.5"
-                    placeholder="0 - 20"
-                    value={mark3}
-                    onChange={(e) => setMark3(e.target.value)}
-                    className="font-mono text-center font-bold text-base bg-white border-navy/20"
-                  />
-                </div>
-              </div>
-
-              {/* Criterion 4: Max 20 */}
-              <div className="rounded-2xl border border-navy/15 bg-ivory/50 p-3.5 space-y-2 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-black text-navy">Criterion 4</span>
-                    <Badge className="bg-navy text-gold text-[10px] font-bold">Max 20</Badge>
-                  </div>
-                  <div className="rounded-lg bg-navy/5 p-2 text-[11px] text-slatebrand leading-tight">
-                    <span className="font-bold text-navy">Rule: </span>
-                    {assignment.rule_criterion_4}
-                  </div>
-                </div>
-
-                <div className="space-y-1 pt-2">
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-slatebrand font-medium">Mark Awarded:</span>
-                    <span className="font-bold text-navy">{num4} / 20</span>
-                  </div>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.5"
-                    placeholder="0 - 20"
-                    value={mark4}
-                    onChange={(e) => setMark4(e.target.value)}
-                    className="font-mono text-center font-bold text-base bg-white border-navy/20"
-                  />
-                </div>
-              </div>
+                )
+              })}
             </div>
           </div>
 
@@ -617,7 +576,12 @@ export default function JudgeScoringPage() {
                     Automatic Evaluation Calculation
                   </div>
                   <div className="text-sm font-semibold text-navy">
-                    Criterion 1 ({num1}) + Criterion 2 ({num2}) + Criterion 3 ({num3}) + Criterion 4 ({num4})
+                    {criteriaList
+                      .map((c, idx) => {
+                        const v = Math.min(c.maxMarks, Math.max(0, parseFloat(marks[c.id] || "0") || 0))
+                        return `C${idx + 1} (${v})`
+                      })
+                      .join(" + ")}
                   </div>
                 </div>
               </div>
@@ -629,7 +593,8 @@ export default function JudgeScoringPage() {
                     Total
                   </div>
                   <div className="text-xl font-black font-mono text-navy">
-                    {totalMarks} <span className="text-xs text-slatebrand">/ 100</span>
+                    {totalMarks}{" "}
+                    <span className="text-xs text-slatebrand">/ {maxTotalMarks}</span>
                   </div>
                 </div>
 
@@ -663,19 +628,19 @@ export default function JudgeScoringPage() {
             <div className="mt-3 pt-2.5 border-t border-navy/10 flex flex-wrap items-center justify-center sm:justify-start gap-3 text-[11px] text-slatebrand">
               <span className="font-bold text-navy">Grading Scale:</span>
               <span className="inline-flex items-center gap-1">
-                <strong className="text-amber-800">A+</strong>: &gt;= 90 Marks
+                <strong className="text-amber-800">A+</strong>: &gt;= 90%
               </span>
               <span>•</span>
               <span className="inline-flex items-center gap-1">
-                <strong className="text-emerald-800">A</strong>: 80 - 89 Marks
+                <strong className="text-emerald-800">A</strong>: 80 - 89%
               </span>
               <span>•</span>
               <span className="inline-flex items-center gap-1">
-                <strong className="text-blue-800">B</strong>: 70 - 79 Marks
+                <strong className="text-blue-800">B</strong>: 70 - 79%
               </span>
               <span>•</span>
               <span className="inline-flex items-center gap-1">
-                <strong className="text-purple-800">C</strong>: 60 - 69 Marks
+                <strong className="text-purple-800">C</strong>: 60 - 69%
               </span>
             </div>
           </div>
@@ -719,31 +684,36 @@ export default function JudgeScoringPage() {
               type="button"
               variant="outline"
               onClick={handleResetForm}
-              className="w-full sm:w-auto text-xs bg-white text-navy border-navy/20 hover:bg-navy/5 font-semibold"
+              disabled={savingEvaluation}
+              className="w-full sm:w-auto text-xs h-9 bg-white text-navy border-navy/20 hover:bg-navy/5 font-semibold"
             >
-              Reset Form
+              Clear Form
             </Button>
 
             <Button
               type="button"
               onClick={() => handleSubmitEvaluation(false)}
               disabled={savingEvaluation}
-              variant="outline"
-              className="w-full sm:w-auto text-xs font-bold bg-navy/10 text-navy border-navy/20 hover:bg-navy/15"
+              className="w-full sm:w-auto bg-[#0A1D2C] hover:bg-[#123B4F] text-white text-xs h-9 font-bold shadow-sm"
             >
               {savingEvaluation ? (
-                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  Saving...
+                </>
               ) : (
-                <Save className="mr-1.5 size-3.5" />
+                <>
+                  <Save className="mr-1.5 size-3.5" />
+                  {editingId ? "Update Score" : "Submit Score"}
+                </>
               )}
-              {editingId ? "Update Score" : "Save Score"}
             </Button>
 
             <Button
               type="button"
               onClick={() => handleSubmitEvaluation(true)}
               disabled={savingEvaluation}
-              className="w-full sm:w-auto bg-[#0A1D2C] hover:bg-[#123B4F] text-white text-xs font-bold shadow-md hover:scale-[1.02] transition-all"
+              className="w-full sm:w-auto bg-gradient-to-r from-gold via-amber-400 to-gold hover:from-[#c9a22e] hover:to-[#c9a22e] text-navy text-xs h-9 font-black shadow-md border-0"
             >
               {savingEvaluation ? (
                 <>
@@ -792,19 +762,16 @@ export default function JudgeScoringPage() {
                     <tr>
                       <th className="py-3 px-3 text-center">Sl</th>
                       <th className="py-3 px-3">Chest No</th>
-                      <th className="py-3 px-2 text-center" title={assignment.rule_criterion_1}>
-                        C1 (30)
-                      </th>
-                      <th className="py-3 px-2 text-center" title={assignment.rule_criterion_2}>
-                        C2 (30)
-                      </th>
-                      <th className="py-3 px-2 text-center" title={assignment.rule_criterion_3}>
-                        C3 (20)
-                      </th>
-                      <th className="py-3 px-2 text-center" title={assignment.rule_criterion_4}>
-                        C4 (20)
-                      </th>
-                      <th className="py-3 px-2 text-center font-bold">Total (100)</th>
+                      {criteriaList.map((crit, idx) => (
+                        <th
+                          key={crit.id || idx}
+                          className="py-3 px-2 text-center"
+                          title={crit.name}
+                        >
+                          C{idx + 1} ({crit.maxMarks})
+                        </th>
+                      ))}
+                      <th className="py-3 px-2 text-center font-bold">Total ({maxTotalMarks})</th>
                       <th className="py-3 px-2 text-center font-bold">Grade</th>
                       <th className="py-3 px-3">Positive Remarks</th>
                       <th className="py-3 px-3">Negative Remarks</th>
@@ -820,10 +787,17 @@ export default function JudgeScoringPage() {
                         <td className="py-2.5 px-3 font-mono font-bold text-navy">
                           #{item.chest_no}
                         </td>
-                        <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_1}</td>
-                        <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_2}</td>
-                        <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_3}</td>
-                        <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_4}</td>
+                        {criteriaList.map((crit, cIdx) => {
+                          const val =
+                            item.marks_breakdown?.[crit.id] ??
+                            (item as any)[`mark_criterion_${cIdx + 1}`] ??
+                            0
+                          return (
+                            <td key={crit.id || cIdx} className="py-2.5 px-2 text-center font-mono">
+                              {val}
+                            </td>
+                          )
+                        })}
                         <td className="py-2.5 px-2 text-center font-mono font-black text-navy text-sm">
                           {item.total_marks}
                         </td>
@@ -928,29 +902,27 @@ export default function JudgeScoringPage() {
                           Grade {item.grade}
                         </span>
                         <div className="font-mono font-black text-sm text-navy">
-                          {item.total_marks}/100
+                          {item.total_marks}/{maxTotalMarks}
                         </div>
                       </div>
                     </div>
 
                     {/* Breakdown */}
-                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                      <div className="rounded bg-white p-1.5 border border-navy/5">
-                        <div className="text-[10px] text-slatebrand">C1 (30)</div>
-                        <div className="font-bold font-mono">{item.mark_criterion_1}</div>
-                      </div>
-                      <div className="rounded bg-white p-1.5 border border-navy/5">
-                        <div className="text-[10px] text-slatebrand">C2 (30)</div>
-                        <div className="font-bold font-mono">{item.mark_criterion_2}</div>
-                      </div>
-                      <div className="rounded bg-white p-1.5 border border-navy/5">
-                        <div className="text-[10px] text-slatebrand">C3 (20)</div>
-                        <div className="font-bold font-mono">{item.mark_criterion_3}</div>
-                      </div>
-                      <div className="rounded bg-white p-1.5 border border-navy/5">
-                        <div className="text-[10px] text-slatebrand">C4 (20)</div>
-                        <div className="font-bold font-mono">{item.mark_criterion_4}</div>
-                      </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-center text-xs">
+                      {criteriaList.map((crit, cIdx) => {
+                        const val =
+                          item.marks_breakdown?.[crit.id] ??
+                          (item as any)[`mark_criterion_${cIdx + 1}`] ??
+                          0
+                        return (
+                          <div key={crit.id || cIdx} className="rounded bg-white p-1.5 border border-navy/5">
+                            <div className="text-[10px] text-slatebrand">
+                              C{cIdx + 1} ({crit.maxMarks})
+                            </div>
+                            <div className="font-bold font-mono">{val}</div>
+                          </div>
+                        )
+                      })}
                     </div>
 
                     {/* Remarks if any */}

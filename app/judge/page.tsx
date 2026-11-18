@@ -17,6 +17,7 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react"
+import { Criterion, buildFallbackCriteria } from "@/lib/judge-criteria"
 
 interface AssignedProgramme {
   id: string
@@ -26,6 +27,7 @@ interface AssignedProgramme {
   rule_criterion_2: string
   rule_criterion_3: string
   rule_criterion_4: string
+  criteria?: Criterion[]
   overall_remarks?: string | null
   created_at: string
   evaluations_count?: number
@@ -98,35 +100,31 @@ export default function JudgeDashboard() {
       {error && (
         <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
           <AlertCircle className="size-5 shrink-0" />
-          <div>
-            <p className="font-bold">Notice</p>
-            <p>{error}</p>
-          </div>
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Assigned Programmes Section */}
+      {/* Assigned Programmes Grid */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base sm:text-lg font-black text-navy flex items-center gap-2">
+          <h2 className="text-base font-bold text-navy flex items-center gap-2">
             <BookOpen className="size-5 text-gold" />
             Your Assigned Programmes ({assignments.length})
           </h2>
           <span className="text-xs text-slatebrand">
-            Click on any programme to start scoring
+            Click any programme to start scoring participants
           </span>
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-navy/10 bg-white/60 py-16 text-slatebrand">
+          <div className="flex flex-col items-center justify-center py-16 text-slatebrand">
             <Loader2 className="size-8 animate-spin text-gold" />
-            <p className="mt-3 text-sm font-bold text-navy">Loading your assigned programmes...</p>
-            <p className="text-xs text-slatebrand">Please wait a moment</p>
+            <span className="mt-3 text-sm font-semibold text-navy">Loading your programmes...</span>
           </div>
         ) : assignments.length === 0 ? (
-          <Card className="border-dashed border-2 border-navy/15 bg-white/70 p-12 text-center">
-            <Scale className="mx-auto size-12 text-navy/20" />
-            <h3 className="mt-3 text-base font-bold text-navy">No Programmes Assigned Yet</h3>
+          <Card className="rounded-2xl border border-dashed border-navy/15 bg-white/70 p-12 text-center">
+            <Scale className="mx-auto size-12 text-slatebrand/30" />
+            <h3 className="mt-3 text-base font-bold text-navy">No Assigned Programmes</h3>
             <p className="mt-1 text-xs text-slatebrand max-w-md mx-auto">
               You do not have any programmes assigned for scoring at the moment. Please contact the festival coordinator or administrator to assign your events.
             </p>
@@ -135,6 +133,15 @@ export default function JudgeDashboard() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {assignments.map((item) => {
               const evalCount = item.evaluations_count || 0
+              const itemCriteria =
+                item.criteria && item.criteria.length > 0
+                  ? item.criteria
+                  : buildFallbackCriteria(item)
+              const totalMax = itemCriteria.reduce(
+                (sum, c) => sum + (Number(c.maxMarks) || 0),
+                0
+              )
+
               return (
                 <Card
                   key={item.id}
@@ -164,26 +171,26 @@ export default function JudgeDashboard() {
                   <CardContent className="p-5 pt-0 space-y-4">
                     {/* Rubrics snapshot */}
                     <div className="rounded-xl border border-navy/10 bg-mist/80 p-3 text-[11px] space-y-1.5 text-slatebrand">
-                      <div className="font-bold text-navy text-xs mb-1 flex items-center gap-1.5">
-                        <ClipboardList className="size-3.5 text-gold" />
-                        Scoring Breakdown (100 Marks):
+                      <div className="font-bold text-navy text-xs mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <ClipboardList className="size-3.5 text-gold" />
+                          Criteria Rules ({itemCriteria.length}):
+                        </span>
+                        <span className="font-bold text-navy">Total {totalMax}m</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="truncate pr-2">1. {item.rule_criterion_1}</span>
-                        <span className="font-bold text-navy shrink-0">30m</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="truncate pr-2">2. {item.rule_criterion_2}</span>
-                        <span className="font-bold text-navy shrink-0">30m</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="truncate pr-2">3. {item.rule_criterion_3}</span>
-                        <span className="font-bold text-navy shrink-0">20m</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="truncate pr-2">4. {item.rule_criterion_4}</span>
-                        <span className="font-bold text-navy shrink-0">20m</span>
-                      </div>
+                      {itemCriteria.slice(0, 4).map((c, i) => (
+                        <div key={c.id || i} className="flex justify-between">
+                          <span className="truncate pr-2">
+                            {i + 1}. {c.name}
+                          </span>
+                          <span className="font-bold text-navy shrink-0">{c.maxMarks}m</span>
+                        </div>
+                      ))}
+                      {itemCriteria.length > 4 && (
+                        <div className="text-[10px] text-slatebrand/80 italic text-right">
+                          +{itemCriteria.length - 4} more criteria configured
+                        </div>
+                      )}
                     </div>
 
                     {/* Progress Bar & Status */}

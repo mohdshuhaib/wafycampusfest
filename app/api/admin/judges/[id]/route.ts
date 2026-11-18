@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import {
+  attachCriteriaToAssignments,
+  attachMarksToEvaluations,
+} from '@/lib/judge-criteria'
 
 export async function GET(
   _request: NextRequest,
@@ -43,10 +47,13 @@ export async function GET(
 
     if (evalErr) throw evalErr
 
+    const enrichedAssignments = await attachCriteriaToAssignments(supabase, assignments || [])
+    const enrichedEvaluations = await attachMarksToEvaluations(supabase, evaluations || [])
+
     return NextResponse.json({
       judge,
-      assignments: assignments || [],
-      evaluations: evaluations || [],
+      assignments: enrichedAssignments,
+      evaluations: enrichedEvaluations,
     })
   } catch (error: any) {
     console.error('Error fetching judge details:', error)
@@ -65,7 +72,7 @@ export async function DELETE(
     const { id } = await params
     const supabase = createAdminClient()
 
-    // 1. Delete assignments & evaluations (cascaded if FK set, or explicit)
+    // 1. Delete assignments & evaluations
     await supabase.from('judge_evaluations').delete().eq('judge_id', id)
     await supabase.from('judge_assignments').delete().eq('judge_id', id)
     await supabase.from('judges').delete().eq('id', id)

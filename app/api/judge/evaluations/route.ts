@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import {
+  attachMarksToEvaluations,
+  saveEvaluationMarks,
+  calculateGrade,
+} from '@/lib/judge-criteria'
 
-// Grade Calculation Rule
-export function calculateGrade(total: number): string {
-  if (total >= 90) return 'A+'
-  if (total >= 80) return 'A'
-  if (total >= 70) return 'B'
-  if (total >= 60) return 'C'
-  return 'None'
-}
+export { calculateGrade }
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,7 +35,9 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
     if (error) throw error
 
-    return NextResponse.json({ evaluations: data || [] })
+    const enriched = await attachMarksToEvaluations(supabase, data || [])
+
+    return NextResponse.json({ evaluations: enriched })
   } catch (error: any) {
     console.error('Error fetching judge evaluations:', error)
     return NextResponse.json(
@@ -61,6 +59,8 @@ export async function POST(request: NextRequest) {
       student_id,
       student_name,
       team_name,
+      marks, // Record<string, number>
+      max_marks, // total max possible marks
       mark_criterion_1,
       mark_criterion_2,
       mark_criterion_3,
@@ -76,14 +76,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Parse and clamp marks
-    const m1 = Math.min(30, Math.max(0, Number(mark_criterion_1) || 0))
-    const m2 = Math.min(30, Math.max(0, Number(mark_criterion_2) || 0))
-    const m3 = Math.min(20, Math.max(0, Number(mark_criterion_3) || 0))
-    const m4 = Math.min(20, Math.max(0, Number(mark_criterion_4) || 0))
+    // Build consolidated marks dictionary
+    const marksBreakdown: Record<string, number> = {}
 
-    const total_marks = Number((m1 + m2 + m3 + m4).toFixed(2))
-    const grade = calculateGrade(total_marks)
+    if (marks && typeof marks === 'object') {
+      for (const [k, v] of Object.entries(marks)) {
+        marksBreakdown[k] = Math.max(0, Number(v) || 0)
+      }
+    }
+
+    const m1 = marksBreakdown.c1 !== undefined ? marksBreakdown.c1 : Math.max(0, Number(mark_criterion_1) || 0)
+    const m2 = marksBreakdown.c2 !== undefined ? marksBreakdown.c2 : Math.max(0, Number(mark_criterion_2) || 0)
+    const m3 = marksBreakdown.c3 !== undefined ? marksBreakdown.c3 : Math.max(0, Number(mark_criterion_3) || 0)
+    const m4 = marksBreakdown.c4 !== undefined ? marksBreakdown.c4 : Math.max(0, Number(mark_criterion_4) || 0)
+
+    marksBreakdown.c1 = m1
+    marksBreakdown.c2 = m2
+    marksBreakdown.c3 = m3
+    marksBreakdown.c4 = m4
+
+    // Sum all marks across all criteria
+    const total_marks = Number(
+      Object.values(marksBreakdown)
+        .reduce((sum, current) => sum + current, 0)
+        .toFixed(2)
+    )
+
+    const totalMax = Number(max_marks) || 100
+    const grade = calculateGrade(total_marks, totalMax)
 
     const supabase = createAdminClient()
 
@@ -158,7 +178,17 @@ export async function POST(request: NextRequest) {
 
     if (resultErr) throw resultErr
 
-    return NextResponse.json({ evaluation: resultData })
+    // Save full marks breakdown into site_assets
+    if (resultData?.id) {
+      await saveEvaluationMarks(supabase, resultData.id, marksBreakdown)
+    }
+
+    return NextResponse.json({
+      evaluation: {
+        ...resultData,
+        marks_breakdown: marksBreakdown,
+      },
+    })
   } catch (error: any) {
     console.error('Error saving judge evaluation:', error)
     return NextResponse.json(
@@ -178,6 +208,14 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = createAdminClient()
+
+    // Delete marks breakdown from site_assets
+    try {
+      await supabase.from('site_assets').delete().eq('key', `judge_evaluation_marks_${id}`)
+    } catch {
+      // ignore
+    }
+
     const { error } = await supabase
       .from('judge_evaluations')
       .delete()

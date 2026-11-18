@@ -25,22 +25,16 @@ import {
   Scale,
   Plus,
   Search,
-  Users,
-  Award,
   BookOpen,
-  Calendar,
   CheckCircle2,
   Trash2,
-  ExternalLink,
   ChevronRight,
   Eye,
   Loader2,
   Sparkles,
   Printer,
-  FileSpreadsheet,
   AlertCircle,
   Mail,
-  Lock,
   UserCheck,
   ClipboardList,
   MessageSquare,
@@ -49,6 +43,7 @@ import {
 } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { Criterion, DEFAULT_CRITERIA, buildFallbackCriteria } from "@/lib/judge-criteria"
 
 interface Judge {
   id: string
@@ -68,6 +63,7 @@ interface AssignedProgramme {
   rule_criterion_2: string
   rule_criterion_3: string
   rule_criterion_4: string
+  criteria?: Criterion[]
   overall_remarks?: string | null
   created_at: string
   event?: {
@@ -90,6 +86,7 @@ interface Evaluation {
   mark_criterion_2: number
   mark_criterion_3: number
   mark_criterion_4: number
+  marks_breakdown?: Record<string, number>
   total_marks: number
   grade: string
   positive_remarks: string | null
@@ -118,15 +115,32 @@ export default function AdminJudgesPage() {
 
   // Assign Programme Modal state
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  const [assignMode, setAssignMode] = useState<"existing" | "manual">("existing")
   const [assignEventId, setAssignEventId] = useState("")
-  const [rule1, setRule1] = useState("Content & Structure (Max 30)")
-  const [rule2, setRule2] = useState("Clarity & Expression (Max 30)")
-  const [rule3, setRule3] = useState("Timing & Discipline (Max 20)")
-  const [rule4, setRule4] = useState("Overall Impact & Accuracy (Max 20)")
+
+  // Manual Event Creation Fields
+  const [manualEventName, setManualEventName] = useState("")
+  const [manualEventCode, setManualEventCode] = useState("")
+  const [manualEventCategory, setManualEventCategory] = useState("ON STAGE")
+  const [manualEventGrade, setManualEventGrade] = useState("A")
+
+  // Dynamic Criteria State (Default 4 Criteria, expandable to 5, 6, etc.)
+  const [criteria, setCriteria] = useState<Criterion[]>([
+    { id: "c1", name: "Content & Structure (Max 30)", maxMarks: 30 },
+    { id: "c2", name: "Clarity & Expression (Max 30)", maxMarks: 30 },
+    { id: "c3", name: "Timing & Discipline (Max 20)", maxMarks: 20 },
+    { id: "c4", name: "Overall Impact & Accuracy (Max 20)", maxMarks: 20 },
+  ])
+
   const [assigningProgramme, setAssigningProgramme] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
 
   const supabase = createClient()
+
+  // Calculate live total max marks configured
+  const totalMaxMarks = useMemo(() => {
+    return criteria.reduce((sum, c) => sum + (Number(c.maxMarks) || 0), 0)
+  }, [criteria])
 
   // Fetch initial data
   const fetchData = async () => {
@@ -228,30 +242,85 @@ export default function AdminJudgesPage() {
     }
   }
 
+  // Criteria manipulation handlers
+  const handleAddCriterion = () => {
+    const nextNum = criteria.length + 1
+    setCriteria((prev) => [
+      ...prev,
+      {
+        id: `c${nextNum}`,
+        name: `Criterion ${nextNum} Rule (Max 10)`,
+        maxMarks: 10,
+      },
+    ])
+  }
+
+  const handleRemoveCriterion = (idx: number) => {
+    if (criteria.length <= 1) return
+    setCriteria((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleUpdateCriterion = (idx: number, field: "name" | "maxMarks", val: any) => {
+    setCriteria((prev) =>
+      prev.map((c, i) => (i === idx ? { ...c, [field]: val } : c))
+    )
+  }
+
   // Handle Assign Programme
   const handleAssignProgramme = async (e: React.FormEvent) => {
     e.preventDefault()
     setAssignError(null)
 
     if (!selectedJudge) return
-    if (!assignEventId) {
-      setAssignError("Please select a programme / event.")
+
+    if (assignMode === "existing" && !assignEventId) {
+      setAssignError("Please choose an existing programme / event.")
       return
+    }
+
+    if (assignMode === "manual" && !manualEventName.trim()) {
+      setAssignError("Please enter the name for the manual event.")
+      return
+    }
+
+    if (criteria.length === 0) {
+      setAssignError("Please configure at least one evaluation criterion.")
+      return
+    }
+
+    for (let i = 0; i < criteria.length; i++) {
+      if (!criteria[i].name?.trim()) {
+        setAssignError(`Please enter a rule / description for Criterion ${i + 1}.`)
+        return
+      }
+      if (criteria[i].maxMarks <= 0) {
+        setAssignError(`Max marks for Criterion ${i + 1} must be greater than 0.`)
+        return
+      }
     }
 
     setAssigningProgramme(true)
     try {
+      const payload: any = {
+        judge_id: selectedJudge.id,
+        criteria,
+      }
+
+      if (assignMode === "manual") {
+        payload.manual_event = {
+          name: manualEventName.trim(),
+          event_code: manualEventCode.trim() || undefined,
+          category: manualEventCategory,
+          grade_type: manualEventGrade,
+        }
+      } else {
+        payload.event_id = assignEventId
+      }
+
       const res = await fetch("/api/admin/judge-assignments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          judge_id: selectedJudge.id,
-          event_id: assignEventId,
-          rule_criterion_1: rule1,
-          rule_criterion_2: rule2,
-          rule_criterion_3: rule3,
-          rule_criterion_4: rule4,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await res.json()
@@ -261,6 +330,14 @@ export default function AdminJudgesPage() {
 
       setIsAssignModalOpen(false)
       setAssignEventId("")
+      setManualEventName("")
+      setManualEventCode("")
+      setCriteria([
+        { id: "c1", name: "Content & Structure (Max 30)", maxMarks: 30 },
+        { id: "c2", name: "Clarity & Expression (Max 30)", maxMarks: 30 },
+        { id: "c3", name: "Timing & Discipline (Max 20)", maxMarks: 20 },
+        { id: "c4", name: "Overall Impact & Accuracy (Max 20)", maxMarks: 20 },
+      ])
       // Refresh assignments
       await handleSelectJudge(selectedJudge)
       await fetchData()
@@ -278,14 +355,14 @@ export default function AdminJudgesPage() {
       const res = await fetch(`/api/admin/judge-assignments?id=${assignmentId}`, {
         method: "DELETE",
       })
-      if (!res.ok) throw new Error("Failed to remove")
+      if (!res.ok) throw new Error("Failed to remove assignment")
       if (selectedAssignment?.id === assignmentId) {
         setSelectedAssignment(null)
       }
       if (selectedJudge) {
         await handleSelectJudge(selectedJudge)
-        await fetchData()
       }
+      await fetchData()
     } catch (err) {
       alert("Error removing assignment: " + err)
     }
@@ -293,7 +370,7 @@ export default function AdminJudgesPage() {
 
   // Handle Delete Judge
   const handleDeleteJudge = async (judgeId: string) => {
-    if (!confirm("Are you sure you want to delete this judge account completely?")) return
+    if (!confirm("Are you sure you want to permanently delete this judge account, their assignments, and scores?")) return
     try {
       const res = await fetch(`/api/admin/judges/${judgeId}`, {
         method: "DELETE",
@@ -328,10 +405,24 @@ export default function AdminJudgesPage() {
     )
   }, [judgeEvaluations, selectedAssignment])
 
+  // Criteria for currently selected assignment
+  const activeAssignmentCriteria = useMemo(() => {
+    if (!selectedAssignment) return []
+    if (selectedAssignment.criteria && selectedAssignment.criteria.length > 0) {
+      return selectedAssignment.criteria
+    }
+    return buildFallbackCriteria(selectedAssignment)
+  }, [selectedAssignment])
+
+  const activeTotalMaxMarks = useMemo(() => {
+    return activeAssignmentCriteria.reduce((sum, c) => sum + (Number(c.maxMarks) || 0), 0)
+  }, [activeAssignmentCriteria])
+
   // Export Judge Scores PDF
   const handleExportPDF = () => {
     if (!selectedAssignment || !selectedJudge) return
 
+    const criteriaList = activeAssignmentCriteria
     const doc = new jsPDF("p", "mm", "a4")
     const progTitle = `${selectedAssignment.event?.event_code || ""} - ${selectedAssignment.event?.name || "Programme"}`
 
@@ -363,71 +454,73 @@ export default function AdminJudgesPage() {
     doc.text(`Email: ${selectedJudge.email}`, 130, 42)
 
     // Rubric / Criteria Box
+    const boxHeight = Math.max(18, 6 + Math.ceil(criteriaList.length / 2) * 6)
     doc.setFillColor(245, 248, 250)
-    doc.roundedRect(14, 46, 182, 18, 2, 2, "F")
-    doc.setFontSize(8)
+    doc.roundedRect(14, 46, 182, boxHeight, 2, 2, "F")
+    doc.setFontSize(7.5)
     doc.setTextColor(90, 109, 126)
-    doc.text(`Crit 1 (Max 30): ${selectedAssignment.rule_criterion_1}`, 18, 52)
-    doc.text(`Crit 2 (Max 30): ${selectedAssignment.rule_criterion_2}`, 18, 58)
-    doc.text(`Crit 3 (Max 20): ${selectedAssignment.rule_criterion_3}`, 110, 52)
-    doc.text(`Crit 4 (Max 20): ${selectedAssignment.rule_criterion_4}`, 110, 58)
 
-    // Table
-    const tableData = assignmentEvaluations.map((ev, idx) => [
-      idx + 1,
-      ev.chest_no,
-      ev.student_name || "—",
-      ev.team_name || "—",
-      ev.mark_criterion_1,
-      ev.mark_criterion_2,
-      ev.mark_criterion_3,
-      ev.mark_criterion_4,
-      ev.total_marks,
-      ev.grade,
-      ev.positive_remarks || "—",
-      ev.negative_remarks || "—",
-    ])
+    criteriaList.forEach((c, i) => {
+      const col = i % 2
+      const row = Math.floor(i / 2)
+      const x = col === 0 ? 18 : 105
+      const y = 52 + row * 6
+      const label = `Crit ${i + 1} (Max ${c.maxMarks}): ${c.name}`
+      doc.text(label.length > 55 ? label.slice(0, 52) + "..." : label, x, y)
+    })
+
+    const startTableY = 48 + boxHeight + 4
+
+    // Dynamic Table Headers & Data
+    const headRow = [
+      "Sl",
+      "Chest",
+      "Student",
+      "Team",
+      ...criteriaList.map((c, i) => `C${i + 1}(${c.maxMarks})`),
+      `Tot(${activeTotalMaxMarks})`,
+      "Grd",
+      "Positive Remarks",
+      "Negative Remarks",
+    ]
+
+    const tableData = assignmentEvaluations.map((ev, idx) => {
+      const criteriaCols = criteriaList.map((c, cIdx) => {
+        return ev.marks_breakdown?.[c.id] ?? (ev as any)[`mark_criterion_${cIdx + 1}`] ?? 0
+      })
+
+      return [
+        idx + 1,
+        ev.chest_no,
+        ev.student_name || "—",
+        ev.team_name || "—",
+        ...criteriaCols,
+        ev.total_marks,
+        ev.grade,
+        ev.positive_remarks || "—",
+        ev.negative_remarks || "—",
+      ]
+    })
 
     autoTable(doc, {
-      startY: 68,
-      head: [
-        [
-          "Sl",
-          "Chest",
-          "Student",
-          "Team",
-          "C1(30)",
-          "C2(30)",
-          "C3(20)",
-          "C4(20)",
-          "Tot(100)",
-          "Grd",
-          "Positive Remarks",
-          "Negative Remarks",
-        ],
-      ],
+      startY: startTableY,
+      head: [headRow],
       body: tableData,
       theme: "grid",
       headStyles: {
         fillColor: [18, 59, 79],
         textColor: [255, 255, 255],
-        fontSize: 7.5,
+        fontSize: 7,
         halign: "center",
       },
       styles: {
-        fontSize: 7,
+        fontSize: 6.5,
         textColor: [27, 33, 39],
-        cellPadding: 2,
+        cellPadding: 1.5,
       },
       columnStyles: {
-        0: { halign: "center", cellWidth: 8 },
-        1: { halign: "center", fontStyle: "bold", cellWidth: 14 },
-        4: { halign: "center", cellWidth: 12 },
-        5: { halign: "center", cellWidth: 12 },
-        6: { halign: "center", cellWidth: 12 },
-        7: { halign: "center", cellWidth: 12 },
-        8: { halign: "center", fontStyle: "bold", cellWidth: 14 },
-        9: { halign: "center", fontStyle: "bold", cellWidth: 10 },
+        0: { halign: "center", cellWidth: 7 },
+        1: { halign: "center", fontStyle: "bold", cellWidth: 12 },
       },
     })
 
@@ -458,43 +551,45 @@ export default function AdminJudgesPage() {
   }
 
   return (
-    <div className="space-y-6 font-['Anek_Malayalam',sans-serif] text-navy">
-      {/* Header Banner */}
+    <div className="space-y-6 font-['Anek_Malayalam',sans-serif]">
+      {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold text-gold">
-            <Scale className="size-3.5" />
-            Judges Command Center
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1 text-xs font-bold text-navy">
+            <Sparkles className="size-3.5 text-gold" />
+            Arts Fest Official Evaluation Panel
           </div>
-          <h1 className="mt-1 text-2xl font-black tracking-tight text-navy sm:text-3xl">
-            Judges & Scoring Portals
+          <h1 className="mt-1 text-2xl font-black text-navy sm:text-3xl">
+            Judges & Programme Evaluation
           </h1>
-          <p className="mt-0.5 text-sm text-slatebrand">
-            Manage festival judges, assign programmes with 4-criterion rubrics, and view live results.
+          <p className="text-xs sm:text-sm text-slatebrand">
+            Create judge accounts, assign programmes with customized multi-criteria rules, and view submitted participant scores.
           </p>
         </div>
 
-        <Button
-          onClick={() => {
-            setFormError(null)
-            setIsAddJudgeOpen(true)
-          }}
-          className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white shadow-md transition-all hover:scale-[1.02] font-bold"
-        >
-          <Plus className="mr-2 size-4" />
-          Add New Judge
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => {
+              setFormError(null)
+              setIsAddJudgeOpen(true)
+            }}
+            className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white shadow font-bold text-xs sm:text-sm"
+          >
+            <Plus className="mr-1.5 size-4" />
+            Add New Judge
+          </Button>
+        </div>
       </div>
 
-      {/* Main Grid: Left = Judges List, Right = Selected Judge View */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      {/* Main Grid: Left Judges Directory, Right Judge Workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Judges List */}
         <div className="lg:col-span-5 space-y-4">
-          <Card className="border border-navy/10 bg-ivory/80 shadow-sm backdrop-blur">
-            <CardHeader className="p-4 pb-3">
+          <Card className="border border-navy/10 bg-white/90 shadow-sm">
+            <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <Users className="size-4 text-gold" />
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-slatebrand flex items-center gap-1.5">
+                  <Scale className="size-4 text-gold" />
                   Judges Directory ({judges.length})
                 </CardTitle>
               </div>
@@ -615,6 +710,9 @@ export default function AdminJudgesPage() {
                         onClick={() => {
                           setAssignError(null)
                           setAssignEventId("")
+                          setManualEventName("")
+                          setManualEventCode("")
+                          setAssignMode("existing")
                           setIsAssignModalOpen(true)
                         }}
                         className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white text-xs h-8 font-bold"
@@ -680,6 +778,10 @@ export default function AdminJudgesPage() {
                           (e.judge_id === assignment.judge_id && e.event_id === assignment.event_id)
                       )
 
+                      const progCriteria = assignment.criteria && assignment.criteria.length > 0
+                        ? assignment.criteria
+                        : buildFallbackCriteria(assignment)
+
                       return (
                         <div
                           key={assignment.id}
@@ -706,47 +808,41 @@ export default function AdminJudgesPage() {
                                 </Badge>
                               </div>
 
-                              {/* Rubrics Preview */}
-                              <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slatebrand">
-                                <div className="rounded bg-navy/5 p-1.5">
-                                  <span className="font-bold text-navy">1 (30m):</span>{" "}
-                                  <span className="truncate block">{assignment.rule_criterion_1}</span>
-                                </div>
-                                <div className="rounded bg-navy/5 p-1.5">
-                                  <span className="font-bold text-navy">2 (30m):</span>{" "}
-                                  <span className="truncate block">{assignment.rule_criterion_2}</span>
-                                </div>
-                                <div className="rounded bg-navy/5 p-1.5">
-                                  <span className="font-bold text-navy">3 (20m):</span>{" "}
-                                  <span className="truncate block">{assignment.rule_criterion_3}</span>
-                                </div>
-                                <div className="rounded bg-navy/5 p-1.5">
-                                  <span className="font-bold text-navy">4 (20m):</span>{" "}
-                                  <span className="truncate block">{assignment.rule_criterion_4}</span>
-                                </div>
+                              {/* Rubrics Preview with Dynamic Criteria */}
+                              <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-slatebrand">
+                                {progCriteria.map((c, idx) => (
+                                  <div
+                                    key={c.id || idx}
+                                    className="rounded bg-navy/5 px-2 py-1 flex items-center gap-1"
+                                    title={c.name}
+                                  >
+                                    <span className="font-bold text-navy">C{idx + 1} ({c.maxMarks}m):</span>
+                                    <span className="truncate max-w-[120px] block">{c.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="mt-2 flex items-center gap-3 text-xs text-slatebrand">
+                                <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                                  <CheckCircle2 className="size-3.5" />
+                                  {evals.length} Participants Evaluated
+                                </span>
+                                <span>•</span>
+                                <span className="text-[11px]">
+                                  {progCriteria.length} Criteria Configured
+                                </span>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                              <Badge
-                                variant={evals.length > 0 ? "default" : "outline"}
-                                className={`text-xs ${
-                                  evals.length > 0
-                                    ? "bg-emerald-600 text-white"
-                                    : "border-slatebrand/30 text-slatebrand"
-                                }`}
-                              >
-                                {evals.length} Evaluated
-                              </Badge>
-
+                            <div className="flex items-center gap-2 self-start sm:self-center">
                               <Button
                                 size="sm"
-                                variant="outline"
+                                variant={isProgSelected ? "default" : "outline"}
                                 onClick={() => setSelectedAssignment(assignment)}
-                                className={`text-xs h-8 font-bold ${
+                                className={`text-xs h-8 ${
                                   isProgSelected
-                                    ? "bg-[#0A1D2C] text-white border-[#0A1D2C]"
-                                    : "bg-white text-navy border-navy/20 hover:bg-navy/5"
+                                    ? "bg-navy text-gold"
+                                    : "bg-white text-navy border-navy/20 hover:bg-navy/5 font-semibold"
                                 }`}
                               >
                                 <Eye className="mr-1.5 size-3.5" />
@@ -829,19 +925,16 @@ export default function AdminJudgesPage() {
                               <th className="py-2.5 px-3 text-center">Sl</th>
                               <th className="py-2.5 px-3">Chest</th>
                               <th className="py-2.5 px-3">Participant</th>
-                              <th className="py-2.5 px-2 text-center" title={selectedAssignment.rule_criterion_1}>
-                                C1 (30)
-                              </th>
-                              <th className="py-2.5 px-2 text-center" title={selectedAssignment.rule_criterion_2}>
-                                C2 (30)
-                              </th>
-                              <th className="py-2.5 px-2 text-center" title={selectedAssignment.rule_criterion_3}>
-                                C3 (20)
-                              </th>
-                              <th className="py-2.5 px-2 text-center" title={selectedAssignment.rule_criterion_4}>
-                                C4 (20)
-                              </th>
-                              <th className="py-2.5 px-2 text-center font-bold">Total (100)</th>
+                              {activeAssignmentCriteria.map((c, idx) => (
+                                <th
+                                  key={c.id || idx}
+                                  className="py-2.5 px-2 text-center"
+                                  title={c.name}
+                                >
+                                  C{idx + 1} ({c.maxMarks})
+                                </th>
+                              ))}
+                              <th className="py-2.5 px-2 text-center font-bold">Total ({activeTotalMaxMarks})</th>
                               <th className="py-2.5 px-2 text-center font-bold">Grade</th>
                               <th className="py-2.5 px-3">Positive Remarks</th>
                               <th className="py-2.5 px-3">Negative Remarks</th>
@@ -860,10 +953,17 @@ export default function AdminJudgesPage() {
                                   <div className="font-bold">{item.student_name || "—"}</div>
                                   <div className="text-[10px] text-slatebrand">{item.team_name || ""}</div>
                                 </td>
-                                <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_1}</td>
-                                <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_2}</td>
-                                <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_3}</td>
-                                <td className="py-2.5 px-2 text-center font-mono">{item.mark_criterion_4}</td>
+                                {activeAssignmentCriteria.map((c, cIdx) => {
+                                  const val =
+                                    item.marks_breakdown?.[c.id] ??
+                                    (item as any)[`mark_criterion_${cIdx + 1}`] ??
+                                    0
+                                  return (
+                                    <td key={c.id || cIdx} className="py-2.5 px-2 text-center font-mono">
+                                      {val}
+                                    </td>
+                                  )
+                                })}
                                 <td className="py-2.5 px-2 text-center font-mono font-bold text-navy">
                                   {item.total_marks}
                                 </td>
@@ -886,7 +986,7 @@ export default function AdminJudgesPage() {
                                 </td>
                                 <td className="py-2.5 px-3 max-w-[160px] truncate text-[11px] text-emerald-700">
                                   {item.positive_remarks ? (
-                                    <span className="flex items-center gap-1">
+                                    <span className="flex items-center gap-1" title={item.positive_remarks}>
                                       <ThumbsUp className="size-3 shrink-0" />
                                       {item.positive_remarks}
                                     </span>
@@ -896,7 +996,7 @@ export default function AdminJudgesPage() {
                                 </td>
                                 <td className="py-2.5 px-3 max-w-[160px] truncate text-[11px] text-red-600">
                                   {item.negative_remarks ? (
-                                    <span className="flex items-center gap-1">
+                                    <span className="flex items-center gap-1" title={item.negative_remarks}>
                                       <ThumbsDown className="size-3 shrink-0" />
                                       {item.negative_remarks}
                                     </span>
@@ -920,7 +1020,7 @@ export default function AdminJudgesPage() {
 
       {/* MODAL: Add New Judge */}
       <Dialog open={isAddJudgeOpen} onOpenChange={setIsAddJudgeOpen}>
-        <DialogContent className="max-w-md font-['Anek_Malayalam',sans-serif]">
+        <DialogContent className="w-[95vw] max-w-md font-['Anek_Malayalam',sans-serif] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-navy text-lg">
               <Scale className="size-5 text-gold" />
@@ -1011,16 +1111,16 @@ export default function AdminJudgesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: Assign Programme to Judge with 4-criterion rules */}
+      {/* MODAL: Assign Programme to Judge with Dynamic Criteria & Manual Creation */}
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-        <DialogContent className="max-w-2xl font-['Anek_Malayalam',sans-serif]">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto font-['Anek_Malayalam',sans-serif] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-navy text-lg">
               <BookOpen className="size-5 text-gold" />
               Assign Programme to {selectedJudge?.name}
             </DialogTitle>
             <DialogDescription className="text-xs text-slatebrand">
-              Select the programme and configure the 4 specific criteria rules for the marks distribution (30, 30, 20, 20).
+              Choose an existing programme or create a custom event manually, then configure multi-criteria rules (add 5th, 6th criteria as needed).
             </DialogDescription>
           </DialogHeader>
 
@@ -1032,105 +1132,199 @@ export default function AdminJudgesPage() {
               </div>
             )}
 
-            {/* Programme Selection */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-navy">Select Programme / Event *</label>
-              <Select value={assignEventId} onValueChange={setAssignEventId}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Choose a programme..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-64">
-                  {events.map((ev) => (
-                    <SelectItem key={ev.id} value={ev.id}>
-                      <span className="font-mono font-bold text-navy">{ev.event_code || "—"}</span> —{" "}
-                      {ev.name} ({ev.category})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Mode Switch: Existing Programme vs Manual Creation */}
+            <div className="flex items-center gap-2 p-1 bg-navy/5 rounded-xl border border-navy/10">
+              <button
+                type="button"
+                onClick={() => setAssignMode("existing")}
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all ${
+                  assignMode === "existing"
+                    ? "bg-navy text-gold shadow-sm"
+                    : "text-slatebrand hover:text-navy"
+                }`}
+              >
+                Select Existing Programme
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignMode("manual")}
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all ${
+                  assignMode === "manual"
+                    ? "bg-navy text-gold shadow-sm"
+                    : "text-slatebrand hover:text-navy"
+                }`}
+              >
+                + Add Event Manually
+              </button>
             </div>
 
-            {/* 4 Rubric Columns */}
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wider text-navy flex items-center gap-1.5">
-                  <ClipboardList className="size-4 text-gold" />
-                  Configure 4-Criteria Rules for Marks (30 + 30 + 20 + 20 = 100)
-                </label>
+            {/* Existing Programme Selection */}
+            {assignMode === "existing" ? (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-navy">Select Programme / Event *</label>
+                <Select value={assignEventId} onValueChange={setAssignEventId}>
+                  <SelectTrigger className="bg-white w-full max-w-full">
+                    <SelectValue placeholder="Choose a programme..." />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    align="start"
+                    className="max-h-64 max-w-[calc(100vw-2.5rem)] w-full overflow-y-auto"
+                  >
+                    {events.map((ev) => (
+                      <SelectItem key={ev.id} value={ev.id} className="max-w-full">
+                        <span className="font-mono font-bold text-navy shrink-0">{ev.event_code || "—"}</span>
+                        <span className="truncate">{ev.name} ({ev.category})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              /* Manual Event Creation Form */
+              <div className="space-y-3 rounded-2xl border border-navy/15 bg-ivory/50 p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-navy flex items-center gap-1.5">
+                    <Sparkles className="size-4 text-gold" />
+                    Manually Create Programme
+                  </span>
+                  <Badge className="bg-gold/20 text-navy font-bold text-[10px]">New Event</Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-navy">Programme / Event Name *</label>
+                  <Input
+                    value={manualEventName}
+                    onChange={(e) => setManualEventName(e.target.value)}
+                    placeholder="e.g. Malayalam Elocution, Mappilappattu, etc."
+                    className="bg-white text-xs h-9"
+                    required={assignMode === "manual"}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-navy">Event Code (Optional)</label>
+                    <Input
+                      value={manualEventCode}
+                      onChange={(e) => setManualEventCode(e.target.value)}
+                      placeholder="e.g. EV-105"
+                      className="bg-white font-mono uppercase text-xs h-9"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-navy">Category</label>
+                    <Select value={manualEventCategory} onValueChange={setManualEventCategory}>
+                      <SelectTrigger className="bg-white text-xs h-9 w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper" align="start" className="max-w-[calc(100vw-2.5rem)]">
+                        <SelectItem value="ON STAGE">ON STAGE</SelectItem>
+                        <SelectItem value="OFF STAGE">OFF STAGE</SelectItem>
+                        <SelectItem value="GENERAL">GENERAL</SelectItem>
+                        <SelectItem value="SPECIAL">SPECIAL</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-navy">Grade Type</label>
+                    <Select value={manualEventGrade} onValueChange={setManualEventGrade}>
+                      <SelectTrigger className="bg-white text-xs h-9 w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper" align="start" className="max-w-[calc(100vw-2.5rem)]">
+                        <SelectItem value="A">Grade A</SelectItem>
+                        <SelectItem value="B">Grade B</SelectItem>
+                        <SelectItem value="C">Grade C</SelectItem>
+                        <SelectItem value="D">Grade D</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Dynamic Evaluation Criteria Builder */}
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-navy flex items-center gap-1.5">
+                    <ClipboardList className="size-4 text-gold" />
+                    Configure Criteria Rules ({criteria.length} Criteria)
+                  </label>
+                  <p className="text-[11px] text-slatebrand">
+                    Set specific rules and maximum marks. Add extra criteria (5, 6, etc.) as required.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Badge
+                    className={`font-mono text-xs font-bold ${
+                      totalMaxMarks === 100
+                        ? "bg-emerald-600 text-white"
+                        : "bg-navy text-gold"
+                    }`}
+                  >
+                    Total: {totalMaxMarks} Marks
+                  </Badge>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddCriterion}
+                    className="bg-[#0A1D2C] hover:bg-[#123B4F] text-gold text-xs h-7 px-2.5 font-bold shadow-xs"
+                  >
+                    <Plus className="mr-1 size-3.5" />
+                    Add Criterion
+                  </Button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Criterion 1 */}
-                <div className="rounded-xl border border-navy/15 bg-ivory/60 p-3 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-navy">Criterion 1 Rule</span>
-                    <Badge className="bg-navy text-gold text-[10px] font-bold">Max 30 Marks</Badge>
-                  </div>
-                  <Input
-                    value={rule1}
-                    onChange={(e) => setRule1(e.target.value)}
-                    placeholder="e.g. Structure, Plot & Narrative flow"
-                    className="text-xs bg-white"
-                    required
-                  />
-                  <span className="text-[10px] text-slatebrand">
-                    Judge will check participant's compliance with this rule.
-                  </span>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto p-1 border rounded-xl border-navy/10 bg-ivory/30">
+                {criteria.map((crit, idx) => (
+                  <div
+                    key={crit.id || idx}
+                    className="rounded-xl border border-navy/15 bg-white p-3 space-y-2 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-navy">Criterion {idx + 1}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-slatebrand font-semibold">Max:</span>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={crit.maxMarks}
+                          onChange={(e) =>
+                            handleUpdateCriterion(idx, "maxMarks", Math.max(1, parseInt(e.target.value) || 0))
+                          }
+                          className="w-16 h-6 text-center font-mono font-bold text-xs bg-ivory/50 p-0"
+                        />
+                        {criteria.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveCriterion(idx)}
+                            className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700 ml-1"
+                            title="Remove Criterion"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
 
-                {/* Criterion 2 */}
-                <div className="rounded-xl border border-navy/15 bg-ivory/60 p-3 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-navy">Criterion 2 Rule</span>
-                    <Badge className="bg-navy text-gold text-[10px] font-bold">Max 30 Marks</Badge>
+                    <Input
+                      value={crit.name}
+                      onChange={(e) => handleUpdateCriterion(idx, "name", e.target.value)}
+                      placeholder={`e.g. Criterion ${idx + 1} Rule`}
+                      className="text-xs bg-white h-8"
+                      required
+                    />
                   </div>
-                  <Input
-                    value={rule2}
-                    onChange={(e) => setRule2(e.target.value)}
-                    placeholder="e.g. Language, Expression & Vocabulary"
-                    className="text-xs bg-white"
-                    required
-                  />
-                  <span className="text-[10px] text-slatebrand">
-                    Judge will check language and expression standard.
-                  </span>
-                </div>
-
-                {/* Criterion 3 */}
-                <div className="rounded-xl border border-navy/15 bg-ivory/60 p-3 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-navy">Criterion 3 Rule</span>
-                    <Badge className="bg-navy text-gold text-[10px] font-bold">Max 20 Marks</Badge>
-                  </div>
-                  <Input
-                    value={rule3}
-                    onChange={(e) => setRule3(e.target.value)}
-                    placeholder="e.g. Time adherence & Discipline"
-                    className="text-xs bg-white"
-                    required
-                  />
-                  <span className="text-[10px] text-slatebrand">
-                    Punctuality, time limits, and rule obedience.
-                  </span>
-                </div>
-
-                {/* Criterion 4 */}
-                <div className="rounded-xl border border-navy/15 bg-ivory/60 p-3 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-navy">Criterion 4 Rule</span>
-                    <Badge className="bg-navy text-gold text-[10px] font-bold">Max 20 Marks</Badge>
-                  </div>
-                  <Input
-                    value={rule4}
-                    onChange={(e) => setRule4(e.target.value)}
-                    placeholder="e.g. Stage presence / Neatness & Accuracy"
-                    className="text-xs bg-white"
-                    required
-                  />
-                  <span className="text-[10px] text-slatebrand">
-                    Presentation standard, formatting, and overall impact.
-                  </span>
-                </div>
+                ))}
               </div>
             </div>
 
@@ -1146,7 +1340,7 @@ export default function AdminJudgesPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={assigningProgramme || !assignEventId}
+                disabled={assigningProgramme || (assignMode === "existing" && !assignEventId)}
                 className="bg-[#0A1D2C] hover:bg-[#123B4F] text-white font-bold"
               >
                 {assigningProgramme ? (
