@@ -84,10 +84,6 @@
     border-color: hsl(var(--border));
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
-
   body {
     min-height: 100vh;
     background: linear-gradient(135deg, #f6f2e8 0%, #f2f1ee 45%, #f5f8fa 100%);
