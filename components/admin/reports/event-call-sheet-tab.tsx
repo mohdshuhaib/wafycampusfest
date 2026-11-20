@@ -273,16 +273,40 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
       let isFirstPage = true
 
       for (const event of eventsToPrint) {
-        const { data } = await supabase
-          .from("participations")
-          .select(`
-            id, team_id, event_id, status,
-            teams ( name, color_hex ),
-            students!inner ( name, chest_no, class_grade, section, image_link )
-          `)
-          .eq("event_id", event.id)
+        const [partsRes, codeLetterAsset] = await Promise.all([
+          supabase
+            .from("participations")
+            .select(`
+              id, team_id, event_id, status,
+              teams ( id, name, color_hex ),
+              students!inner ( id, name, chest_no, class_grade, section, image_link )
+            `)
+            .eq("event_id", event.id),
+          supabase
+            .from("site_assets")
+            .select("value")
+            .eq("key", `code_letter_event_${event.id}`)
+            .maybeSingle(),
+        ])
 
-        const rawParts = (data as any[]) || []
+        let codeLetterMap: Record<string, string> = {}
+        const assetData = codeLetterAsset?.data as any
+        if (assetData?.value) {
+          try {
+            const parsed = JSON.parse(assetData.value)
+            if (Array.isArray(parsed?.assignments)) {
+              parsed.assignments.forEach((a: any) => {
+                if (a.participant_id && a.code_letter) {
+                  codeLetterMap[a.participant_id] = a.code_letter
+                }
+              })
+            }
+          } catch (e) {
+            // ignore JSON parse error
+          }
+        }
+
+        const rawParts = (partsRes.data as any[]) || []
         const parts = rawParts.map((p) => ({
           id: p.id,
           chest_no: p.students?.chest_no || "N/A",
@@ -290,6 +314,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
           class_grade: p.students?.class_grade || "-",
           teamName: p.teams?.name || "Unknown Team",
           image_link: p.students?.image_link || null,
+          codeLetter: codeLetterMap[p.id] || codeLetterMap[p.students?.id] || codeLetterMap[p.team_id] || "",
         })).sort((a, b) => (parseInt(a.chest_no) || 999) - (parseInt(b.chest_no) || 999))
 
         // Pre-crop all participant photos
@@ -331,7 +356,7 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         doc.text(`Category: ${event.category}  |  Total: ${parts.length}`, pageWidth - margin, yPos, { align: "right" })
         yPos += 6
 
-        // AutoTable Grid
+        // AutoTable Grid with Code column
         const tableBody = parts.map((p, idx) => [
           idx + 1,
           "", // Photo column
@@ -339,12 +364,13 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
           p.name,
           p.class_grade,
           p.teamName,
+          p.codeLetter || "", // Code column (for handwriting or prefilled)
           "", // Signature box
         ])
 
         autoTable(doc, {
           startY: yPos,
-          head: [["Sl No", "Photo", "Chest No", "Name", "Class", "Team", "Sign"]],
+          head: [["Sl No", "Photo", "Chest No", "Name", "Class", "Team", "Code", "Sign"]],
           body: tableBody,
           theme: "grid",
           headStyles: {
@@ -362,13 +388,14 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
             textColor: [10, 29, 44],
           },
           columnStyles: {
-            0: { cellWidth: 12, halign: "center" },
+            0: { cellWidth: 11, halign: "center" },
             1: { cellWidth: 16, halign: "center" },
-            2: { cellWidth: 20, halign: "center", fontStyle: "bold" },
+            2: { cellWidth: 18, halign: "center", fontStyle: "bold" },
             3: { cellWidth: "auto", fontStyle: "bold" },
-            4: { cellWidth: 18, halign: "center" },
-            5: { cellWidth: 32 },
-            6: { cellWidth: 30, halign: "center" },
+            4: { cellWidth: 16, halign: "center" },
+            5: { cellWidth: 28 },
+            6: { cellWidth: 20, halign: "center", fontStyle: "bold", fontSize: 10 },
+            7: { cellWidth: 27, halign: "center" },
           },
           didDrawCell: (data) => {
             if (data.section === "body" && data.column.index === 1) {
