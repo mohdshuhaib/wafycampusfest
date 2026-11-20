@@ -397,66 +397,145 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
     }
   }
 
+  // Helper: safely loads and downscales logo to prevent V8 RangeError / browser freeze
+  const getScoreSheetLogoDataUrl = async (): Promise<string> => {
+    if (typeof window === "undefined") return "";
+
+    const tryLoadImage = (url: string): Promise<string> => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try {
+            const maxDim = 400;
+            let w = img.naturalWidth || img.width;
+            let h = img.naturalHeight || img.height;
+            if (!w || !h) {
+              resolve("");
+              return;
+            }
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve("");
+              return;
+            }
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/png"));
+          } catch (e) {
+            console.warn("Could not downscale logo image", e);
+            resolve("");
+          }
+        };
+        img.onerror = () => resolve("");
+        img.src = url;
+      });
+    };
+
+    let dataUrl = await tryLoadImage("/logo-sm.png");
+    if (!dataUrl) {
+      dataUrl = await tryLoadImage("/logo.png");
+    }
+    return dataUrl;
+  };
+
   // --- GENERATE SCORE SHEET (JUDGMENT SHEET) ---
   const generateScoreSheetPDF = async (eventsToPrint: Event[]) => {
-    setGeneratingPdf(true)
-    const doc = new jsPDF('p', 'mm', 'a4');
-    let isFirstPage = true
-
-    let headerImgData = "";
-    if (headerImage) {
-        headerImgData = await getCroppedSquareImageDataUrl(headerImage, 400);
+    if (eventsToPrint.length === 0) {
+      alert("No events selected to print.");
+      return;
     }
 
-    for (const event of eventsToPrint) {
-        if (!isFirstPage) doc.addPage()
-        isFirstPage = false
+    setGeneratingPdf(true);
 
-        const [eventDetails, participantsRes] = await Promise.all([
-            supabase.from('events').select('description').eq('id', event.id).single(),
-            supabase.from('participations').select('id, teams(name), students(chest_no)').eq('event_id', event.id)
-        ]);
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      let isFirstPage = true;
 
-        const criteria = (eventDetails.data as { description: string } | null)?.description || "";
-        const parts = participantsRes.data as any[] || [];
+      // Safely load and downscale logo once
+      const logoDataUrl = await getScoreSheetLogoDataUrl();
+
+      // Batch query all participations and code letters in parallel for optimal speed
+      const eventIds = eventsToPrint.map((e) => e.id);
+      const [participationsRes, codeLetterAssetsRes] = await Promise.all([
+        supabase.from('participations').select('id, event_id').in('event_id', eventIds),
+        (supabase.from('site_assets') as any)
+          .select('key, value')
+          .in('key', eventIds.map((id) => `code_letter_event_${id}`))
+      ]);
+
+      const partsCountByEvent = new Map<string, number>();
+      if (participationsRes.data) {
+        for (const p of participationsRes.data as any[]) {
+          partsCountByEvent.set(p.event_id, (partsCountByEvent.get(p.event_id) || 0) + 1);
+        }
+      }
+
+      const codeLettersByEvent = new Map<string, any>();
+      if (codeLetterAssetsRes.data) {
+        for (const asset of codeLetterAssetsRes.data as any[]) {
+          try {
+            const evId = asset.key.replace("code_letter_event_", "");
+            codeLettersByEvent.set(evId, JSON.parse(asset.value));
+          } catch {}
+        }
+      }
+
+      for (const event of eventsToPrint) {
+        if (!isFirstPage) doc.addPage();
+        isFirstPage = false;
+
+        const rowCount = partsCountByEvent.get(event.id) || 0;
+        const codeLetterRecord = codeLettersByEvent.get(event.id) || null;
 
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
-        let yPos = 15;
 
-        if (headerImgData) {
-            try {
-                const imgProps = doc.getImageProperties(headerImgData);
-                const desiredWidth = pageWidth - 2 * margin;
-                let imgHeight = (imgProps.height * desiredWidth) / imgProps.width;
-                if (imgHeight > 30) {
-                    imgHeight = 30;
-                    const adjustedWidth = (imgProps.width * imgHeight) / imgProps.height;
-                    const xOffset = (pageWidth - adjustedWidth) / 2;
-                    doc.addImage(headerImgData, 'PNG', xOffset, yPos, adjustedWidth, imgHeight);
-                } else {
-                    doc.addImage(headerImgData, 'PNG', margin, yPos, desiredWidth, imgHeight);
-                }
-                yPos += imgHeight + 5;
-            } catch (e) { console.warn("Could not add header image", e) }
-        } else {
-             doc.setFontSize(16);
-             doc.setFont("helvetica", "bold");
-             doc.text("WAFY CAMPUS KALIKAVU ARTS FEST 2026-27", pageWidth / 2, yPos, { align: 'center' });
-             yPos += 10;
+        // 1. Top Left Logo
+        if (logoDataUrl) {
+          try {
+            // Aspect ratio of logo is ~0.8
+            const logoH = 24;
+            const logoW = 24 * (12834 / 16042); // ~19.2 mm
+            doc.addImage(logoDataUrl, 'PNG', margin, 12, logoW, logoH);
+          } catch (e) {
+            console.warn("Could not add logo image", e);
+          }
         }
 
-        doc.setFontSize(14);
+        // 2. Header Title & Judgment Sheet Details
+        doc.setFontSize(15);
         doc.setFont("helvetica", "bold");
-        doc.text("JUDGMENT SHEET", pageWidth / 2, yPos, { align: 'center' });
-        yPos += 8;
+        doc.text("WAFY CAMPUS KALIKAVU ARTS FEST 2026-27", pageWidth / 2, 17, { align: 'center' });
 
-        doc.setFontSize(9);
+        doc.setFontSize(13);
+        doc.setFont("helvetica", "bold");
+        doc.text("JUDGMENT SHEET", pageWidth / 2, 25, { align: 'center' });
+
+        doc.setFontSize(8.5);
         doc.setFont("helvetica", "normal");
-        doc.text("GRADING SYSTEM: GRADE A-80% AND ABOVE, GRADE B-70% TO 79%, GRADE C-60% TO 69%", pageWidth / 2, yPos, { align: 'center' });
-        yPos += 12;
+        doc.text("GRADING SYSTEM: GRADE A-80% AND ABOVE, GRADE B-70% TO 79%, GRADE C-60% TO 69%", pageWidth / 2, 32, { align: 'center' });
 
+        // Divider Line below header
+        let yPos = 39;
+        doc.setDrawColor(210, 210, 210);
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 7;
+
+        // 3. Item & Topic (Criteria section removed as requested)
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
         doc.text("ITEM:", margin, yPos);
@@ -466,102 +545,96 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
 
         doc.setFont("helvetica", "bold");
         doc.text("TOPIC:", margin, yPos);
+        doc.setDrawColor(0, 0, 0);
         doc.setLineWidth(0.1);
         doc.line(margin + 18, yPos + 1, pageWidth - margin, yPos + 1);
-        yPos += 8;
+        yPos += 10;
 
-        doc.setFont("helvetica", "bold");
-        doc.text("CRITERIA:", margin, yPos);
-
-        if (criteria) {
-             const criteriaWidth = pageWidth - margin - 35;
-             const result = textToImage(criteria, criteriaWidth, 10);
-
-             if (result) {
-                 const { dataUrl, heightMM } = result;
-                 doc.addImage(dataUrl, 'PNG', margin + 25, yPos, criteriaWidth, heightMM);
-                 yPos += heightMM + 5;
-             } else {
-                 yPos += 8;
-             }
-        } else {
-             yPos += 8;
-        }
-
-        yPos += 2;
-
+        // 4. Code Letters & Table Data
         const isCategoryC = event.grade_type === 'D' || event.grade_type === 'C' || event.category === 'SPECIAL' || event.category === 'GENERAL';
         let effectiveCount = 0;
 
         if (isCategoryC) {
-            effectiveCount = 4;
+          effectiveCount = 4;
         } else {
-            const rowCount = parts.length;
-            effectiveCount = Math.max(rowCount, 5);
+          effectiveCount = Math.max(rowCount, 5);
         }
 
-        const footerHeight = 30;
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let codes: string[] = [];
+
+        if (codeLetterRecord?.configured_letters?.length) {
+          codes = [...codeLetterRecord.configured_letters].sort();
+        } else if (codeLetterRecord?.assignments?.length) {
+          codes = codeLetterRecord.assignments.map((a: any) => a.letter).filter(Boolean).sort();
+        }
+
+        if (!codes.length) {
+          for (let i = 0; i < effectiveCount; i++) {
+            codes.push(letters[i % 26] + (Math.floor(i / 26) > 0 ? Math.floor(i / 26) : ""));
+          }
+        }
+
+        const footerHeight = 25;
         const bottomMargin = 15;
         const availableHeight = pageHeight - yPos - footerHeight - bottomMargin;
         const tableHeaderHeight = 10;
         const availableForRows = availableHeight - tableHeaderHeight;
 
-        let dynamicRowHeight = availableForRows / effectiveCount;
-        if (dynamicRowHeight > 35) dynamicRowHeight = 35;
-        if (dynamicRowHeight < 10) dynamicRowHeight = 10;
+        let dynamicRowHeight = availableForRows / codes.length;
+        if (dynamicRowHeight > 38) dynamicRowHeight = 38;
+        if (dynamicRowHeight < 12) dynamicRowHeight = 12;
 
-        const tableBody = [];
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-        for (let i = 0; i < effectiveCount; i++) {
-            const code = letters[i % 26] + (Math.floor(i / 26) > 0 ? Math.floor(i / 26) : "");
-            tableBody.push([
-                code, "", "", ""
-            ]);
-        }
+        // Table body: only CODE and REMARKS (PLACE and GRADE removed, REMARKS widened)
+        const tableBody = codes.map((code) => [code, ""]);
 
         autoTable(doc, {
-            startY: yPos,
-            head: [["CODE", "REMARKS", "PLACE", "GRADE"]],
-            body: tableBody,
-            theme: 'grid',
-            headStyles: {
-                fillColor: [255, 255, 255],
-                textColor: [0, 0, 0],
-                lineWidth: 0.3,
-                lineColor: [0, 0, 0],
-                halign: 'center',
-                valign: 'middle',
-                fontStyle: 'bold',
-                minCellHeight: 10
-            },
-            bodyStyles: {
-                lineWidth: 0.3,
-                lineColor: [0, 0, 0],
-                minCellHeight: dynamicRowHeight,
-                valign: 'middle',
-                textColor: [0,0,0]
-            },
-            columnStyles: {
-                0: { cellWidth: 20, halign: 'center', fontStyle: 'bold', fontSize: 12 },
-                1: { cellWidth: 'auto' },
-                2: { cellWidth: 25, halign: 'center' },
-                3: { cellWidth: 25, halign: 'center' }
-            },
-            didParseCell: function(data: any) {
-                data.cell.styles.textColor = [0, 0, 0];
-            }
+          startY: yPos,
+          head: [["CODE", "REMARKS"]],
+          body: tableBody,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [248, 249, 250],
+            textColor: [0, 0, 0],
+            lineWidth: 0.3,
+            lineColor: [0, 0, 0],
+            halign: 'center',
+            valign: 'middle',
+            fontStyle: 'bold',
+            fontSize: 11,
+            minCellHeight: 10
+          },
+          bodyStyles: {
+            lineWidth: 0.3,
+            lineColor: [0, 0, 0],
+            minCellHeight: dynamicRowHeight,
+            valign: 'middle',
+            textColor: [0, 0, 0]
+          },
+          columnStyles: {
+            0: { cellWidth: 28, halign: 'center', fontStyle: 'bold', fontSize: 13 },
+            1: { cellWidth: 'auto', halign: 'left' }
+          },
+          didParseCell: function(data: any) {
+            data.cell.styles.textColor = [0, 0, 0];
+          }
         });
 
-        const footerY = pageHeight - 25;
+        // 5. Judge signature line at bottom
+        const footerY = pageHeight - 20;
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("NAME & SIGN OF THE JUDGE : _______________________________", margin, footerY);
-    }
+      }
 
-    doc.save("judgment_sheets.pdf")
-    setGeneratingPdf(false)
-  }
+      doc.save("judgment_sheets.pdf");
+    } catch (err) {
+      console.error("Error generating score sheet PDF:", err);
+      alert("Failed to generate Score Sheet PDF. Check console for details.");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   // --- GENERATE PARTICIPANT LIST (BULK EXPORT) ---
   const generateParticipantListPDF = async (category: 'ON STAGE' | 'OFF STAGE') => {
@@ -748,6 +821,9 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => generateScoreSheetPDF(events.filter(e => e.category === 'OFF STAGE'))}>
                             All OFF STAGE Score Sheets
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => generateScoreSheetPDF(events)}>
+                            All Events Score Sheets
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
