@@ -362,99 +362,159 @@ export default function AdminTopicAssignPage() {
   }
 
   // --- PDF EXPORT GENERATORS & HELPERS ---
+  const containsMalayalam = (text: string) => /[\u0D00-\u0D7F]/.test(text || "")
+  const containsArabic = (text: string) => /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text || "")
+  const isComplexScript = (text: string) => containsMalayalam(text) || containsArabic(text)
+
+  const ensureMalayalamFontLoaded = async () => {
+    if (typeof document === "undefined") return
+    if (typeof FontFace !== "undefined") {
+      try {
+        const font = new FontFace("AnekMalayalam", "url(/AnekMalayalam-Regular.ttf)")
+        const loaded = await font.load()
+        document.fonts.add(loaded)
+      } catch (e) {
+        // Fallback to Nirmala UI / Kartika
+      }
+    }
+    if (document.fonts) {
+      try {
+        await document.fonts.ready
+      } catch {}
+    }
+  }
+
   useEffect(() => {
     if (typeof document === "undefined") return
     const style = document.createElement("style")
+    style.id = "malayalam-font-style"
     style.innerHTML = `
       @font-face {
         font-family: 'AnekMalayalam';
         src: url('/AnekMalayalam-Regular.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
       }
     `
-    document.head.appendChild(style)
+    if (!document.getElementById("malayalam-font-style")) {
+      document.head.appendChild(style)
+    }
+
+    if (typeof FontFace !== "undefined") {
+      try {
+        const font = new FontFace("AnekMalayalam", "url(/AnekMalayalam-Regular.ttf)")
+        font.load().then((loadedFont) => {
+          document.fonts.add(loadedFont)
+        }).catch(() => {})
+      } catch (e) {}
+    }
+
     return () => {
-      document.head.removeChild(style)
+      const el = document.getElementById("malayalam-font-style")
+      if (el) el.remove()
     }
   }, [])
 
   // Canvas helper for crystal-clear Malayalam & Arabic text rendering
-  const textToImage = (
+  const renderTopicTextCanvas = async (
     text: string,
-    widthMM: number,
+    maxWidthMM: number,
     fontSizePt: number,
     options?: { isArabic?: boolean; textColor?: string; bold?: boolean }
-  ): { dataUrl: string; heightMM: number } | null => {
-    if (typeof document === "undefined") return null
+  ): Promise<{ dataUrl: string; widthMM: number; heightMM: number } | null> => {
+    if (typeof document === "undefined" || !text || !text.trim()) return null
+
+    if (document.fonts) {
+      try {
+        await document.fonts.ready
+      } catch {}
+    }
 
     const canvas = document.createElement("canvas")
     const ctx = canvas.getContext("2d")
     if (!ctx) return null
 
     const pxPerMM = 3.78
-    const scaleFactor = 3
+    const scale = 3 // High-DPI 3x scaling for sharp vector-like print quality
 
-    const widthPx = widthMM * pxPerMM * scaleFactor
-    canvas.width = widthPx
-    canvas.height = 1200 * scaleFactor
+    const isArabic = options?.isArabic ?? containsArabic(text)
+    const isMalayalam = containsMalayalam(text)
 
-    ctx.scale(scaleFactor, scaleFactor)
-    const weight = options?.bold ? "bold " : ""
-    ctx.font = `${weight}${fontSizePt * 1.33}px 'AnekMalayalam', 'Noto Sans Arabic', 'Segoe UI', 'Arial', sans-serif`
+    const fontStack = isArabic
+      ? "'Noto Sans Arabic', 'Traditional Arabic', 'Amiri', 'Segoe UI', 'Arial', sans-serif"
+      : isMalayalam
+      ? "'AnekMalayalam', 'Nirmala UI', 'Kartika', 'Noto Sans Malayalam', 'Arial', sans-serif"
+      : "'AnekMalayalam', 'Nirmala UI', 'Segoe UI', 'Arial', sans-serif"
+
+    const weight = options?.bold ? "bold " : "500 "
+    const fontSizePx = fontSizePt * 1.333
+    const targetWidthPx = maxWidthMM * pxPerMM
+
+    ctx.font = `${weight}${fontSizePx}px ${fontStack}`
+    const lineHeightPx = fontSizePx * 1.45
+
+    const paragraphs = text.split("\n")
+    const lines: string[] = []
+
+    for (const para of paragraphs) {
+      const words = para.split(" ")
+      let currentLine = ""
+
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i]
+        const testLine = currentLine ? `${currentLine} ${word}` : word
+        const metrics = ctx.measureText(testLine)
+
+        if (metrics.width > targetWidthPx && currentLine) {
+          lines.push(currentLine)
+          currentLine = word
+        } else {
+          currentLine = testLine
+        }
+      }
+      if (currentLine) {
+        lines.push(currentLine)
+      }
+    }
+
+    if (lines.length === 0) return null
+
+    let maxMeasuredWidth = 0
+    for (const l of lines) {
+      const m = ctx.measureText(l)
+      if (m.width > maxMeasuredWidth) {
+        maxMeasuredWidth = m.width
+      }
+    }
+
+    const finalWidthPx = Math.ceil(Math.min(maxMeasuredWidth + 6, targetWidthPx) * scale)
+    const finalHeightPx = Math.ceil((lines.length * lineHeightPx + 4) * scale)
+
+    canvas.width = finalWidthPx
+    canvas.height = finalHeightPx
+
+    ctx.scale(scale, scale)
+    ctx.font = `${weight}${fontSizePx}px ${fontStack}`
     ctx.textBaseline = "top"
     ctx.fillStyle = options?.textColor || "#0A1D2C"
 
-    const maxWidth = widthMM * pxPerMM
-    const lineHeight = fontSizePt * 1.33 * 1.45
-
-    const paragraphs = text.split("\n")
-    let y = 0
-
-    paragraphs.forEach((para) => {
-      const words = para.split(" ")
-      let line = ""
-
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + " "
-        const metrics = ctx.measureText(testLine)
-        const testWidth = metrics.width
-
-        if (testWidth > maxWidth && n > 0) {
-          if (options?.isArabic) {
-            ctx.textAlign = "right"
-            ctx.fillText(line.trim(), maxWidth, y)
-          } else {
-            ctx.textAlign = "left"
-            ctx.fillText(line.trim(), 0, y)
-          }
-          line = words[n] + " "
-          y += lineHeight
-        } else {
-          line = testLine
-        }
-      }
-      if (options?.isArabic) {
+    let y = 2
+    for (const l of lines) {
+      if (isArabic) {
         ctx.textAlign = "right"
-        ctx.fillText(line.trim(), maxWidth, y)
+        ctx.fillText(l.trim(), finalWidthPx / scale - 2, y)
       } else {
         ctx.textAlign = "left"
-        ctx.fillText(line.trim(), 0, y)
+        ctx.fillText(l.trim(), 2, y)
       }
-      y += lineHeight
-    })
-
-    const finalHeight = Math.max((y + 4) * scaleFactor, 10 * scaleFactor)
-    const finalCanvas = document.createElement("canvas")
-    finalCanvas.width = widthPx
-    finalCanvas.height = finalHeight
-    const finalCtx = finalCanvas.getContext("2d")
-    if (finalCtx) {
-      finalCtx.drawImage(canvas, 0, 0)
-      return {
-        dataUrl: finalCanvas.toDataURL("image/png"),
-        heightMM: finalHeight / scaleFactor / pxPerMM,
-      }
+      y += lineHeightPx
     }
-    return null
+
+    return {
+      dataUrl: canvas.toDataURL("image/png"),
+      widthMM: finalWidthPx / scale / pxPerMM,
+      heightMM: finalHeightPx / scale / pxPerMM,
+    }
   }
 
   // Load logo data safely
@@ -560,7 +620,7 @@ export default function AdminTopicAssignPage() {
 
     // 3. Programme Details Banner
     doc.setFillColor(10, 29, 44) // Navy
-    doc.roundedRect(margin, yPos, contentWidth, 23, 2, 2, "F")
+    doc.roundedRect(margin, yPos, contentWidth, 22, 2, 2, "F")
 
     // Event Code Pill
     doc.setFillColor(218, 165, 32) // Gold
@@ -582,139 +642,91 @@ export default function AdminTopicAssignPage() {
     doc.setTextColor(210, 225, 240)
     doc.text(`Category: ${rec.event?.category || "General"}`, pageWidth - margin - 4, yPos + 8.5, { align: "right" })
 
-    // Sub-info inside card
+    // Sub-info inside card (Only Language & Total Participants; removed Mode and Published)
     doc.setTextColor(255, 255, 255)
-    doc.setFontSize(8)
+    doc.setFontSize(8.5)
     doc.setFont("helvetica", "normal")
     const langLabel = `Language: ${(rec.topic_language || "english").toUpperCase()}`
-    const typeLabel = `Mode: ${
-      rec.topic_type === "general"
-        ? "General Topic"
-        : rec.topic_type === "personal"
-        ? "Team-wise (Personal)"
-        : "Participant-wise"
-    }`
-    const statusLabel =
-      rec.publish_type === "scheduled" && rec.scheduled_publish_time
-        ? `Scheduled: ${new Date(rec.scheduled_publish_time).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}`
-        : "Published (Spot)"
 
-    doc.text(`${langLabel}   |   ${typeLabel}   |   ${statusLabel}`, margin + 5, yPos + 18)
-    doc.text(`Total Participants: ${parts.length}`, pageWidth - margin - 4, yPos + 18, { align: "right" })
+    doc.text(langLabel, margin + 5, yPos + 17)
+    doc.text(`Total Participants: ${parts.length}`, pageWidth - margin - 4, yPos + 17, { align: "right" })
 
-    yPos += 29
+    yPos += 27
 
-    // 4. Topic Content Section
-    doc.setFontSize(9.5)
+    // 4. Directly skip to PARTICIPANT DETAILS & TOPIC ALLOCATION
+    doc.setFontSize(10)
     doc.setFont("helvetica", "bold")
     doc.setTextColor(10, 29, 44)
-    doc.text("ASSIGNED TOPIC CONTENT", margin, yPos)
-    yPos += 3.5
+    doc.text("PARTICIPANT DETAILS & TOPIC ALLOCATION", margin, yPos)
+    yPos += 4
 
-    const isArabic = rec.topic_language === "arabic"
-    const isMalayalam = rec.topic_language === "malayalam"
+    // Pre-render topic images and any Malayalam/Arabic student name images for crisp, error-free rendering
+    const topicImagesMap = new Map<number, { dataUrl: string; widthMM: number; heightMM: number; isArabic: boolean }>()
+    const nameImagesMap = new Map<number, { dataUrl: string; widthMM: number; heightMM: number; isArabic: boolean }>()
 
-    if (rec.topic_type === "general") {
-      const topicText = rec.general_topic || "No topic text specified."
+    for (let idx = 0; idx < parts.length; idx++) {
+      const p = parts[idx]
+      let participantTopic = ""
+      if (rec.topic_type === "participant") {
+        participantTopic = rec.participant_topics?.[p.student_id] || rec.participant_topics?.[p.id] || ""
+      } else if (rec.topic_type === "personal") {
+        participantTopic = rec.team_topics?.[p.team_id] || ""
+      } else {
+        participantTopic = rec.general_topic || ""
+      }
 
-      if (isMalayalam || isArabic) {
-        const renderedImg = textToImage(topicText, contentWidth - 14, 11, {
+      const trimmedTopic = participantTopic.trim()
+      if (trimmedTopic && trimmedTopic !== "—" && trimmedTopic !== "-") {
+        const isArabic = containsArabic(trimmedTopic) || rec.topic_language === "arabic"
+        const rendered = await renderTopicTextCanvas(trimmedTopic, 60, 8.5, {
+          isArabic,
+          textColor: "#0A1D2C",
+          bold: false,
+        })
+        if (rendered) {
+          topicImagesMap.set(idx, { ...rendered, isArabic })
+        }
+      }
+
+      // Check if student name contains Malayalam or Arabic
+      if (isComplexScript(p.name)) {
+        const isArabic = containsArabic(p.name)
+        const renderedName = await renderTopicTextCanvas(p.name, 40, 8.5, {
           isArabic,
           textColor: "#0A1D2C",
           bold: true,
         })
-        const boxHeight = (renderedImg?.heightMM || 15) + 8
-
-        doc.setFillColor(250, 250, 252)
-        doc.setDrawColor(218, 165, 32)
-        doc.setLineWidth(0.4)
-        doc.roundedRect(margin, yPos, contentWidth, boxHeight, 1.5, 1.5, "FD")
-
-        // Gold accent bar
-        doc.setFillColor(218, 165, 32)
-        doc.roundedRect(margin, yPos, 2.5, boxHeight, 1, 1, "F")
-
-        if (renderedImg) {
-          doc.addImage(renderedImg.dataUrl, "PNG", margin + 6, yPos + 4, contentWidth - 14, renderedImg.heightMM)
+        if (renderedName) {
+          nameImagesMap.set(idx, { ...renderedName, isArabic })
         }
-        yPos += boxHeight + 7
-      } else {
-        doc.setFontSize(10)
-        doc.setFont("helvetica", "bold")
-        const lines = doc.splitTextToSize(topicText, contentWidth - 14)
-        const boxHeight = Math.max(lines.length * 5.5 + 8, 16)
-
-        doc.setFillColor(250, 250, 252)
-        doc.setDrawColor(218, 165, 32)
-        doc.setLineWidth(0.4)
-        doc.roundedRect(margin, yPos, contentWidth, boxHeight, 1.5, 1.5, "FD")
-
-        // Gold accent bar
-        doc.setFillColor(218, 165, 32)
-        doc.roundedRect(margin, yPos, 2.5, boxHeight, 1, 1, "F")
-
-        doc.setTextColor(10, 29, 44)
-        doc.text(lines, margin + 7, yPos + 7)
-        yPos += boxHeight + 7
       }
-    } else if (rec.topic_type === "personal") {
-      const teamRows = teams.map((tm) => {
-        const tVal = rec.team_topics?.[tm.id] || "No topic assigned"
-        return [tm.name, tVal]
-      })
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [["Team", "Assigned Team Topic"]],
-        body: teamRows,
-        theme: "grid",
-        headStyles: {
-          fillColor: [10, 29, 44],
-          textColor: [255, 255, 255],
-          fontSize: 8.5,
-          fontStyle: "bold",
-          halign: "center",
-          valign: "middle",
-          minCellHeight: 7,
-        },
-        bodyStyles: {
-          fontSize: 8.5,
-          textColor: [10, 29, 44],
-          valign: "middle",
-          minCellHeight: 7,
-        },
-        columnStyles: {
-          0: { cellWidth: 45, fontStyle: "bold" },
-          1: { cellWidth: "auto" },
-        },
-      })
-      yPos = (doc as any).lastAutoTable.finalY + 7
-    } else {
-      // Participant-wise
-      doc.setFillColor(250, 250, 252)
-      doc.setDrawColor(218, 165, 32)
-      doc.setLineWidth(0.4)
-      doc.roundedRect(margin, yPos, contentWidth, 12, 1.5, 1.5, "FD")
-
-      doc.setFillColor(218, 165, 32)
-      doc.roundedRect(margin, yPos, 2.5, 12, 1, 1, "F")
-
-      doc.setFontSize(8.5)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(10, 29, 44)
-      doc.text("Individual topics are assigned per participant. See participant details below.", margin + 6, yPos + 7.5)
-      yPos += 18
     }
 
-    // 5. Participants Table
-    doc.setFontSize(9.5)
-    doc.setFont("helvetica", "bold")
-    doc.setTextColor(10, 29, 44)
-    doc.text("PARTICIPANT DETAILS & TOPIC ALLOCATION", margin, yPos)
-    yPos += 3.5
+    // Pre-render fallback topic if no participants registered yet
+    if (parts.length === 0 && rec.general_topic && rec.general_topic.trim()) {
+      const isArabic = containsArabic(rec.general_topic) || rec.topic_language === "arabic"
+      const rendered = await renderTopicTextCanvas(rec.general_topic.trim(), 60, 8.5, {
+        isArabic,
+        textColor: "#0A1D2C",
+        bold: false,
+      })
+      if (rendered) {
+        topicImagesMap.set(0, { ...rendered, isArabic })
+      }
+    }
 
     const tableRows = parts.length === 0
-      ? [["-", "-", "No participants registered for this programme yet.", "-", "-", "-"]]
+      ? [[
+          "-",
+          "-",
+          "No participants registered for this programme yet.",
+          "-",
+          "-",
+          {
+            content: topicImagesMap.has(0) ? "" : (rec.general_topic || "—"),
+            styles: { minCellHeight: Math.max((topicImagesMap.get(0)?.heightMM || 5) + 4, 8.5) }
+          }
+        ]]
       : parts.map((p, idx) => {
           let participantTopic = ""
           if (rec.topic_type === "participant") {
@@ -725,13 +737,22 @@ export default function AdminTopicAssignPage() {
             participantTopic = rec.general_topic || "General"
           }
 
+          const hasTopicImg = topicImagesMap.has(idx)
+          const topicImg = topicImagesMap.get(idx)
+          const hasNameImg = nameImagesMap.has(idx)
+
+          const minH = Math.max((topicImg?.heightMM || 5) + 4, 8.5)
+
           return [
             (idx + 1).toString(),
             p.chest_no || "—",
-            p.name,
+            hasNameImg ? "" : p.name,
             p.class_grade || "—",
             p.team_name,
-            participantTopic,
+            {
+              content: hasTopicImg ? "" : participantTopic,
+              styles: { minCellHeight: minH },
+            },
           ]
         })
 
@@ -761,7 +782,58 @@ export default function AdminTopicAssignPage() {
         2: { cellWidth: 42, fontStyle: "bold" },
         3: { cellWidth: 16, halign: "center" },
         4: { cellWidth: 32 },
-        5: { cellWidth: "auto" },
+        5: { cellWidth: 62 },
+      },
+      didDrawCell: (data) => {
+        if (data.section === "body") {
+          // Draw student name if it was rendered via Canvas
+          if (data.column.index === 2) {
+            const nameImg = nameImagesMap.get(data.row.index)
+            if (nameImg && nameImg.dataUrl) {
+              const padding = 1.5
+              const maxW = data.cell.width - padding * 2
+              const maxH = data.cell.height - padding * 2
+              const scale = Math.min(1, maxW / nameImg.widthMM, maxH / nameImg.heightMM)
+              const imgW = nameImg.widthMM * scale
+              const imgH = nameImg.heightMM * scale
+
+              const x = nameImg.isArabic
+                ? data.cell.x + data.cell.width - padding - imgW
+                : data.cell.x + padding
+              const y = data.cell.y + (data.cell.height - imgH) / 2
+
+              try {
+                doc.addImage(nameImg.dataUrl, "PNG", x, y, imgW, imgH)
+              } catch (e) {
+                console.warn("Failed to add name image to cell", e)
+              }
+            }
+          }
+
+          // Draw topic image
+          if (data.column.index === 5) {
+            const topicImg = topicImagesMap.get(data.row.index)
+            if (topicImg && topicImg.dataUrl) {
+              const padding = 1.5
+              const maxW = data.cell.width - padding * 2
+              const maxH = data.cell.height - padding * 2
+              const scale = Math.min(1, maxW / topicImg.widthMM, maxH / topicImg.heightMM)
+              const imgW = topicImg.widthMM * scale
+              const imgH = topicImg.heightMM * scale
+
+              const x = topicImg.isArabic
+                ? data.cell.x + data.cell.width - padding - imgW
+                : data.cell.x + padding
+              const y = data.cell.y + (data.cell.height - imgH) / 2
+
+              try {
+                doc.addImage(topicImg.dataUrl, "PNG", x, y, imgW, imgH)
+              } catch (e) {
+                console.warn("Failed to add topic image to cell", e)
+              }
+            }
+          }
+        }
       },
       didDrawPage: (data) => {
         const currentPage = data.pageNumber
@@ -789,6 +861,8 @@ export default function AdminTopicAssignPage() {
   const generateTopicPDF = async (rec: EventTopicRecord) => {
     try {
       setExportingPdfId(rec.id)
+      await ensureMalayalamFontLoaded()
+
       const doc = new jsPDF("p", "mm", "a4")
       const logoDataUrl = await getLogoDataUrl()
 
@@ -816,6 +890,8 @@ export default function AdminTopicAssignPage() {
 
     try {
       setExportingAll(true)
+      await ensureMalayalamFontLoaded()
+
       const doc = new jsPDF("p", "mm", "a4")
       const logoDataUrl = await getLogoDataUrl()
 
