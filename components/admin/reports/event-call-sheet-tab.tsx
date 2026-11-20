@@ -518,43 +518,42 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
         // 2. Header Title & Judgment Sheet Details
         doc.setFontSize(15);
         doc.setFont("helvetica", "bold");
-        doc.text("WAFY CAMPUS KALIKAVU ARTS FEST 2026-27", pageWidth / 2, 17, { align: 'center' });
+        doc.text("WAFY CAMPUS KALIKAVU ARTS FEST 2026-27", pageWidth / 2, 19, { align: 'center' });
 
         doc.setFontSize(13);
         doc.setFont("helvetica", "bold");
-        doc.text("JUDGMENT SHEET", pageWidth / 2, 25, { align: 'center' });
-
-        doc.setFontSize(8.5);
-        doc.setFont("helvetica", "normal");
-        doc.text("GRADING SYSTEM: GRADE A-80% AND ABOVE, GRADE B-70% TO 79%, GRADE C-60% TO 69%", pageWidth / 2, 32, { align: 'center' });
+        doc.text("JUDGMENT SHEET", pageWidth / 2, 28, { align: 'center' });
 
         // Divider Line below header
-        let yPos = 39;
+        let yPos = 38;
         doc.setDrawColor(210, 210, 210);
         doc.setLineWidth(0.3);
         doc.line(margin, yPos, pageWidth - margin, yPos);
-        yPos += 7;
+        yPos += 8;
 
-        // 3. Item & Topic (Criteria section removed as requested)
+        // 3. Item (Topic line and criteria removed as requested)
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
         doc.text("ITEM:", margin, yPos);
-        doc.setFont("helvetica", "normal");
-        doc.text(`${event.name} (${event.event_code})`, margin + 15, yPos);
-        yPos += 8;
-
         doc.setFont("helvetica", "bold");
-        doc.text("TOPIC:", margin, yPos);
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(0.1);
-        doc.line(margin + 18, yPos + 1, pageWidth - margin, yPos + 1);
-        yPos += 10;
+        doc.text(`${event.name} (${event.event_code})`, margin + 15, yPos);
+        yPos += 9;
 
         // 4. Code Letters & Table Data
+        const evCode = (event.event_code || "").trim().toUpperCase();
+        const evName = (event.name || "").trim().toLowerCase();
+        const isSixLetterEvent =
+          evCode === "SEON14" ||
+          evCode === "SEON23" ||
+          evName.includes("kavyapayatt") ||
+          evName.includes("quiz");
+
         const isCategoryC = event.grade_type === 'D' || event.grade_type === 'C' || event.category === 'SPECIAL' || event.category === 'GENERAL';
         let effectiveCount = 0;
 
-        if (isCategoryC) {
+        if (isSixLetterEvent) {
+          effectiveCount = 6;
+        } else if (isCategoryC) {
           effectiveCount = 4;
         } else {
           effectiveCount = Math.max(rowCount, 5);
@@ -569,7 +568,13 @@ export function EventCallSheetTab({ events }: { events: Event[] }) {
           codes = codeLetterRecord.assignments.map((a: any) => a.letter).filter(Boolean).sort();
         }
 
-        if (!codes.length) {
+        if (isSixLetterEvent) {
+          // Always ensure Kavyapayatt and Quiz have code letters till F (A, B, C, D, E, F)
+          const sixLetters = ["A", "B", "C", "D", "E", "F"];
+          if (codes.length < 6) {
+            codes = sixLetters;
+          }
+        } else if (!codes.length) {
           for (let i = 0; i < effectiveCount; i++) {
             codes.push(letters[i % 26] + (Math.floor(i / 26) > 0 ? Math.floor(i / 26) : ""));
           }
