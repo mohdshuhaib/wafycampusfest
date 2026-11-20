@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import { EventScorer } from "@/components/scoring/event-scorer"
 import { PublishManager } from "@/components/scoring/publish-manager"
+import { TabulationManager } from "@/components/scoring/tabulation-manager"
 import { GradeSettingsDialog } from "@/components/scoring/grade-settings-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal, Globe } from "lucide-react"
+import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal, Globe, Calculator } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -433,6 +434,15 @@ export default function ScoringPage() {
                             </TabsTrigger>
                         ))}
 
+                        {/* Tabulation Tab */}
+                        <TabsTrigger
+                            value="TABULATION"
+                            className="rounded-xl px-4 py-2 text-xs font-bold text-slatebrand transition-all duration-200 hover:bg-gold/15 hover:text-navy data-[state=active]:bg-navy data-[state=active]:text-ivory data-[state=active]:shadow-premium md:text-sm cursor-pointer flex items-center gap-1.5"
+                        >
+                            <Calculator className="size-3.5 text-gold" />
+                            <span>Tabulation</span>
+                        </TabsTrigger>
+
                         {/* New Publish Results Tab */}
                         <TabsTrigger
                             value="PUBLISH"
@@ -455,6 +465,11 @@ export default function ScoringPage() {
                         />
                     </TabsContent>
                 ))}
+
+                {/* Tabulation Tab Content */}
+                <TabsContent value="TABULATION" className="mt-0 data-[state=inactive]:hidden">
+                    <TabulationManager onScoreSaved={handleScoreUpdate} />
+                </TabsContent>
 
                 {/* Publish Tab Content */}
                 <TabsContent value="PUBLISH" className="mt-0 data-[state=inactive]:hidden">
