@@ -10,35 +10,69 @@ export async function GET(request: NextRequest) {
     const eventId = searchParams.get("event_id")
 
     if (eventId) {
-      // Fetch specific event code letter assignment
-      const { data, error } = await supabase
-        .from("site_assets")
-        .select("key, value, updated_at")
-        .eq("key", `code_letter_event_${eventId}`)
-        .maybeSingle()
+      // Fetch specific event code letter assignment, event details, participations & teams
+      const [assetRes, eventRes, participationsRes, teamsRes] = await Promise.all([
+        supabase
+          .from("site_assets")
+          .select("key, value, updated_at")
+          .eq("key", `code_letter_event_${eventId}`)
+          .maybeSingle(),
+        supabase
+          .from("events")
+          .select("id, name, event_code, category, grade_type")
+          .eq("id", eventId)
+          .maybeSingle(),
+        supabase
+          .from("participations")
+          .select(`
+            id,
+            student_id,
+            team_id,
+            students ( id, name, chest_no ),
+            teams ( id, name, color_hex )
+          `)
+          .eq("event_id", eventId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("teams")
+          .select("id, name, color_hex")
+          .order("name", { ascending: true }),
+      ])
 
-      if (error) throw error
-
-      if (!data || !data.value) {
-        return NextResponse.json({ record: null })
+      let record = null
+      if (assetRes.data?.value) {
+        try {
+          record = JSON.parse(assetRes.data.value)
+        } catch (e) {
+          record = null
+        }
       }
 
-      try {
-        const parsed = JSON.parse(data.value)
-        return NextResponse.json({ record: parsed })
-      } catch (e) {
-        return NextResponse.json({ record: null })
-      }
+      return NextResponse.json({
+        record,
+        event: eventRes.data || null,
+        participations: participationsRes.data || [],
+        teams: teamsRes.data || [],
+      })
     }
 
-    // Fetch all code letter assignments
-    const { data: assets, error } = await supabase
-      .from("site_assets")
-      .select("key, value, updated_at")
-      .like("key", "code_letter_event_%")
+    // Fetch all code letter assignments, events, and teams
+    const [assetsRes, eventsRes, teamsRes] = await Promise.all([
+      supabase
+        .from("site_assets")
+        .select("key, value, updated_at")
+        .like("key", "code_letter_event_%"),
+      supabase
+        .from("events")
+        .select("id, name, event_code, category, grade_type")
+        .order("name", { ascending: true }),
+      supabase
+        .from("teams")
+        .select("id, name, color_hex")
+        .order("name", { ascending: true }),
+    ])
 
-    if (error) throw error
-
+    const assets = assetsRes.data || []
     const spinnedEventIds: string[] = []
     const records: Record<string, any> = {}
 
@@ -60,6 +94,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       spinnedEventIds,
       records,
+      events: eventsRes.data || [],
+      teams: teamsRes.data || [],
     })
   } catch (error: any) {
     console.error("Error fetching code letter assignments:", error)

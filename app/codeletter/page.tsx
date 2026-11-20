@@ -248,30 +248,33 @@ export default function CodeLetterAdminPage() {
   const loadInitialData = async () => {
     setLoading(true)
     try {
-      // Fetch all spinned assignments from Supabase API
+      // Fetch all spinned assignments, events & teams from server API
       const res = await fetch("/api/code-letter")
       const spinnedData = await res.json()
       const spinnedRecords = spinnedData.records || {}
       setSpinnedMap(spinnedRecords)
 
-      // Fetch all events
-      const { data: eventsData, error: evErr } = await (supabase
-        .from("events") as any)
-        .select("id, name, event_code, category, grade_type")
-        .order("name", { ascending: true })
-
-      if (evErr) throw evErr
-      const loadedEvents: ProgrammeEvent[] = eventsData || []
+      let loadedEvents: ProgrammeEvent[] = spinnedData.events || []
+      if (!loadedEvents || loadedEvents.length === 0) {
+        // Fallback to client query if needed
+        const { data: eventsData } = await (supabase
+          .from("events") as any)
+          .select("id, name, event_code, category, grade_type")
+          .order("name", { ascending: true })
+        loadedEvents = eventsData || []
+      }
       setEvents(loadedEvents)
 
-      // Fetch all teams
-      const { data: teamsData, error: tErr } = await (supabase
-        .from("teams") as any)
-        .select("id, name, color_hex")
-        .order("name", { ascending: true })
-
-      if (tErr) throw tErr
-      setTeams(teamsData || [])
+      let loadedTeams: Team[] = spinnedData.teams || []
+      if (!loadedTeams || loadedTeams.length === 0) {
+        // Fallback to client query if needed
+        const { data: teamsData } = await (supabase
+          .from("teams") as any)
+          .select("id, name, color_hex")
+          .order("name", { ascending: true })
+        loadedTeams = teamsData || []
+      }
+      setTeams(loadedTeams)
 
       // Auto-select first event if none selected
       if (!selectedEventId && loadedEvents.length > 0) {
@@ -296,8 +299,11 @@ export default function CodeLetterAdminPage() {
     const loadParticipantsForEvent = async () => {
       setLoadingParticipants(true)
       try {
-        // Fetch saved record directly from Supabase API for this event
+        // Fetch saved record and participants from server API (bypasses RLS for public display)
         let savedRecord: CodeLetterRecord | null = null
+        let apiParticipations: any[] = []
+        let apiTeams: any[] = []
+
         try {
           const res = await fetch(`/api/code-letter?event_id=${selectedEventId}`)
           if (res.ok) {
@@ -309,14 +315,22 @@ export default function CodeLetterAdminPage() {
                 [selectedEventId]: data.record,
               }))
             }
+            if (Array.isArray(data.participations)) {
+              apiParticipations = data.participations
+            }
+            if (Array.isArray(data.teams) && data.teams.length > 0) {
+              apiTeams = data.teams
+            }
           }
         } catch (err) {
           console.warn("Could not fetch event record:", err)
         }
 
+        const activeTeams = apiTeams.length > 0 ? apiTeams : teams
+
         if (isGroupEvent(selectedEvent)) {
           // Grade C and D: Group items for the 3 teams
-          const groupParticipants: ParticipantItem[] = teams.map((team) => {
+          const groupParticipants: ParticipantItem[] = activeTeams.map((team) => {
             const savedAssigned = savedRecord?.assignments?.find(
               (a) => a.participant_id === team.id
             )
@@ -335,38 +349,42 @@ export default function CodeLetterAdminPage() {
           initializeLettersAndState(groupParticipants, savedRecord)
         } else {
           // Grade A and B: Individual student participants
-          const { data, error } = await (supabase.from("participations") as any)
-            .select(`
-              id,
-              student_id,
-              students ( id, name, chest_no ),
-              teams ( id, name, color_hex )
-            `)
-            .eq("event_id", selectedEventId)
-            .order("created_at", { ascending: true })
-
-          if (error) {
-            console.error("Error fetching participants:", error)
-            setParticipants([])
-          } else if (data) {
-            const indParticipants: ParticipantItem[] = (data || []).map((p: any) => {
-              const savedAssigned = savedRecord?.assignments?.find(
-                (a) => a.participant_id === p.id || a.participant_id === p.student_id
-              )
-              return {
-                id: p.id,
-                name: p.students?.name || "Participant",
-                chest_no: p.students?.chest_no || "—",
-                team_name: p.teams?.name || "Team",
-                team_color: p.teams?.color_hex || "#1e3a8a",
-                is_team: false,
-                assigned_letter: savedAssigned?.code_letter || null,
-              }
-            })
-
-            setParticipants(indParticipants)
-            initializeLettersAndState(indParticipants, savedRecord)
+          // Prioritize server API participations (bypasses RLS) or fallback to client supabase
+          let partsData = apiParticipations
+          if (!partsData || partsData.length === 0) {
+            try {
+              const { data } = await (supabase.from("participations") as any)
+                .select(`
+                  id,
+                  student_id,
+                  students ( id, name, chest_no ),
+                  teams ( id, name, color_hex )
+                `)
+                .eq("event_id", selectedEventId)
+                .order("created_at", { ascending: true })
+              if (data) partsData = data
+            } catch (e) {
+              console.warn("Client fetch participations failed", e)
+            }
           }
+
+          const indParticipants: ParticipantItem[] = (partsData || []).map((p: any) => {
+            const savedAssigned = savedRecord?.assignments?.find(
+              (a) => a.participant_id === p.id || a.participant_id === p.student_id
+            )
+            return {
+              id: p.id,
+              name: p.students?.name || "Participant",
+              chest_no: p.students?.chest_no || "—",
+              team_name: p.teams?.name || "Team",
+              team_color: p.teams?.color_hex || "#1e3a8a",
+              is_team: false,
+              assigned_letter: savedAssigned?.code_letter || null,
+            }
+          })
+
+          setParticipants(indParticipants)
+          initializeLettersAndState(indParticipants, savedRecord)
         }
       } catch (err) {
         console.error("Error preparing participants:", err)
