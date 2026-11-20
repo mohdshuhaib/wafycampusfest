@@ -528,7 +528,7 @@ export default function AdminSchedulePage() {
     doc.setTextColor(212, 175, 55)
     doc.setFont("helvetica", "bold")
     doc.setFontSize(14)
-    doc.text("WAFY CAMPUS KALIKAVU ARTS FEST 2026", 105, 12, { align: "center" })
+    doc.text("WAFY CAMPUS KALIKAVU ARTS FEST 2026-27", 105, 12, { align: "center" })
 
     // Subtitle
     doc.setTextColor(255, 255, 255)
@@ -615,7 +615,7 @@ export default function AdminSchedulePage() {
       doc.setFontSize(7)
       doc.setFont("helvetica", "normal")
       doc.setTextColor(148, 163, 184)
-      doc.text("Wafy Campus Kalikavu Arts Fest 2026 • Official Festival Schedule", 14, 290)
+      doc.text("Wafy Campus Kalikavu Arts Fest 2026-27 • Official Festival Schedule", 14, 290)
       doc.text(`Page ${i} of ${totalPages}`, 196, 290, { align: "right" })
     }
 

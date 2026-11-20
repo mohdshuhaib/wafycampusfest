@@ -71,7 +71,7 @@ export default async function JudgeLayout({
                 Wafy Campus Kalikavu
               </div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slatebrand">
-                Arts Fest 2026 • Judge Portal
+                Arts Fest 2026-27 • Judge Portal
               </div>
             </div>
           </Link>

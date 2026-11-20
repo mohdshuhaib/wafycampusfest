@@ -119,7 +119,7 @@ export async function saveAssignmentCriteria(
     {
       key: `judge_assignment_criteria_${assignmentId}`,
       label: 'Judge Assignment Criteria',
-      type: 'assignment_criteria',
+      type: 'file',
       value: JSON.stringify(criteria),
       description: `Criteria configuration for judge assignment ${assignmentId}`,
       updated_at: new Date().toISOString(),
@@ -203,7 +203,7 @@ export async function saveEvaluationMarks(
     {
       key: `judge_evaluation_marks_${evaluationId}`,
       label: 'Judge Evaluation Marks',
-      type: 'evaluation_marks',
+      type: 'file',
       value: JSON.stringify(marksBreakdown),
       description: `Evaluation marks breakdown for evaluation ${evaluationId}`,
       updated_at: new Date().toISOString(),

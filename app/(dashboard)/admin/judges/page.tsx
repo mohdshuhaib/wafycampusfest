@@ -433,7 +433,7 @@ export default function AdminJudgesPage() {
     doc.setTextColor(212, 175, 55) // #D4AF37 Gold
     doc.setFont("helvetica", "bold")
     doc.setFontSize(14)
-    doc.text("WAFY CAMPUS KALIKKAV ARTS FEST 2026", 105, 12, { align: "center" })
+    doc.text("WAFY CAMPUS KALIKKAV ARTS FEST 2026-27", 105, 12, { align: "center" })
 
     doc.setTextColor(246, 242, 232)
     doc.setFontSize(10)

@@ -100,7 +100,7 @@ export default function ScoringPage() {
           doc.text(`SENIOR SECTION - FINAL RESULTS`, 105, 20, { align: "center" });
           doc.setFontSize(12);
           doc.setFont("helvetica", "normal");
-          doc.text("PMSA ARTS FEST 2025-26", 105, 28, { align: "center" });
+          doc.text("WAFY CAMPUS ARTS FEST 2026-27", 105, 28, { align: "center" });
 
           const tableBody: any[] = [];
 
@@ -204,7 +204,7 @@ export default function ScoringPage() {
           doc.text(`${category.toUpperCase()} - FIRST PRIZE WINNERS`, 105, 20, { align: "center" });
           doc.setFontSize(10);
           doc.setFont("helvetica", "normal");
-          doc.text("PMSA ARTS FEST 2025-26", 105, 28, { align: "center" });
+          doc.text("WAFY CAMPUS ARTS FEST 2026-27", 105, 28, { align: "center" });
 
           const tableRows: any[] = [];
 

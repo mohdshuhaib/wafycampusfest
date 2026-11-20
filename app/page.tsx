@@ -1535,7 +1535,7 @@ export default function ArtsFestResultsPage() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Image src="/logo.png" alt="Logo" width={28} height={28} className="size-7 object-contain opacity-90" />
-            <span className="text-slate-800 font-bold">Wafy Campus Kalikavu Arts Fest 2026</span>
+            <span className="text-slate-800 font-bold">Wafy Campus Kalikavu Arts Fest 2026-27</span>
           </div>
 
           <div className="flex items-center gap-6 font-semibold text-slate-600">

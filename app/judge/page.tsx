@@ -164,7 +164,7 @@ export default function JudgeDashboard() {
                       {item.event?.name}
                     </CardTitle>
                     <CardDescription className="text-xs text-slatebrand line-clamp-1">
-                      Wafy Campus Kalikkav Arts Fest 2026
+                      Wafy Campus Kalikkav Arts Fest 2026-27
                     </CardDescription>
                   </CardHeader>
 

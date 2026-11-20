@@ -369,7 +369,7 @@ export default function Hero3DCanvasScroller({
               <div className="text-[10px] sm:text-xs font-black uppercase tracking-[0.22em] text-cyan-300 flex items-center gap-1.5 font-['Plus_Jakarta_Sans',sans-serif]">
                 <span className="size-1.5 rounded-full bg-[#E06D53] animate-ping" />
                 <span className="bg-gradient-to-r from-cyan-300 via-teal-200 to-[#E06D53] bg-clip-text text-transparent">
-                  Arts Fest 2026
+                  Arts Fest 2026-27
                 </span>
               </div>
             </div>
@@ -568,12 +568,12 @@ export default function Hero3DCanvasScroller({
                   </span>
                   <br />
                   <span className="inline-block bg-gradient-to-r from-[#E06D53] via-rose-500 via-amber-400 to-yellow-300 bg-clip-text text-transparent drop-shadow-[0_8px_35px_rgba(224,109,83,0.7)]">
-                    Arts Fest 2026
+                    Arts Fest 2026-27
                   </span>
                 </h1>
 
                 <p className="mt-4 max-w-xl text-xs sm:text-base text-slate-200 font-semibold tracking-wide drop-shadow">
-                  PMSA Campus Kalikavu • Igniting Creativity, Elevating Brotherhood
+                  Wafy Campus Kalikavu • Igniting Creativity, Elevating Brotherhood
                 </p>
 
                 {/* Interactive Action Buttons */}
