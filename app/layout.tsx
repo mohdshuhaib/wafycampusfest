@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cn } from "@/lib/utils";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Wafy Campus Kalikavu Arts Fest Portal",
@@ -21,6 +22,7 @@ export default function RootLayout({
         )}
       >
         {children}
+        <Toaster />
       </body>
     </html>
   );

@@ -27,7 +27,6 @@ import {
   Clock,
   LayoutGrid,
   Scale,
-  Disc3,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -39,7 +38,6 @@ const adminLinks = [
   { href: "/admin/teams", label: "Teams", icon: Trophy },
   { href: "/admin/students", label: "Students", icon: Users },
   { href: "/admin/events", label: "Events", icon: Music },
-  { href: "/admin/code-letter", label: "Code Letter", icon: Disc3 },
   { href: "/admin/topic-assign", label: "Topic Assign", icon: BookOpen },
   { href: "/admin/timer", label: "Timer", icon: Clock },
   { href: "/admin/schedule", label: "Schedule", icon: CalendarClock },
