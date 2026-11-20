@@ -31,7 +31,11 @@ import {
   Clock,
   Zap,
   Calendar,
+  FileDown,
+  Printer,
 } from "lucide-react"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 interface ProgrammeEvent {
   id: string
@@ -106,6 +110,10 @@ export default function AdminTopicAssignPage() {
   const [deleteRecord, setDeleteRecord] = useState<EventTopicRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [dbColumnMissing, setDbColumnMissing] = useState(false)
+
+  // Export PDF states
+  const [exportingPdfId, setExportingPdfId] = useState<string | null>(null)
+  const [exportingAll, setExportingAll] = useState(false)
 
   const supabase = createClient()
 
@@ -353,6 +361,478 @@ export default function AdminTopicAssignPage() {
     setDeleting(false)
   }
 
+  // --- PDF EXPORT GENERATORS & HELPERS ---
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    const style = document.createElement("style")
+    style.innerHTML = `
+      @font-face {
+        font-family: 'AnekMalayalam';
+        src: url('/AnekMalayalam-Regular.ttf') format('truetype');
+      }
+    `
+    document.head.appendChild(style)
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
+
+  // Canvas helper for crystal-clear Malayalam & Arabic text rendering
+  const textToImage = (
+    text: string,
+    widthMM: number,
+    fontSizePt: number,
+    options?: { isArabic?: boolean; textColor?: string; bold?: boolean }
+  ): { dataUrl: string; heightMM: number } | null => {
+    if (typeof document === "undefined") return null
+
+    const canvas = document.createElement("canvas")
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return null
+
+    const pxPerMM = 3.78
+    const scaleFactor = 3
+
+    const widthPx = widthMM * pxPerMM * scaleFactor
+    canvas.width = widthPx
+    canvas.height = 1200 * scaleFactor
+
+    ctx.scale(scaleFactor, scaleFactor)
+    const weight = options?.bold ? "bold " : ""
+    ctx.font = `${weight}${fontSizePt * 1.33}px 'AnekMalayalam', 'Noto Sans Arabic', 'Segoe UI', 'Arial', sans-serif`
+    ctx.textBaseline = "top"
+    ctx.fillStyle = options?.textColor || "#0A1D2C"
+
+    const maxWidth = widthMM * pxPerMM
+    const lineHeight = fontSizePt * 1.33 * 1.45
+
+    const paragraphs = text.split("\n")
+    let y = 0
+
+    paragraphs.forEach((para) => {
+      const words = para.split(" ")
+      let line = ""
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + " "
+        const metrics = ctx.measureText(testLine)
+        const testWidth = metrics.width
+
+        if (testWidth > maxWidth && n > 0) {
+          if (options?.isArabic) {
+            ctx.textAlign = "right"
+            ctx.fillText(line.trim(), maxWidth, y)
+          } else {
+            ctx.textAlign = "left"
+            ctx.fillText(line.trim(), 0, y)
+          }
+          line = words[n] + " "
+          y += lineHeight
+        } else {
+          line = testLine
+        }
+      }
+      if (options?.isArabic) {
+        ctx.textAlign = "right"
+        ctx.fillText(line.trim(), maxWidth, y)
+      } else {
+        ctx.textAlign = "left"
+        ctx.fillText(line.trim(), 0, y)
+      }
+      y += lineHeight
+    })
+
+    const finalHeight = Math.max((y + 4) * scaleFactor, 10 * scaleFactor)
+    const finalCanvas = document.createElement("canvas")
+    finalCanvas.width = widthPx
+    finalCanvas.height = finalHeight
+    const finalCtx = finalCanvas.getContext("2d")
+    if (finalCtx) {
+      finalCtx.drawImage(canvas, 0, 0)
+      return {
+        dataUrl: finalCanvas.toDataURL("image/png"),
+        heightMM: finalHeight / scaleFactor / pxPerMM,
+      }
+    }
+    return null
+  }
+
+  // Load logo data safely
+  const getLogoDataUrl = async (): Promise<string> => {
+    try {
+      const res = await fetch("/logo-sm.png")
+      if (res.ok) {
+        const blob = await res.blob()
+        return await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(String(reader.result || ""))
+          reader.readAsDataURL(blob)
+        })
+      }
+    } catch (e) {
+      console.warn("Could not load logo for topic PDF", e)
+    }
+    return ""
+  }
+
+  // Renders a complete, colored, margin-balanced topic sheet on a jsPDF document
+  const renderSingleTopic = async (
+    doc: jsPDF,
+    rec: EventTopicRecord,
+    isFirstPage: boolean,
+    logoDataUrl: string
+  ) => {
+    if (!isFirstPage) {
+      doc.addPage()
+    }
+
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 14
+    const contentWidth = pageWidth - margin * 2
+
+    // 1. Fetch participants for this event
+    const { data: partsData } = await (supabase.from("participations") as any)
+      .select(`
+        id,
+        student_id,
+        students ( id, name, chest_no, class_grade, section ),
+        teams ( id, name, color_hex )
+      `)
+      .eq("event_id", rec.event_id)
+      .order("created_at", { ascending: true })
+
+    const rawParts = (partsData as any[]) || []
+    const parts = rawParts
+      .map((p) => ({
+        id: p.id,
+        student_id: p.student_id || p.id,
+        name: p.students?.name || "Unknown Student",
+        chest_no: p.students?.chest_no || "—",
+        class_grade: p.students?.class_grade || "-",
+        team_id: p.teams?.id || "",
+        team_name: p.teams?.name || "Team",
+        team_color: p.teams?.color_hex || "#1e3a8a",
+      }))
+      .sort((a, b) => (parseInt(a.chest_no) || 999) - (parseInt(b.chest_no) || 999))
+
+    let yPos = margin
+
+    // 2. Top Header with Logo
+    if (logoDataUrl) {
+      try {
+        doc.addImage(logoDataUrl, "PNG", margin, yPos, 16, 20)
+      } catch {}
+    }
+
+    const textStartX = logoDataUrl ? margin + 20 : margin
+    doc.setTextColor(10, 29, 44) // Navy #0A1D2C
+    doc.setFontSize(14)
+    doc.setFont("helvetica", "bold")
+    doc.text("WAFY CAMPUS KALIKAVU ARTS FEST 2026-27", textStartX, yPos + 6)
+
+    doc.setTextColor(153, 122, 21) // Gold #997A15
+    doc.setFontSize(10.5)
+    doc.setFont("helvetica", "bold")
+    doc.text("OFFICIAL PROGRAMME TOPIC ASSIGNMENT", textStartX, yPos + 12)
+
+    doc.setTextColor(100, 116, 139) // Slate
+    doc.setFontSize(8)
+    doc.setFont("helvetica", "normal")
+    const dateStr = new Date().toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    doc.text(`Generated: ${dateStr}  •  Academic & Cultural Wing`, textStartX, yPos + 17)
+
+    // Divider line
+    yPos += 24
+    doc.setDrawColor(10, 29, 44)
+    doc.setLineWidth(0.7)
+    doc.line(margin, yPos, margin + 45, yPos)
+    doc.setDrawColor(218, 165, 32)
+    doc.setLineWidth(0.7)
+    doc.line(margin + 47, yPos, pageWidth - margin, yPos)
+    yPos += 5
+
+    // 3. Programme Details Banner
+    doc.setFillColor(10, 29, 44) // Navy
+    doc.roundedRect(margin, yPos, contentWidth, 23, 2, 2, "F")
+
+    // Event Code Pill
+    doc.setFillColor(218, 165, 32) // Gold
+    doc.roundedRect(margin + 4, yPos + 4, 25, 6, 1.2, 1.2, "F")
+    doc.setTextColor(10, 29, 44)
+    doc.setFontSize(8.5)
+    doc.setFont("helvetica", "bold")
+    doc.text(rec.event?.event_code || "PRG", margin + 16.5, yPos + 8.2, { align: "center" })
+
+    // Programme Name
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(11.5)
+    doc.setFont("helvetica", "bold")
+    doc.text(rec.event?.name || "Programme", margin + 32, yPos + 8.5)
+
+    // Category Pill
+    doc.setFontSize(8)
+    doc.setFont("helvetica", "normal")
+    doc.setTextColor(210, 225, 240)
+    doc.text(`Category: ${rec.event?.category || "General"}`, pageWidth - margin - 4, yPos + 8.5, { align: "right" })
+
+    // Sub-info inside card
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(8)
+    doc.setFont("helvetica", "normal")
+    const langLabel = `Language: ${(rec.topic_language || "english").toUpperCase()}`
+    const typeLabel = `Mode: ${
+      rec.topic_type === "general"
+        ? "General Topic"
+        : rec.topic_type === "personal"
+        ? "Team-wise (Personal)"
+        : "Participant-wise"
+    }`
+    const statusLabel =
+      rec.publish_type === "scheduled" && rec.scheduled_publish_time
+        ? `Scheduled: ${new Date(rec.scheduled_publish_time).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}`
+        : "Published (Spot)"
+
+    doc.text(`${langLabel}   |   ${typeLabel}   |   ${statusLabel}`, margin + 5, yPos + 18)
+    doc.text(`Total Participants: ${parts.length}`, pageWidth - margin - 4, yPos + 18, { align: "right" })
+
+    yPos += 29
+
+    // 4. Topic Content Section
+    doc.setFontSize(9.5)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(10, 29, 44)
+    doc.text("ASSIGNED TOPIC CONTENT", margin, yPos)
+    yPos += 3.5
+
+    const isArabic = rec.topic_language === "arabic"
+    const isMalayalam = rec.topic_language === "malayalam"
+
+    if (rec.topic_type === "general") {
+      const topicText = rec.general_topic || "No topic text specified."
+
+      if (isMalayalam || isArabic) {
+        const renderedImg = textToImage(topicText, contentWidth - 14, 11, {
+          isArabic,
+          textColor: "#0A1D2C",
+          bold: true,
+        })
+        const boxHeight = (renderedImg?.heightMM || 15) + 8
+
+        doc.setFillColor(250, 250, 252)
+        doc.setDrawColor(218, 165, 32)
+        doc.setLineWidth(0.4)
+        doc.roundedRect(margin, yPos, contentWidth, boxHeight, 1.5, 1.5, "FD")
+
+        // Gold accent bar
+        doc.setFillColor(218, 165, 32)
+        doc.roundedRect(margin, yPos, 2.5, boxHeight, 1, 1, "F")
+
+        if (renderedImg) {
+          doc.addImage(renderedImg.dataUrl, "PNG", margin + 6, yPos + 4, contentWidth - 14, renderedImg.heightMM)
+        }
+        yPos += boxHeight + 7
+      } else {
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "bold")
+        const lines = doc.splitTextToSize(topicText, contentWidth - 14)
+        const boxHeight = Math.max(lines.length * 5.5 + 8, 16)
+
+        doc.setFillColor(250, 250, 252)
+        doc.setDrawColor(218, 165, 32)
+        doc.setLineWidth(0.4)
+        doc.roundedRect(margin, yPos, contentWidth, boxHeight, 1.5, 1.5, "FD")
+
+        // Gold accent bar
+        doc.setFillColor(218, 165, 32)
+        doc.roundedRect(margin, yPos, 2.5, boxHeight, 1, 1, "F")
+
+        doc.setTextColor(10, 29, 44)
+        doc.text(lines, margin + 7, yPos + 7)
+        yPos += boxHeight + 7
+      }
+    } else if (rec.topic_type === "personal") {
+      const teamRows = teams.map((tm) => {
+        const tVal = rec.team_topics?.[tm.id] || "No topic assigned"
+        return [tm.name, tVal]
+      })
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [["Team", "Assigned Team Topic"]],
+        body: teamRows,
+        theme: "grid",
+        headStyles: {
+          fillColor: [10, 29, 44],
+          textColor: [255, 255, 255],
+          fontSize: 8.5,
+          fontStyle: "bold",
+          halign: "center",
+          valign: "middle",
+          minCellHeight: 7,
+        },
+        bodyStyles: {
+          fontSize: 8.5,
+          textColor: [10, 29, 44],
+          valign: "middle",
+          minCellHeight: 7,
+        },
+        columnStyles: {
+          0: { cellWidth: 45, fontStyle: "bold" },
+          1: { cellWidth: "auto" },
+        },
+      })
+      yPos = (doc as any).lastAutoTable.finalY + 7
+    } else {
+      // Participant-wise
+      doc.setFillColor(250, 250, 252)
+      doc.setDrawColor(218, 165, 32)
+      doc.setLineWidth(0.4)
+      doc.roundedRect(margin, yPos, contentWidth, 12, 1.5, 1.5, "FD")
+
+      doc.setFillColor(218, 165, 32)
+      doc.roundedRect(margin, yPos, 2.5, 12, 1, 1, "F")
+
+      doc.setFontSize(8.5)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(10, 29, 44)
+      doc.text("Individual topics are assigned per participant. See participant details below.", margin + 6, yPos + 7.5)
+      yPos += 18
+    }
+
+    // 5. Participants Table
+    doc.setFontSize(9.5)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(10, 29, 44)
+    doc.text("PARTICIPANT DETAILS & TOPIC ALLOCATION", margin, yPos)
+    yPos += 3.5
+
+    const tableRows = parts.length === 0
+      ? [["-", "-", "No participants registered for this programme yet.", "-", "-", "-"]]
+      : parts.map((p, idx) => {
+          let participantTopic = ""
+          if (rec.topic_type === "participant") {
+            participantTopic = rec.participant_topics?.[p.student_id] || rec.participant_topics?.[p.id] || "—"
+          } else if (rec.topic_type === "personal") {
+            participantTopic = rec.team_topics?.[p.team_id] || "—"
+          } else {
+            participantTopic = rec.general_topic || "General"
+          }
+
+          return [
+            (idx + 1).toString(),
+            p.chest_no || "—",
+            p.name,
+            p.class_grade || "—",
+            p.team_name,
+            participantTopic,
+          ]
+        })
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Sl No", "Chest No", "Student Name", "Class", "Team", "Assigned Topic"]],
+      body: tableRows,
+      theme: "grid",
+      headStyles: {
+        fillColor: [10, 29, 44],
+        textColor: [255, 255, 255],
+        fontSize: 8.5,
+        fontStyle: "bold",
+        halign: "center",
+        valign: "middle",
+        minCellHeight: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [10, 29, 44],
+        valign: "middle",
+        minCellHeight: 7.5,
+      },
+      columnStyles: {
+        0: { cellWidth: 12, halign: "center" },
+        1: { cellWidth: 18, halign: "center", fontStyle: "bold" },
+        2: { cellWidth: 42, fontStyle: "bold" },
+        3: { cellWidth: 16, halign: "center" },
+        4: { cellWidth: 32 },
+        5: { cellWidth: "auto" },
+      },
+      didDrawPage: (data) => {
+        const currentPage = data.pageNumber
+        doc.setFontSize(8)
+        doc.setFont("helvetica", "normal")
+        doc.setTextColor(120, 120, 120)
+
+        // Footer divider line
+        doc.setDrawColor(220, 220, 220)
+        doc.setLineWidth(0.2)
+        doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12)
+
+        doc.text("Arts Fest Convener / Chief Judge: ____________________", margin, pageHeight - 7)
+        doc.text(
+          `Wafy Campus Kalikavu Arts Fest  •  Page ${currentPage}`,
+          pageWidth - margin,
+          pageHeight - 7,
+          { align: "right" }
+        )
+      },
+    })
+  }
+
+  // Generate Single Programme Topic PDF
+  const generateTopicPDF = async (rec: EventTopicRecord) => {
+    try {
+      setExportingPdfId(rec.id)
+      const doc = new jsPDF("p", "mm", "a4")
+      const logoDataUrl = await getLogoDataUrl()
+
+      await renderSingleTopic(doc, rec, true, logoDataUrl)
+
+      const safeCode = (rec.event?.event_code || rec.event?.name || "topic")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "_")
+      doc.save(`${safeCode}_topic_assignment.pdf`)
+      toast.success(`Exported topic PDF for ${rec.event?.name || rec.event?.event_code}!`)
+    } catch (err: any) {
+      console.error("Error generating topic PDF:", err)
+      toast.error("Failed to generate Topic PDF: " + (err?.message || "Unknown error"))
+    } finally {
+      setExportingPdfId(null)
+    }
+  }
+
+  // Generate All Programme Topics PDF (bulk)
+  const generateAllTopicsPDF = async () => {
+    if (filteredTopicRecords.length === 0) {
+      toast.error("No topics available to export")
+      return
+    }
+
+    try {
+      setExportingAll(true)
+      const doc = new jsPDF("p", "mm", "a4")
+      const logoDataUrl = await getLogoDataUrl()
+
+      for (let i = 0; i < filteredTopicRecords.length; i++) {
+        await renderSingleTopic(doc, filteredTopicRecords[i], i === 0, logoDataUrl)
+      }
+
+      doc.save("all_programme_topics.pdf")
+      toast.success("Exported all programme topics PDF successfully!")
+    } catch (err: any) {
+      console.error("Error exporting all topics PDF:", err)
+      toast.error("Failed to export all topics: " + (err?.message || "Unknown error"))
+    } finally {
+      setExportingAll(false)
+    }
+  }
+
   // Filter topics for main display
   const filteredTopicRecords = topicRecords.filter((rec) => {
     const q = searchQuery.toLowerCase()
@@ -393,13 +873,31 @@ export default function AdminTopicAssignPage() {
           </p>
         </div>
 
-        <Button
-          onClick={() => handleOpenAddModal()}
-          className="bg-navy hover:bg-navy/90 text-ivory gap-2 shadow-premium rounded-xl px-5 h-11 cursor-pointer font-bold"
-        >
-          <Plus className="size-4 text-gold" />
-          <span>Add / Assign Topic</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {topicRecords.length > 0 && (
+            <Button
+              variant="outline"
+              disabled={exportingAll}
+              onClick={generateAllTopicsPDF}
+              className="border-navy/15 text-navy hover:bg-navy/5 font-bold rounded-xl px-4 h-11 gap-2 cursor-pointer"
+            >
+              {exportingAll ? (
+                <Loader2 className="size-4 animate-spin text-gold" />
+              ) : (
+                <Printer className="size-4 text-gold" />
+              )}
+              <span>Export All Topics</span>
+            </Button>
+          )}
+
+          <Button
+            onClick={() => handleOpenAddModal()}
+            className="bg-navy hover:bg-navy/90 text-ivory gap-2 shadow-premium rounded-xl px-5 h-11 cursor-pointer font-bold"
+          >
+            <Plus className="size-4 text-gold" />
+            <span>Add / Assign Topic</span>
+          </Button>
+        </div>
       </div>
 
       {/* Database Missing Banner Notice */}
@@ -577,25 +1075,42 @@ export default function AdminTopicAssignPage() {
                   </div>
 
                   {/* Actions Footer */}
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-navy/5">
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-navy/5">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      onClick={() => handleOpenAddModal(rec)}
-                      className="h-9 px-3 text-navy hover:bg-navy/8 rounded-xl gap-1.5 cursor-pointer font-bold text-xs"
+                      disabled={exportingPdfId === rec.id}
+                      onClick={() => generateTopicPDF(rec)}
+                      className="h-9 px-3 border-navy/15 text-navy hover:bg-gold/10 hover:text-navy hover:border-gold/40 rounded-xl gap-1.5 cursor-pointer font-bold text-xs"
                     >
-                      <Edit2 className="size-3.5 text-navy" />
-                      <span>Edit Topic</span>
+                      {exportingPdfId === rec.id ? (
+                        <Loader2 className="size-3.5 animate-spin text-gold" />
+                      ) : (
+                        <FileDown className="size-3.5 text-gold" />
+                      )}
+                      <span>Export PDF</span>
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteRecord(rec)}
-                      className="h-9 px-3 text-destructive hover:bg-destructive/10 rounded-xl gap-1.5 cursor-pointer font-bold text-xs"
-                    >
-                      <Trash2 className="size-3.5 text-destructive" />
-                      <span>Delete</span>
-                    </Button>
+
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenAddModal(rec)}
+                        className="h-9 px-3 text-navy hover:bg-navy/8 rounded-xl gap-1.5 cursor-pointer font-bold text-xs"
+                      >
+                        <Edit2 className="size-3.5 text-navy" />
+                        <span>Edit Topic</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteRecord(rec)}
+                        className="h-9 px-3 text-destructive hover:bg-destructive/10 rounded-xl gap-1.5 cursor-pointer font-bold text-xs"
+                      >
+                        <Trash2 className="size-3.5 text-destructive" />
+                        <span>Delete</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )
