@@ -37,12 +37,15 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
     const leaderboard = teams.map((team: any) => {
       const teamParts = parts.filter((p: any) => p.teams?.id === team.id)
       const earnedTotal = teamParts.reduce((sum: number, p: any) => sum + (p.points_earned || 0), 0)
+      const penalty = Number(team.penalty_points || 0)
+      const netTotal = Math.max(0, earnedTotal - penalty)
       return {
         id: team.id,
         name: team.name,
         color: team.color_hex,
-        total: earnedTotal,
+        total: netTotal,
         rawTotal: earnedTotal,
+        penalty,
       }
     })
 
@@ -132,8 +135,13 @@ export function LiveLeaderboard({ refreshTrigger }: { refreshTrigger: number }) 
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="border-x border-gold/20 bg-gold/10 py-2 text-center text-2xl font-black text-navy">
-                          {team.total}
+                        <TableCell className="border-x border-gold/20 bg-gold/10 py-2 text-center">
+                          <div className="text-2xl font-black text-navy">{team.total}</div>
+                          {team.penalty > 0 && (
+                            <div className="text-[10px] font-bold text-rose-600">
+                              -{team.penalty} pen
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     )

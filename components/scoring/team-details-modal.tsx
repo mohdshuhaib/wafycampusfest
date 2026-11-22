@@ -69,9 +69,18 @@ export function TeamDetailsModal({ teamId, open, onOpenChange }: Props) {
     doc.setFontSize(20)
     doc.text(`${data.team.name} - Score Report`, 14, 20)
 
-    const total = data.parts.reduce((sum: number, p: any) => sum + p.points_earned, 0)
+    const gross = data.parts.reduce((sum: number, p: any) => sum + p.points_earned, 0)
+    const penalty = Number(data.team.penalty_points || 0)
+    const net = Math.max(0, gross - penalty)
+
     doc.setFontSize(12)
-    doc.text(`Total Points: ${total}`, 14, 30)
+    doc.text(`Gross Points: ${gross}`, 14, 28)
+    if (penalty > 0) {
+      doc.text(`Minus Marks (Penalties): -${penalty}`, 14, 34)
+      doc.text(`Net Total Points: ${net}`, 14, 40)
+    } else {
+      doc.text(`Total Points: ${net}`, 14, 34)
+    }
 
     const body = data.parts.map((p: any) => [
       p.events.name,
@@ -82,8 +91,19 @@ export function TeamDetailsModal({ teamId, open, onOpenChange }: Props) {
       p.points_earned,
     ])
 
+    if (penalty > 0) {
+      body.push([
+        "PENALTY / MINUS MARKS",
+        "Disciplinary / Late Deduction",
+        "-",
+        "-",
+        "-",
+        `-${penalty}`,
+      ])
+    }
+
     autoTable(doc, {
-      startY: 35,
+      startY: penalty > 0 ? 46 : 40,
       head: [["Event", "Winner", "Section", "Pos", "Grade", "Pts"]],
       body,
       theme: "grid",
@@ -118,9 +138,14 @@ export function TeamDetailsModal({ teamId, open, onOpenChange }: Props) {
               </div>
               <div className="text-right">
                 <div className="text-5xl font-black leading-none tracking-tighter text-ivory" style={{ textShadow: `0 0 30px ${data.team.color_hex}40` }}>
-                  {data.parts.reduce((sum: number, p: any) => sum + p.points_earned, 0)}
+                  {Math.max(0, data.parts.reduce((sum: number, p: any) => sum + p.points_earned, 0) - Number(data.team.penalty_points || 0))}
                 </div>
-                <div className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-ivory/48">Total Points</div>
+                <div className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-ivory/48">Net Total Points</div>
+                {Number(data.team.penalty_points || 0) > 0 && (
+                  <div className="mt-2 text-xs font-bold text-rose-300">
+                    Gross: {data.parts.reduce((sum: number, p: any) => sum + p.points_earned, 0)} • Minus: -{data.team.penalty_points}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -173,6 +198,18 @@ export function TeamDetailsModal({ teamId, open, onOpenChange }: Props) {
                   <TableRow>
                     <TableCell colSpan={6} className="py-12 text-center text-sm font-bold text-slatebrand">
                       No scores recorded for {data.team.name} yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {Number(data.team.penalty_points || 0) > 0 && (
+                  <TableRow className="border-t-2 border-rose-200 bg-rose-50/70 font-bold hover:bg-rose-50">
+                    <TableCell className="pl-6 font-bold text-rose-700">Minus Marks (Penalty)</TableCell>
+                    <TableCell className="text-xs font-semibold text-rose-600">Disciplinary / Delay Deduction</TableCell>
+                    <TableCell className="text-xs font-semibold text-rose-600">-</TableCell>
+                    <TableCell className="text-center text-xs font-bold text-rose-600">-</TableCell>
+                    <TableCell className="text-center font-mono text-xs text-rose-600">-</TableCell>
+                    <TableCell className="bg-rose-100/70 pr-6 text-right font-mono font-black text-rose-700">
+                      -{data.team.penalty_points}
                     </TableCell>
                   </TableRow>
                 )}

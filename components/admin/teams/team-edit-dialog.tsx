@@ -15,6 +15,7 @@ interface Team {
   name: string
   slug: string
   color_hex: string
+  penalty_points?: number
 }
 
 interface TeamEditDialogProps {
@@ -29,7 +30,8 @@ export function TeamEditDialog({ team, open, onOpenChange, onSuccess }: TeamEdit
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
-    color_hex: "#0A1D2C"
+    color_hex: "#0A1D2C",
+    penalty_points: 0,
   })
 
   useEffect(() => {
@@ -37,7 +39,8 @@ export function TeamEditDialog({ team, open, onOpenChange, onSuccess }: TeamEdit
     setFormData({
       name: team.name,
       slug: team.slug,
-      color_hex: team.color_hex
+      color_hex: team.color_hex,
+      penalty_points: (team as any).penalty_points || 0,
     })
   }, [team, open])
 
@@ -52,7 +55,8 @@ export function TeamEditDialog({ team, open, onOpenChange, onSuccess }: TeamEdit
         .update({
           name: formData.name,
           slug: formData.slug,
-          color_hex: formData.color_hex
+          color_hex: formData.color_hex,
+          penalty_points: formData.penalty_points,
         })
         .eq('id', team.id)
 
@@ -118,6 +122,25 @@ export function TeamEditDialog({ team, open, onOpenChange, onSuccess }: TeamEdit
                 className="font-mono"
               />
             </div>
+          </div>
+          <div className="space-y-2 rounded-2xl border border-rose-200/80 bg-rose-50/50 p-3">
+            <Label htmlFor="team-penalty" className="text-xs font-bold uppercase tracking-[0.12em] text-rose-700">
+              Minus Marks (Penalty Points)
+            </Label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-black text-rose-600">-</span>
+              <Input
+                id="team-penalty"
+                type="number"
+                min="0"
+                value={formData.penalty_points}
+                onChange={(e) => setFormData({...formData, penalty_points: Math.max(0, parseInt(e.target.value) || 0)})}
+                className="font-mono font-bold text-rose-700 bg-white"
+              />
+            </div>
+            <p className="text-[11px] font-medium text-slatebrand">
+              Deducted automatically from this team's overall score in the championship.
+            </p>
           </div>
         </div>
 

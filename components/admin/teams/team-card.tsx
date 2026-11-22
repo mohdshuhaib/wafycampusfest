@@ -9,6 +9,7 @@ interface Team {
   slug: string
   color_hex: string
   access_override: boolean | null
+  penalty_points?: number
 }
 
 interface TeamWithCounts extends Team {
@@ -51,6 +52,12 @@ export function TeamCard({ team, onEdit, onView }: TeamCardProps) {
             <Users className="size-5" />
           </div>
         </div>
+        {typeof team.penalty_points === 'number' && team.penalty_points > 0 ? (
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-rose-200/80 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700">
+            <span>Minus Mark</span>
+            <span className="font-mono text-sm font-black">-{team.penalty_points} pts</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="relative mt-auto grid grid-cols-2 gap-2 pt-5">

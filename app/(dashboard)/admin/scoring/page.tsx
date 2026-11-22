@@ -8,6 +8,7 @@ import { PublishManager } from "@/components/scoring/publish-manager"
 import { TabulationManager } from "@/components/scoring/tabulation-manager"
 import { ResultAnalyseManager } from "@/components/scoring/result-analyse-manager"
 import { GradeSettingsDialog } from "@/components/scoring/grade-settings-dialog"
+import { PenaltySettingsDialog } from "@/components/scoring/penalty-settings-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal, Globe, Calculator, TrendingUp } from "lucide-react"
+import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal, Globe, Calculator, TrendingUp, MinusCircle } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -39,6 +40,7 @@ export default function ScoringPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState(SECTIONS[0].id)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isPenaltyOpen, setIsPenaltyOpen] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [downloadingExcel, setDownloadingExcel] = useState(false)
   const supabase = createClient()
@@ -406,6 +408,14 @@ export default function ScoringPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            <Button
+              variant="outline"
+              onClick={() => setIsPenaltyOpen(true)}
+              className="border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 hover:text-white"
+            >
+              <MinusCircle className="size-4" />
+              <span>Minus Marks</span>
+            </Button>
             <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
               <Settings className="size-4" />
               <span className="hidden sm:inline">Rules</span>
@@ -497,6 +507,12 @@ export default function ScoringPage() {
       <GradeSettingsDialog
         open={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
+        onSuccess={handleScoreUpdate}
+      />
+
+      <PenaltySettingsDialog
+        open={isPenaltyOpen}
+        onOpenChange={setIsPenaltyOpen}
         onSuccess={handleScoreUpdate}
       />
     </div>

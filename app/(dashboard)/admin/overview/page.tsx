@@ -32,7 +32,7 @@ export default function OverviewPage() {
 
       const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
-        .select("id, name, color_hex") as { data: Team[] | null; error: any }
+        .select("id, name, color_hex, penalty_points") as { data: any[] | null; error: any }
 
       if (teamsError || !teamsData) {
         console.error("Error fetching teams", teamsError)
@@ -67,6 +67,7 @@ export default function OverviewPage() {
         teamsMap.set(team.id, {
           name: team.name,
           color: team.color_hex,
+          penalty: Number(team.penalty_points || 0),
           earnedPoints: 0,
           totalPoints: 0,
           first: 0,
@@ -89,7 +90,7 @@ export default function OverviewPage() {
       })
 
       teamsMap.forEach((t) => {
-        t.totalPoints = t.earnedPoints
+        t.totalPoints = Math.max(0, t.earnedPoints - (t.penalty || 0))
       })
 
       setTeamStats(Array.from(teamsMap.values()).sort((a, b) => b.totalPoints - a.totalPoints))
@@ -211,11 +212,13 @@ export default function OverviewPage() {
 
       autoTable(doc, {
         startY: yPos,
-        head: [["Rank", "Team Name", "Total Points", "1st", "2nd", "3rd"]],
+        head: [["Rank", "Team Name", "Earned Pts", "Minus Marks", "Total Points", "1st", "2nd", "3rd"]],
         body: teamStats.map((t, i) => [
           i + 1,
           t.name,
           t.earnedPoints,
+          t.penalty > 0 ? `-${t.penalty}` : "0",
+          t.totalPoints,
           t.first,
           t.second,
           t.third,
@@ -223,7 +226,7 @@ export default function OverviewPage() {
         theme: "striped",
         headStyles: { fillColor: [10, 29, 44] },
         columnStyles: {
-          2: { fontStyle: "bold" },
+          4: { fontStyle: "bold" },
         },
       })
 

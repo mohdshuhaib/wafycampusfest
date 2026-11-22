@@ -400,6 +400,12 @@ export default function ArtsFestResultsPage() {
                     <span className="font-bold text-slate-800 font-mono text-xs">{secondTeam.special}</span>
                   </div>
                 </div>
+
+                {secondTeam.penalty > 0 && (
+                  <div className="mt-2 text-center text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200/80 rounded-lg py-0.5 px-2">
+                    Minus Mark: -{secondTeam.penalty} pts
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -463,6 +469,12 @@ export default function ArtsFestResultsPage() {
                     <span className="font-bold text-slate-900 font-mono text-xs">{firstTeam.special}</span>
                   </div>
                 </div>
+
+                {firstTeam.penalty > 0 && (
+                  <div className="mt-2 text-center text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200/80 rounded-lg py-0.5 px-2">
+                    Minus Mark: -{firstTeam.penalty} pts
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -520,6 +532,12 @@ export default function ArtsFestResultsPage() {
                     <span className="font-bold text-slate-800 font-mono text-xs">{thirdTeam.special}</span>
                   </div>
                 </div>
+
+                {thirdTeam.penalty > 0 && (
+                  <div className="mt-2 text-center text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200/80 rounded-lg py-0.5 px-2">
+                    Minus Mark: -{thirdTeam.penalty} pts
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

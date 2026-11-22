@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase"
 import { TeamCard } from "@/components/admin/teams/team-card"
 import { TeamEditDialog } from "@/components/admin/teams/team-edit-dialog"
 import { TeamDetailsDialog } from "@/components/admin/teams/team-details-dialog"
-import { Loader2, Lock, Unlock, Globe, ShieldCheck, Sparkles, Trophy, Users, Gauge, Settings2 } from "lucide-react"
+import { PenaltySettingsDialog } from "@/components/scoring/penalty-settings-dialog"
+import { Loader2, Lock, Unlock, Globe, ShieldCheck, Sparkles, Trophy, Users, Gauge, Settings2, AlertTriangle, MinusCircle } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
@@ -17,6 +18,7 @@ interface Team {
   slug: string
   color_hex: string
   access_override: boolean | null
+  penalty_points?: number
 }
 
 interface TeamWithCounts extends Team {
@@ -58,6 +60,7 @@ export default function AdminTeams() {
   const [viewingTeam, setViewingTeam] = useState<TeamWithCounts | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const [isPenaltyOpen, setIsPenaltyOpen] = useState(false)
 
   const supabase = createClient()
 
@@ -211,7 +214,7 @@ export default function AdminTeams() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="surface-panel rounded-3xl p-5">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-navy">
             <Users className="size-4 text-gold" />
@@ -232,6 +235,28 @@ export default function AdminTeams() {
             Using global
           </div>
           <div className="text-title text-3xl text-navy">{teams.filter(team => team.access_override === null).length}</div>
+        </div>
+        <div className="surface-panel rounded-3xl p-5 flex flex-col justify-between">
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-rose-700">
+                <MinusCircle className="size-4 text-rose-600" />
+                Minus Marks
+              </div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">Penalties</span>
+            </div>
+            <div className="text-title text-3xl font-black text-rose-600">
+              -{teams.reduce((sum, t) => sum + (t.penalty_points || 0), 0)} <span className="text-xs font-sans text-slatebrand">pts</span>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsPenaltyOpen(true)}
+            className="mt-3 w-full border-rose-300 bg-rose-50/50 text-rose-700 hover:bg-rose-100 text-xs font-bold"
+          >
+            Manage Deductions
+          </Button>
         </div>
       </section>
 
@@ -308,6 +333,12 @@ export default function AdminTeams() {
         team={viewingTeam}
         open={isViewOpen}
         onOpenChange={setIsViewOpen}
+      />
+
+      <PenaltySettingsDialog
+        open={isPenaltyOpen}
+        onOpenChange={setIsPenaltyOpen}
+        onSuccess={loadData}
       />
     </div>
   )
