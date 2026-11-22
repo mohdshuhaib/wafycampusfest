@@ -191,22 +191,53 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
         const newWinners = { FIRST: new Map(), SECOND: new Map(), THIRD: new Map() }
         const newOtherGrades = new Map<string, string>()
 
-        mapped.forEach((p: any) => {
-            const key = isTeamEvent ? (p.team?.id || p.team_id) : p.id
+        if (isTeamEvent) {
+          // In team/group event mode, map results to Group 1 and Group 2 per team
+          const teamRowsByTeamId: Record<string, any[]> = {}
+          mapped.forEach((p: any) => {
+            if (p.student_id) return // ignore individual student rows
+            const tId = p.team?.id || p.team_id
+            if (!tId) return
+            if (!teamRowsByTeamId[tId]) teamRowsByTeamId[tId] = []
+            teamRowsByTeamId[tId].push(p)
+          })
 
-            // When in team mode, ignore individual student rows
-            if (isTeamEvent && p.student_id) return
-            // When in individual mode, ignore team rows
-            if (!isTeamEvent && !p.student_id) return
+          // Sort team rows so winners come first, then grades
+          const posRank: Record<string, number> = { FIRST: 1, SECOND: 2, THIRD: 3 }
+          Object.entries(teamRowsByTeamId).forEach(([tId, rows]) => {
+            rows.sort((a, b) => {
+              const rankA = a.result_position ? (posRank[a.result_position] || 9) : 10
+              const rankB = b.result_position ? (posRank[b.result_position] || 9) : 10
+              return rankA - rankB
+            })
 
-            if (p.result_position && (p.result_position === 'FIRST' || p.result_position === 'SECOND' || p.result_position === 'THIRD')) {
+            rows.forEach((p, idx) => {
+              const grpNum = idx + 1
+              if (grpNum > 2) return // Maximum 2 groups per team
+              const key = `${tId}__grp${grpNum}`
+
+              if (p.result_position && (p.result_position === 'FIRST' || p.result_position === 'SECOND' || p.result_position === 'THIRD')) {
                 // @ts-ignore
                 newWinners[p.result_position].set(key, p.performance_grade || 'NONE')
-            } else if (p.performance_grade) {
-                // If they have a grade but no position, they go to 'otherGrades'
+              } else if (p.performance_grade && p.performance_grade !== 'NONE') {
                 newOtherGrades.set(key, p.performance_grade)
+              }
+            })
+          })
+        } else {
+          // Individual mode
+          mapped.forEach((p: any) => {
+            if (!p.student_id) return // ignore team rows
+
+            if (p.result_position && (p.result_position === 'FIRST' || p.result_position === 'SECOND' || p.result_position === 'THIRD')) {
+              // @ts-ignore
+              newWinners[p.result_position].set(p.id, p.performance_grade || 'NONE')
+            } else if (p.performance_grade) {
+              newOtherGrades.set(p.id, p.performance_grade)
             }
-        })
+          })
+        }
+
         // @ts-ignore
         setWinners(newWinners)
         setOtherGrades(newOtherGrades)
@@ -370,18 +401,26 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
               })
           }
 
-          // Process Winners
-          winners.FIRST.forEach((perf, teamId) => addResult(teamId, 'FIRST', perf, basePoints?.FIRST || 0))
-          winners.SECOND.forEach((perf, teamId) => addResult(teamId, 'SECOND', perf, basePoints?.SECOND || 0))
-          winners.THIRD.forEach((perf, teamId) => addResult(teamId, 'THIRD', perf, basePoints?.THIRD || 0))
+          // Process Winners (grpKey is either `${teamId}__grp1` / `${teamId}__grp2` or legacy `teamId`)
+          winners.FIRST.forEach((perf, grpKey) => {
+            const teamId = grpKey.includes('__') ? grpKey.split('__')[0] : grpKey
+            addResult(teamId, 'FIRST', perf, basePoints?.FIRST || 0)
+          })
+          winners.SECOND.forEach((perf, grpKey) => {
+            const teamId = grpKey.includes('__') ? grpKey.split('__')[0] : grpKey
+            addResult(teamId, 'SECOND', perf, basePoints?.SECOND || 0)
+          })
+          winners.THIRD.forEach((perf, grpKey) => {
+            const teamId = grpKey.includes('__') ? grpKey.split('__')[0] : grpKey
+            addResult(teamId, 'THIRD', perf, basePoints?.THIRD || 0)
+          })
 
-          // Process Others (Teams not in winners)
-          teams.forEach(t => {
-             const isWinner = winners.FIRST.has(t.id) || winners.SECOND.has(t.id) || winners.THIRD.has(t.id)
-             if (!isWinner) {
-                 const grade = otherGrades.get(t.id) || 'NONE'
-                 addResult(t.id, null, grade === 'NONE' ? null : grade, 0)
-             }
+          // Process Others (Groups that were given a performance grade but not in winners)
+          otherGrades.forEach((grade, grpKey) => {
+            const teamId = grpKey.includes('__') ? grpKey.split('__')[0] : grpKey
+            if (grade && grade !== 'NONE') {
+              addResult(teamId, null, grade, 0)
+            }
           })
 
           if (newResults.length > 0) {
@@ -416,8 +455,14 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
       ...Array.from(winners.THIRD.keys())
   ])
 
-  const itemList = mode === 'INDIVIDUAL' ? participants.filter(p => p.student) : teams.map(t => ({ ...t, id: t.id })) // Normalized
-  const otherParticipants = itemList.filter(item => !winnerIds.has(mode === 'INDIVIDUAL' ? item.id : item.id))
+  // In team mode (Grade C & D), generate 2 groups per team (Group 1 & Group 2) so teams can win multiple positions or grades
+  const itemList = mode === 'INDIVIDUAL' 
+    ? participants.filter(p => p.student) 
+    : teams.flatMap(t => [
+        { id: `${t.id}__grp1`, team_id: t.id, group_num: 1, name: `${t.name} (Group 1)`, team: t },
+        { id: `${t.id}__grp2`, team_id: t.id, group_num: 2, name: `${t.name} (Group 2)`, team: t }
+      ])
+  const otherParticipants = itemList.filter(item => !winnerIds.has(item.id))
 
   return (
     <div className="flex h-full flex-col space-y-4">

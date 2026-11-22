@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { createClient } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -19,6 +20,7 @@ import {
   Radio,
   Layers,
   Check,
+  Copy,
 } from "lucide-react"
 
 interface EnrichedEvent {
@@ -44,6 +46,9 @@ export function PublishManager({ onPublishChanged }: { onPublishChanged?: () => 
   const [statusFilter, setStatusFilter] = useState<"ALL" | "PUBLISHED" | "UNPUBLISHED" | "MARKED">("ALL")
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [bulkPublishing, setBulkPublishing] = useState(false)
+  const [copyingId, setCopyingId] = useState<string | null>(null)
+
+  const supabase = createClient()
 
   const loadData = async () => {
     try {
@@ -66,6 +71,111 @@ export function PublishManager({ onPublishChanged }: { onPublishChanged?: () => 
   useEffect(() => {
     loadData()
   }, [])
+
+  // Copy Result formatted for WhatsApp & clipboard
+  const handleCopyResult = async (evt: EnrichedEvent) => {
+    try {
+      setCopyingId(evt.id)
+      const { data: parts, error } = await supabase
+        .from("participations")
+        .select(`
+          id,
+          result_position,
+          performance_grade,
+          student_id,
+          students ( id, name, chest_no ),
+          teams ( id, name, color_hex )
+        `)
+        .eq("event_id", evt.id)
+
+      if (error) throw error
+
+      const rawParts = (parts as any[]) || []
+      const posRank: Record<string, number> = { FIRST: 1, SECOND: 2, THIRD: 3 }
+
+      const winners = rawParts
+        .filter((p) => p.result_position && posRank[p.result_position])
+        .sort((a, b) => posRank[a.result_position] - posRank[b.result_position])
+
+      const gradeRank: Record<string, number> = { "A+": 1, A: 2, B: 3, C: 4 }
+      const gradeOnly = rawParts
+        .filter(
+          (p) =>
+            (!p.result_position || !posRank[p.result_position]) &&
+            p.performance_grade &&
+            p.performance_grade !== "NONE"
+        )
+        .sort((a, b) => {
+          const rankA = gradeRank[a.performance_grade] || 9
+          const rankB = gradeRank[b.performance_grade] || 9
+          return rankA - rankB
+        })
+
+      if (winners.length === 0 && gradeOnly.length === 0) {
+        toast.info(`No marked positions or grades found for "${evt.name}".`)
+        return
+      }
+
+      const isGroup =
+        evt.grade_type === "C" ||
+        evt.grade_type === "D" ||
+        evt.category === "GENERAL" ||
+        evt.category === "SPECIAL"
+
+      const medalIcons: Record<string, string> = {
+        FIRST: "🥇 1.",
+        SECOND: "🥈 2.",
+        THIRD: "🥉 3.",
+      }
+
+      const lines: string[] = []
+      lines.push(`*${evt.name.trim()}*`)
+
+      winners.forEach((p) => {
+        const prefix = medalIcons[p.result_position] || `${posRank[p.result_position] || 1}.`
+        const gradeStr =
+          p.performance_grade && p.performance_grade !== "NONE"
+            ? ` with ${p.performance_grade} Grade`
+            : ""
+
+        if (isGroup) {
+          const teamName = p.teams?.name || "Team"
+          lines.push(`${prefix} Team ${teamName}${gradeStr}`)
+        } else {
+          const studentName = p.students?.name || "Participant"
+          const teamName = p.teams?.name || "Team"
+          lines.push(`${prefix} ${studentName} Team ${teamName}${gradeStr}`)
+        }
+      })
+
+      if (gradeOnly.length > 0) {
+        lines.push("")
+        lines.push(" *GRADE ONLY*")
+        lines.push("")
+
+        gradeOnly.forEach((p) => {
+          const gradeStr = p.performance_grade ? ` with ${p.performance_grade} Grade` : ""
+          if (isGroup) {
+            const teamName = p.teams?.name || "Team"
+            lines.push(`📌 Team ${teamName}${gradeStr}`)
+          } else {
+            const studentName = p.students?.name || "Participant"
+            const teamName = p.teams?.name || "Team"
+            lines.push(`📌 ${studentName} Team ${teamName}${gradeStr}`)
+          }
+        })
+      }
+
+      const textToCopy = lines.join("\n")
+      await navigator.clipboard.writeText(textToCopy)
+      toast.success(`Copied results for "${evt.name}" to clipboard!`)
+    } catch (err: any) {
+      console.error("Error copying result:", err)
+      toast.error("Failed to copy result: " + (err?.message || "Unknown error"))
+    } finally {
+      setCopyingId(null)
+    }
+  }
 
   // Toggle publish status for a single event
   const handleTogglePublish = async (evt: EnrichedEvent) => {
@@ -307,7 +417,7 @@ export function PublishManager({ onPublishChanged }: { onPublishChanged?: () => 
                   <th className="py-3 px-3 text-center">Evaluation Status</th>
                   <th className="py-3 px-4 min-w-[240px]">Top Winners / Evaluated</th>
                   <th className="py-3 px-4 text-center w-36">Live Status</th>
-                  <th className="py-3 px-4 text-right w-36">Action</th>
+                  <th className="py-3 px-4 text-right min-w-[220px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-navy/5 text-navy font-medium">
@@ -403,49 +513,67 @@ export function PublishManager({ onPublishChanged }: { onPublishChanged?: () => 
                         )}
                       </td>
 
-                      {/* Action Button: Publish / Unpublish */}
+                      {/* Action Buttons: Copy Result & Publish / Unpublish */}
                       <td className="py-3.5 px-4 text-right">
-                        {evt.is_published ? (
+                        <div className="flex items-center justify-end gap-2">
                           <Button
                             size="sm"
-                            onClick={() => handleTogglePublish(evt)}
-                            disabled={isToggling}
-                            className="bg-emerald-600 hover:bg-rose-600 text-white font-bold h-9 px-3.5 rounded-xl transition-all group shadow-xs cursor-pointer"
-                            title="Click to unpublish from public portal"
+                            variant="outline"
+                            onClick={() => handleCopyResult(evt)}
+                            disabled={copyingId === evt.id}
+                            className="border-navy/15 text-navy hover:bg-gold/10 hover:border-gold/40 hover:text-navy font-bold h-9 px-2.5 rounded-xl transition-all cursor-pointer gap-1.5 shadow-xs"
+                            title="Copy formatted result for WhatsApp"
                           >
-                            {isToggling ? (
-                              <Loader2 className="size-3.5 animate-spin" />
-                            ) : (
-                              <>
-                                <Check className="size-3.5 group-hover:hidden" />
-                                <EyeOff className="size-3.5 hidden group-hover:inline" />
-                                <span className="group-hover:hidden">Published</span>
-                                <span className="hidden group-hover:inline">Unpublish</span>
-                              </>
-                            )}
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            onClick={() => handleTogglePublish(evt)}
-                            disabled={isToggling}
-                            className={`font-bold h-9 px-3.5 rounded-xl transition-all shadow-xs cursor-pointer gap-1.5 ${
-                              evt.is_marked
-                                ? "bg-navy hover:bg-navy/90 text-ivory border-2 border-gold/40 shadow-premium"
-                                : "bg-slate-200 hover:bg-navy hover:text-ivory text-slate-700"
-                            }`}
-                            title="Publish results to public website"
-                          >
-                            {isToggling ? (
+                            {copyingId === evt.id ? (
                               <Loader2 className="size-3.5 animate-spin text-gold" />
                             ) : (
-                              <>
-                                <Globe className="size-3.5 text-gold" />
-                                <span>Publish</span>
-                              </>
+                              <Copy className="size-3.5 text-gold" />
                             )}
+                            <span className="text-xs">Copy Result</span>
                           </Button>
-                        )}
+
+                          {evt.is_published ? (
+                            <Button
+                              size="sm"
+                              onClick={() => handleTogglePublish(evt)}
+                              disabled={isToggling}
+                              className="bg-emerald-600 hover:bg-rose-600 text-white font-bold h-9 px-3.5 rounded-xl transition-all group shadow-xs cursor-pointer"
+                              title="Click to unpublish from public portal"
+                            >
+                              {isToggling ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : (
+                                <>
+                                  <Check className="size-3.5 group-hover:hidden" />
+                                  <EyeOff className="size-3.5 hidden group-hover:inline" />
+                                  <span className="group-hover:hidden">Published</span>
+                                  <span className="hidden group-hover:inline">Unpublish</span>
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => handleTogglePublish(evt)}
+                              disabled={isToggling}
+                              className={`font-bold h-9 px-3.5 rounded-xl transition-all shadow-xs cursor-pointer gap-1.5 ${
+                                evt.is_marked
+                                  ? "bg-navy hover:bg-navy/90 text-ivory border-2 border-gold/40 shadow-premium"
+                                  : "bg-slate-200 hover:bg-navy hover:text-ivory text-slate-700"
+                              }`}
+                              title="Publish results to public website"
+                            >
+                              {isToggling ? (
+                                <Loader2 className="size-3.5 animate-spin text-gold" />
+                              ) : (
+                                <>
+                                  <Globe className="size-3.5 text-gold" />
+                                  <span>Publish</span>
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )

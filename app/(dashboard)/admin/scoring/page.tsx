@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase"
 import { EventScorer } from "@/components/scoring/event-scorer"
 import { PublishManager } from "@/components/scoring/publish-manager"
 import { TabulationManager } from "@/components/scoring/tabulation-manager"
+import { ResultAnalyseManager } from "@/components/scoring/result-analyse-manager"
 import { GradeSettingsDialog } from "@/components/scoring/grade-settings-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -15,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal, Globe, Calculator } from "lucide-react"
+import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal, Globe, Calculator, TrendingUp } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -451,6 +452,15 @@ export default function ScoringPage() {
                             <Globe className="size-3.5 text-gold" />
                             <span>Publish Results</span>
                         </TabsTrigger>
+
+                        {/* Result Analyse Tab */}
+                        <TabsTrigger
+                            value="ANALYSE"
+                            className="rounded-xl px-4 py-2 text-xs font-bold text-slatebrand transition-all duration-200 hover:bg-gold/15 hover:text-navy data-[state=active]:bg-navy data-[state=active]:text-ivory data-[state=active]:shadow-premium md:text-sm cursor-pointer flex items-center gap-1.5"
+                        >
+                            <TrendingUp className="size-3.5 text-gold" />
+                            <span>Result Analyse</span>
+                        </TabsTrigger>
                     </TabsList>
                 </div>
              </div>
@@ -474,6 +484,11 @@ export default function ScoringPage() {
                 {/* Publish Tab Content */}
                 <TabsContent value="PUBLISH" className="mt-0 data-[state=inactive]:hidden">
                     <PublishManager onPublishChanged={handleScoreUpdate} />
+                </TabsContent>
+
+                {/* Result Analyse Tab Content */}
+                <TabsContent value="ANALYSE" className="mt-0 data-[state=inactive]:hidden">
+                    <ResultAnalyseManager onPublishChanged={handleScoreUpdate} />
                 </TabsContent>
              </div>
            </Tabs>
