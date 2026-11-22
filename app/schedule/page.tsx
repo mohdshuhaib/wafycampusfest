@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import Link from "next/link"
 import {
   CalendarClock,
-  ArrowLeft,
   Clock,
   Calendar,
   Search,
@@ -13,7 +12,6 @@ import {
   ChevronRight,
   Tv,
   List,
-  Sparkles,
   Users,
   BookOpen,
   Play,
@@ -21,6 +19,7 @@ import {
   RefreshCw,
   Layers,
   Award,
+  Radio,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -101,54 +100,49 @@ function getStageTheme(stageName?: string | null) {
   if (s.includes("1")) {
     return {
       name: "Stage 1",
-      badge: "bg-amber-500/20 text-amber-300 border-amber-400/40",
-      accent: "from-amber-500/30 to-amber-700/10",
-      border: "border-amber-500/40",
-      glow: "shadow-[0_0_25px_rgba(245,158,11,0.25)]",
-      pill: "bg-amber-500 text-slate-950",
+      badge: "bg-amber-500/15 text-amber-900 border-amber-500/30",
+      border: "border-amber-400",
+      glow: "shadow-[0_6px_25px_rgba(245,158,11,0.18)]",
+      pill: "bg-amber-500 text-white",
       color: "#F59E0B",
     }
   }
   if (s.includes("2")) {
     return {
       name: "Stage 2",
-      badge: "bg-blue-500/20 text-blue-300 border-blue-400/40",
-      accent: "from-blue-500/30 to-blue-700/10",
-      border: "border-blue-500/40",
-      glow: "shadow-[0_0_25px_rgba(59,130,246,0.25)]",
-      pill: "bg-blue-500 text-slate-950",
+      badge: "bg-blue-500/15 text-blue-900 border-blue-500/30",
+      border: "border-blue-400",
+      glow: "shadow-[0_6px_25px_rgba(59,130,246,0.18)]",
+      pill: "bg-blue-500 text-white",
       color: "#3B82F6",
     }
   }
   if (s.includes("3")) {
     return {
       name: "Stage 3",
-      badge: "bg-purple-500/20 text-purple-300 border-purple-400/40",
-      accent: "from-purple-500/30 to-purple-700/10",
-      border: "border-purple-500/40",
-      glow: "shadow-[0_0_25px_rgba(168,85,247,0.25)]",
-      pill: "bg-purple-500 text-slate-950",
+      badge: "bg-purple-500/15 text-purple-900 border-purple-500/30",
+      border: "border-purple-400",
+      glow: "shadow-[0_6px_25px_rgba(168,85,247,0.18)]",
+      pill: "bg-purple-500 text-white",
       color: "#A855F7",
     }
   }
   if (s.includes("4")) {
     return {
       name: "Stage 4",
-      badge: "bg-emerald-500/20 text-emerald-300 border-emerald-400/40",
-      accent: "from-emerald-500/30 to-emerald-700/10",
-      border: "border-emerald-500/40",
-      glow: "shadow-[0_0_25px_rgba(16,185,129,0.25)]",
-      pill: "bg-emerald-500 text-slate-950",
+      badge: "bg-emerald-500/15 text-emerald-900 border-emerald-500/30",
+      border: "border-emerald-400",
+      glow: "shadow-[0_6px_25px_rgba(16,185,129,0.18)]",
+      pill: "bg-emerald-500 text-white",
       color: "#10B981",
     }
   }
   return {
     name: stageName || "Stage 1",
-    badge: "bg-gold/20 text-gold border-gold/40",
-    accent: "from-gold/25 to-slate-800/20",
-    border: "border-gold/30",
-    glow: "shadow-[0_0_20px_rgba(212,175,55,0.2)]",
-    pill: "bg-gold text-slate-950",
+    badge: "bg-amber-500/15 text-amber-900 border-amber-500/30",
+    border: "border-amber-400",
+    glow: "shadow-[0_6px_25px_rgba(245,158,11,0.18)]",
+    pill: "bg-amber-500 text-white",
     color: "#D4AF37",
   }
 }
@@ -296,7 +290,6 @@ export default function PublicSchedulePage() {
   }, [filteredSchedules, liveItems, currentTime])
 
   // TV Slides: Display 3 programmes per slide
-  // If there are live items across stages and user is at initial position, show live items first
   const maxIndex = Math.max(0, filteredSchedules.length - 3)
 
   // Clamp current index within bounds
@@ -305,7 +298,6 @@ export default function PublicSchedulePage() {
   // Get the 3 programmes for the current window
   const visibleProgrammes = useMemo(() => {
     if (filteredSchedules.length === 0) return []
-    // If fewer than 3 total, return all of them
     if (filteredSchedules.length <= 3) {
       return filteredSchedules
     }
@@ -359,32 +351,30 @@ export default function PublicSchedulePage() {
   }, [filteredSchedules])
 
   return (
-    <main className="min-h-screen bg-[#070e17] text-slate-100 font-sans selection:bg-gold selection:text-slate-950 flex flex-col justify-between">
+    <main className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-gold selection:text-navy flex flex-col justify-between">
       {/* Top TV Header Bar */}
-      <header className="border-b border-white/10 bg-[#0A1626]/90 backdrop-blur-xl sticky top-0 z-50 shadow-2xl">
+      <header className="border-b border-navy/10 bg-white/95 backdrop-blur-xl sticky top-0 z-50 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
           {/* Fest Brand & Title */}
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="size-11 rounded-2xl bg-gradient-to-br from-gold/30 via-gold/10 to-transparent border border-gold/40 flex items-center justify-center text-gold shadow-lg hover:border-gold transition-all shrink-0"
+              className="size-11 rounded-2xl bg-gold/15 border border-gold/30 flex items-center justify-center text-navy shadow-xs hover:border-gold transition-all shrink-0"
               title="Return to Home"
             >
-              <CalendarClock className="size-6 text-gold" />
+              <CalendarClock className="size-6 text-navy" />
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-black text-white text-base sm:text-lg tracking-tight uppercase">
+                <span className="font-black text-navy text-base sm:text-lg tracking-tight uppercase">
                   Wafy Campus Kalikavu
                 </span>
-                <span className="bg-gold/20 text-gold text-[10px] font-black uppercase px-2 py-0.5 rounded-md border border-gold/40 tracking-wider">
+                <span className="bg-gold/20 text-navy text-[10px] font-black uppercase px-2 py-0.5 rounded-md border border-gold/40 tracking-wider">
                   Arts Fest 2026-27
                 </span>
               </div>
-              <div className="text-xs font-semibold text-slate-400 flex items-center gap-2">
-                <span className="text-gold font-bold">● Main Stage Gallery Screen</span>
-                <span className="hidden sm:inline text-white/30">•</span>
-                <span className="hidden sm:inline">Live Programme Schedule & Stage Status</span>
+              <div className="text-xs font-semibold text-slate-500 flex items-center gap-2">
+                <span className="text-amber-600 font-bold">● Main Stage Gallery Screen</span>
               </div>
             </div>
           </div>
@@ -392,10 +382,10 @@ export default function PublicSchedulePage() {
           {/* Wall-Clock Live Time & Status Indicator */}
           <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
             {/* Live Time Box */}
-            <div className="bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-1.5 flex items-center gap-3 shadow-inner">
-              <Clock className="size-4 text-gold animate-pulse" />
+            <div className="bg-white border border-navy/10 rounded-2xl px-4 py-1.5 flex items-center gap-3 shadow-xs">
+              <Clock className="size-4 text-amber-600 animate-pulse" />
               <div className="flex flex-col text-right">
-                <span className="font-mono text-sm sm:text-base font-extrabold text-white tracking-widest leading-none">
+                <span className="font-mono text-sm sm:text-base font-extrabold text-navy tracking-widest leading-none">
                   {currentTime
                     ? currentTime.toLocaleTimeString("en-US", {
                         hour: "2-digit",
@@ -405,7 +395,7 @@ export default function PublicSchedulePage() {
                       })
                     : "--:--:--"}
                 </span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
                   {currentTime
                     ? currentTime.toLocaleDateString("en-GB", {
                         day: "2-digit",
@@ -417,15 +407,15 @@ export default function PublicSchedulePage() {
               </div>
             </div>
 
-            {/* View Mode & AutoPlay Switcher */}
-            <div className="flex items-center gap-1.5 bg-slate-900/90 border border-white/10 p-1 rounded-2xl">
+            {/* View Mode Switcher */}
+            <div className="flex items-center gap-1.5 bg-slate-100 border border-navy/10 p-1 rounded-2xl">
               <button
                 type="button"
                 onClick={() => setViewMode("gallery")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   viewMode === "gallery"
-                    ? "bg-gold text-slate-950 font-black shadow-md"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-navy text-white font-black shadow-xs"
+                    : "text-slate-600 hover:text-navy"
                 }`}
                 title="TV 3-Programme Stage View"
               >
@@ -437,8 +427,8 @@ export default function PublicSchedulePage() {
                 onClick={() => setViewMode("timeline")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   viewMode === "timeline"
-                    ? "bg-gold text-slate-950 font-black shadow-md"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-navy text-white font-black shadow-xs"
+                    : "text-slate-600 hover:text-navy"
                 }`}
                 title="Full Schedule Timeline"
               >
@@ -455,12 +445,12 @@ export default function PublicSchedulePage() {
                 onClick={() => setAutoPlay(!autoPlay)}
                 className={`h-9 px-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
                   autoPlay
-                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                    : "bg-slate-900 border-white/15 text-slate-300 hover:text-white"
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold"
+                    : "bg-white border-navy/15 text-slate-700 hover:text-navy hover:bg-slate-50"
                 }`}
                 title={autoPlay ? "Auto-cycling is ON (15s)" : "Enable automatic screen cycling for TV"}
               >
-                {autoPlay ? <Pause className="size-3.5 mr-1" /> : <Play className="size-3.5 mr-1" />}
+                {autoPlay ? <Pause className="size-3.5 mr-1 text-emerald-700" /> : <Play className="size-3.5 mr-1" />}
                 <span>Auto-Cycle {autoPlay ? "ON" : "OFF"}</span>
               </Button>
             )}
@@ -469,7 +459,7 @@ export default function PublicSchedulePage() {
               variant="outline"
               size="sm"
               onClick={fetchScheduleData}
-              className="size-9 p-0 rounded-xl bg-slate-900 border-white/15 text-slate-300 hover:text-white hover:border-gold/40 cursor-pointer"
+              className="size-9 p-0 rounded-xl bg-white border-navy/15 text-slate-700 hover:text-navy hover:bg-slate-50 cursor-pointer shadow-xs"
               title="Refresh live status"
             >
               <RefreshCw className="size-3.5" />
@@ -480,31 +470,31 @@ export default function PublicSchedulePage() {
 
       {/* Main Body Content */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-        {/* Navigation Toolbar & Live Programme Pulse */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-900/60 border border-white/10 rounded-3xl p-4 sm:p-5 backdrop-blur-md">
+        {/* Navigation Toolbar & Live Programme Status */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white border border-navy/10 rounded-3xl p-4 sm:p-5 shadow-xs">
           {/* Active Status & Search */}
           <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
             {liveItems.length > 0 ? (
-              <div className="flex items-center gap-2 bg-red-500/20 text-red-300 border border-red-500/40 px-3.5 py-1.5 rounded-2xl text-xs font-black uppercase tracking-wider animate-pulse">
-                <span className="size-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
+              <div className="flex items-center gap-2 bg-red-500/10 text-red-700 border border-red-500/30 px-3.5 py-1.5 rounded-2xl text-xs font-black uppercase tracking-wider animate-pulse">
+                <span className="size-2 rounded-full bg-red-600 shadow-[0_0_8px_#ef4444]" />
                 <span>{liveItems.length} Programme{liveItems.length === 1 ? "" : "s"} LIVE Across Stages</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 bg-slate-800 border border-white/10 px-3.5 py-1.5 rounded-2xl text-xs font-bold text-slate-300">
-                <Clock className="size-3.5 text-gold" />
+              <div className="flex items-center gap-2 bg-slate-100 border border-navy/10 px-3.5 py-1.5 rounded-2xl text-xs font-bold text-slate-700">
+                <Clock className="size-3.5 text-amber-600" />
                 <span>No Programmes Live Right Now • Next Scheduled Up</span>
               </div>
             )}
 
-            {/* Live Jump Button */}
+            {/* Live Jump Button with Live Radio Icon */}
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleJumpToLive}
-              className="text-xs font-bold text-gold hover:text-gold hover:bg-gold/10 rounded-xl h-8 px-2.5 cursor-pointer"
+              className="text-xs font-black text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border-red-200 rounded-xl h-8 px-3 cursor-pointer shadow-xs flex items-center gap-1.5"
             >
-              <Sparkles className="size-3.5 mr-1 text-gold" />
-              <span>Jump to Now</span>
+              <Radio className="size-3.5 text-red-600 animate-pulse" />
+              <span>Show Live</span>
             </Button>
           </div>
 
@@ -518,21 +508,21 @@ export default function PublicSchedulePage() {
                 setSearchQuery(e.target.value)
                 setCurrentIndex(0)
               }}
-              className="pl-10 h-10 bg-slate-950/80 border-white/15 text-white placeholder:text-slate-500 rounded-xl text-xs font-medium focus:border-gold"
+              className="pl-10 h-10 bg-slate-50 border-navy/15 text-navy placeholder:text-slate-400 focus:bg-white rounded-xl text-xs font-medium focus:border-gold"
             />
           </div>
 
           {/* Next / Back Controls (TV Gallery Mode) */}
           {viewMode === "gallery" && filteredSchedules.length > 3 && (
             <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-              <span className="text-xs font-bold text-slate-400 font-mono">
+              <span className="text-xs font-bold text-slate-500 font-mono">
                 Showing {clampedIndex + 1}–{Math.min(clampedIndex + 3, filteredSchedules.length)} of {filteredSchedules.length}
               </span>
               <div className="flex items-center gap-2">
                 <Button
                   onClick={handlePrev}
                   disabled={clampedIndex === 0}
-                  className="bg-slate-800 hover:bg-slate-700 text-white border border-white/15 disabled:opacity-30 rounded-xl size-10 p-0 cursor-pointer shadow-lg font-bold"
+                  className="bg-white hover:bg-slate-50 text-navy border border-navy/15 disabled:opacity-30 rounded-xl size-10 p-0 cursor-pointer shadow-xs font-bold"
                   title="Previous Programme"
                 >
                   <ChevronLeft className="size-5" />
@@ -540,7 +530,7 @@ export default function PublicSchedulePage() {
                 <Button
                   onClick={handleNext}
                   disabled={clampedIndex >= maxIndex}
-                  className="bg-gold hover:bg-gold/90 text-slate-950 border border-gold/40 disabled:opacity-30 rounded-xl size-10 p-0 cursor-pointer shadow-lg font-black"
+                  className="bg-navy hover:bg-navy/90 text-white border border-navy/20 disabled:opacity-30 rounded-xl size-10 p-0 cursor-pointer shadow-xs font-black"
                   title="Next Programme"
                 >
                   <ChevronRight className="size-5 stroke-[3]" />
@@ -553,14 +543,14 @@ export default function PublicSchedulePage() {
         {/* Loading Spinner */}
         {loading ? (
           <div className="flex flex-col items-center justify-center p-20 space-y-4">
-            <Loader2 className="size-12 animate-spin text-gold" />
-            <p className="text-base font-bold text-slate-300">Loading live stage schedule...</p>
+            <Loader2 className="size-12 animate-spin text-amber-600" />
+            <p className="text-base font-bold text-slate-600">Loading live stage schedule...</p>
           </div>
         ) : filteredSchedules.length === 0 ? (
-          <div className="bg-slate-900/60 border border-white/10 rounded-3xl p-12 text-center max-w-lg mx-auto space-y-3">
+          <div className="bg-white border border-navy/10 rounded-3xl p-12 text-center max-w-lg mx-auto space-y-3 shadow-xs">
             <CalendarClock className="size-12 text-gold mx-auto" />
-            <h3 className="text-xl font-bold text-white">No Programmes Scheduled</h3>
-            <p className="text-sm text-slate-400">
+            <h3 className="text-xl font-bold text-navy">No Programmes Scheduled</h3>
+            <p className="text-sm text-slate-500">
               {searchQuery
                 ? "No programmes found matching your search query."
                 : "The festival committee is finalizing the stage schedule. Please check back shortly."}
@@ -568,7 +558,7 @@ export default function PublicSchedulePage() {
           </div>
         ) : viewMode === "gallery" ? (
           /* ========================================================= */
-          /* 1. TV GALLERY 3-PROGRAMME DISPLAY (MAIN STAGE TV SCREEN)  */
+          /* 1. TV GALLERY 3-PROGRAMME DISPLAY (WHITE BACKGROUND THEME)*/
           /* ========================================================= */
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
@@ -580,16 +570,16 @@ export default function PublicSchedulePage() {
                 return (
                   <div
                     key={sched.id}
-                    className={`relative rounded-3xl flex flex-col justify-between overflow-hidden border transition-all duration-300 backdrop-blur-xl ${
+                    className={`relative rounded-3xl flex flex-col justify-between overflow-hidden transition-all duration-300 bg-white ${
                       isLiveNow
-                        ? `bg-gradient-to-b from-slate-900/95 via-[#0A1626] to-slate-900/95 ${stageTheme.border} ${stageTheme.glow} ring-2 ring-gold/40`
-                        : "bg-slate-900/75 border-white/10 hover:border-white/20 shadow-xl"
+                        ? `border-2 ${stageTheme.border} ${stageTheme.glow} ring-2 ring-amber-400/30 shadow-lg`
+                        : "border border-navy/10 hover:border-navy/25 shadow-xs hover:shadow-md"
                     }`}
                   >
                     {/* Top Accent Strip */}
                     <div
                       className={`h-2 w-full bg-gradient-to-r ${
-                        isLiveNow ? "from-red-500 via-gold to-amber-500 animate-pulse" : "from-slate-700 via-slate-600 to-slate-800"
+                        isLiveNow ? "from-red-500 via-amber-400 to-amber-500 animate-pulse" : "from-navy/30 via-navy/20 to-navy/40"
                       }`}
                     />
 
@@ -599,7 +589,7 @@ export default function PublicSchedulePage() {
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         {/* Stage Pill */}
                         <div
-                          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black tracking-wide border shadow-sm ${stageTheme.badge}`}
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black tracking-wide border shadow-xs ${stageTheme.badge}`}
                         >
                           <Layers className="size-3.5" />
                           <span>{sched.stage || "Stage 1"}</span>
@@ -607,28 +597,28 @@ export default function PublicSchedulePage() {
 
                         {/* Status Badge */}
                         {isLiveNow ? (
-                          <div className="flex items-center gap-1.5 bg-red-500 text-white px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg animate-pulse">
+                          <div className="flex items-center gap-1.5 bg-red-600 text-white px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm animate-pulse">
                             <span className="size-2 rounded-full bg-white shadow-[0_0_6px_#ffffff]" />
                             <span>LIVE NOW</span>
                           </div>
                         ) : liveStatus.status === "COMPLETED" ? (
-                          <div className="bg-slate-800 text-slate-400 border border-white/10 px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase">
+                          <div className="bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase">
                             COMPLETED
                           </div>
                         ) : (
-                          <div className="bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase">
+                          <div className="bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase">
                             UPCOMING
                           </div>
                         )}
                       </div>
 
                       {/* Time Slot & Date */}
-                      <div className="flex items-center justify-between text-xs text-slate-300 font-medium pb-2 border-b border-white/10">
-                        <div className="flex items-center gap-1.5 font-mono font-bold text-white text-sm">
-                          <Clock className="size-4 text-gold shrink-0" />
+                      <div className="flex items-center justify-between text-xs text-slate-600 font-medium pb-2 border-b border-navy/10">
+                        <div className="flex items-center gap-1.5 font-mono font-bold text-navy text-sm">
+                          <Clock className="size-4 text-amber-600 shrink-0" />
                           <span>{format12Hour(sched.start_time)} – {format12Hour(sched.end_time)}</span>
                         </div>
-                        <div className="flex items-center gap-1 text-slate-400 text-xs">
+                        <div className="flex items-center gap-1 text-slate-500 text-xs">
                           <Calendar className="size-3 text-slate-400" />
                           <span>{formatDateLabel(sched.schedule_date)}</span>
                         </div>
@@ -637,37 +627,37 @@ export default function PublicSchedulePage() {
                       {/* Programme Code, Name & Category */}
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-black text-gold bg-gold/15 border border-gold/30 px-2.5 py-0.5 rounded-md">
+                          <span className="font-mono text-xs font-black text-navy bg-navy/8 border border-navy/15 px-2.5 py-0.5 rounded-md">
                             {sched.programme?.event_code || "CODE"}
                           </span>
-                          <span className="text-[10px] font-extrabold uppercase text-slate-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-extrabold uppercase text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
                             {sched.programme?.category || "PROGRAMME"}
                           </span>
                           {sched.programme?.grade_type && (
-                            <span className="text-[10px] font-extrabold uppercase text-slate-300 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded-md">
+                            <span className="text-[10px] font-extrabold uppercase text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md">
                               Grade {sched.programme.grade_type}
                             </span>
                           )}
                         </div>
-                        <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-snug line-clamp-2">
+                        <h2 className="text-xl sm:text-2xl font-black text-navy tracking-tight leading-snug line-clamp-2">
                           {sched.programme?.name}
                         </h2>
                       </div>
 
                       {/* Topic Card (If assigned) */}
                       {sched.topic?.general_topic ? (
-                        <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-gold/30 space-y-1.5 shadow-inner">
-                          <div className="flex items-center justify-between text-[11px] font-bold text-gold uppercase tracking-wider">
+                        <div className="p-3.5 rounded-2xl bg-amber-500/8 border border-amber-500/25 space-y-1.5 shadow-xs">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-amber-900 uppercase tracking-wider">
                             <span className="flex items-center gap-1.5">
-                              <BookOpen className="size-3.5 text-gold" />
+                              <BookOpen className="size-3.5 text-amber-600" />
                               <span>Assigned Topic</span>
                             </span>
-                            <span className="text-[10px] text-slate-400 uppercase">
+                            <span className="text-[10px] text-slate-500 uppercase font-semibold">
                               {sched.topic.language || "Topic"}
                             </span>
                           </div>
                           <p
-                            className={`text-sm font-semibold text-slate-100 leading-relaxed ${
+                            className={`text-sm font-semibold text-navy leading-relaxed ${
                               sched.topic.language === "arabic"
                                 ? "text-right font-serif text-base"
                                 : ""
@@ -681,16 +671,16 @@ export default function PublicSchedulePage() {
 
                       {/* Participants Section */}
                       <div className="space-y-2 pt-2 flex-1 flex flex-col justify-end">
-                        <div className="flex items-center justify-between text-xs font-bold text-slate-400">
-                          <span className="flex items-center gap-1.5 text-white">
-                            <Users className="size-3.5 text-gold" />
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+                          <span className="flex items-center gap-1.5 text-navy">
+                            <Users className="size-3.5 text-amber-600" />
                             <span>Participants ({sched.participants.length})</span>
                           </span>
-                          <span className="text-[10px] text-slate-400">Code Letters & Teams</span>
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Team</span>
                         </div>
 
                         {sched.participants.length === 0 ? (
-                          <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5 text-center text-xs text-slate-500 italic">
+                          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 italic">
                             No participants listed for this programme
                           </div>
                         ) : (
@@ -698,26 +688,26 @@ export default function PublicSchedulePage() {
                             {sched.participants.map((p, pIdx) => (
                               <div
                                 key={p.id || pIdx}
-                                className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-white/5 hover:border-white/15 transition-all text-xs"
+                                className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 border border-navy/5 hover:border-navy/15 hover:bg-slate-100/80 transition-all text-xs"
                               >
                                 {/* Left: Code Letter & Name */}
                                 <div className="flex items-center gap-2 min-w-0 pr-2">
                                   {p.code_letter ? (
-                                    <span className="font-mono text-xs font-black size-6 rounded-lg bg-gold text-slate-950 flex items-center justify-center shrink-0 shadow-sm">
+                                    <span className="font-mono text-xs font-black size-6 rounded-lg bg-navy text-gold flex items-center justify-center shrink-0 shadow-xs">
                                       {p.code_letter}
                                     </span>
                                   ) : (
-                                    <span className="font-mono text-[10px] font-bold text-slate-400 size-6 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                                    <span className="font-mono text-[10px] font-bold text-slate-500 size-6 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
                                       #{pIdx + 1}
                                     </span>
                                   )}
                                   <div className="truncate">
-                                    <div className="font-bold text-white truncate text-xs sm:text-sm">
+                                    <div className="font-bold text-navy truncate text-xs sm:text-sm">
                                       {p.student_name}
                                     </div>
                                     {p.chest_no && (
-                                      <div className="text-[10px] text-slate-400 font-mono">
-                                        Chest: <span className="font-bold text-slate-300">{p.chest_no}</span>
+                                      <div className="text-[10px] text-slate-500 font-mono">
+                                        Chest: <span className="font-bold text-slate-700">{p.chest_no}</span>
                                       </div>
                                     )}
                                   </div>
@@ -727,9 +717,9 @@ export default function PublicSchedulePage() {
                                 <div
                                   className="text-[11px] font-black px-2 py-0.5 rounded-lg border shrink-0 max-w-[110px] truncate"
                                   style={{
-                                    backgroundColor: `${p.team_color}22`,
+                                    backgroundColor: `${p.team_color}15`,
                                     color: p.team_color,
-                                    borderColor: `${p.team_color}55`,
+                                    borderColor: `${p.team_color}44`,
                                   }}
                                 >
                                   {p.team_name}
@@ -742,11 +732,11 @@ export default function PublicSchedulePage() {
                     </div>
 
                     {/* Bottom Indicator Footer */}
-                    <div className="px-6 py-3 bg-slate-950/80 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
-                      <span className="font-mono text-[11px]">
+                    <div className="px-6 py-3 bg-slate-50 border-t border-navy/10 flex items-center justify-between text-xs text-slate-500">
+                      <span className="font-mono text-[11px] font-semibold text-slate-600">
                         Slot {cardIdx + clampedIndex + 1} of {filteredSchedules.length}
                       </span>
-                      <span className="font-bold text-gold flex items-center gap-1">
+                      <span className="font-bold text-amber-700 flex items-center gap-1">
                         <Award className="size-3" />
                         <span>Arts Fest 2026</span>
                       </span>
@@ -761,7 +751,7 @@ export default function PublicSchedulePage() {
               <Button
                 onClick={handlePrev}
                 disabled={clampedIndex === 0}
-                className="bg-slate-900 hover:bg-slate-800 text-white border border-white/15 disabled:opacity-30 rounded-2xl px-5 h-12 cursor-pointer font-bold gap-2 text-sm shadow-xl"
+                className="bg-white hover:bg-slate-50 text-navy border border-navy/15 disabled:opacity-30 rounded-2xl px-5 h-12 cursor-pointer font-bold gap-2 text-sm shadow-xs"
               >
                 <ChevronLeft className="size-4" />
                 <span>Previous Programmes</span>
@@ -776,8 +766,8 @@ export default function PublicSchedulePage() {
                     onClick={() => setCurrentIndex(dotIdx)}
                     className={`size-2.5 rounded-full transition-all cursor-pointer ${
                       dotIdx === clampedIndex
-                        ? "w-8 bg-gold shadow-[0_0_8px_rgba(212,175,55,0.6)]"
-                        : "bg-white/20 hover:bg-white/40"
+                        ? "w-8 bg-navy shadow-xs"
+                        : "bg-navy/20 hover:bg-navy/40"
                     }`}
                     title={`Go to item ${dotIdx + 1}`}
                   />
@@ -787,7 +777,7 @@ export default function PublicSchedulePage() {
               <Button
                 onClick={handleNext}
                 disabled={clampedIndex >= maxIndex}
-                className="bg-gold hover:bg-gold/90 text-slate-950 border border-gold/40 disabled:opacity-30 rounded-2xl px-5 h-12 cursor-pointer font-black gap-2 text-sm shadow-xl"
+                className="bg-navy hover:bg-navy/90 text-white border border-navy/20 disabled:opacity-30 rounded-2xl px-5 h-12 cursor-pointer font-black gap-2 text-sm shadow-xs"
               >
                 <span>Next Programmes</span>
                 <ChevronRight className="size-4 stroke-[3]" />
@@ -803,20 +793,20 @@ export default function PublicSchedulePage() {
               <div key={dateStr} className="space-y-4">
                 {/* Date Header Banner */}
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-gradient-to-r from-gold via-amber-400 to-amber-500 text-slate-950 px-4 py-2 rounded-2xl font-black text-sm shadow-lg">
-                    <Calendar className="size-4 stroke-[2.5]" />
+                  <div className="flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-2xl font-black text-sm shadow-xs">
+                    <Calendar className="size-4 stroke-[2.5] text-gold" />
                     <span>{formatDateLabel(dateStr)}</span>
                   </div>
-                  <span className="text-xs font-bold text-slate-400">
+                  <span className="text-xs font-bold text-slate-500">
                     ({items.length} programme{items.length === 1 ? "" : "s"})
                   </span>
                 </div>
 
                 {/* Table of Programmes for this Date */}
-                <div className="rounded-3xl border border-white/10 bg-slate-900/80 shadow-2xl overflow-hidden backdrop-blur-md">
+                <div className="rounded-3xl border border-navy/10 bg-white shadow-xs overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-[#0A1626] text-slate-300 text-xs uppercase tracking-wider font-extrabold border-b border-white/10">
+                      <thead className="bg-slate-100 text-slate-700 text-xs uppercase tracking-wider font-extrabold border-b border-navy/10">
                         <tr>
                           <th className="px-5 py-4 w-14 text-center">#</th>
                           <th className="px-5 py-4 min-w-[220px]">Programme</th>
@@ -827,7 +817,7 @@ export default function PublicSchedulePage() {
                           <th className="px-5 py-4 min-w-[160px]">Participants</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5 text-slate-200 font-medium">
+                      <tbody className="divide-y divide-navy/5 text-navy font-medium">
                         {items.map((item, idx) => {
                           const stageTheme = getStageTheme(item.stage)
                           const liveStat = getProgrammeStatus(item)
@@ -839,7 +829,7 @@ export default function PublicSchedulePage() {
                               className={`transition-colors ${
                                 isLive
                                   ? "bg-red-500/10 hover:bg-red-500/15"
-                                  : "hover:bg-white/4"
+                                  : "hover:bg-slate-50/70"
                               }`}
                             >
                               <td className="px-5 py-4 text-center font-mono font-bold text-slate-400">
@@ -849,14 +839,14 @@ export default function PublicSchedulePage() {
                               {/* Programme */}
                               <td className="px-5 py-4">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-mono text-xs font-extrabold text-gold bg-gold/15 px-2 py-0.5 rounded border border-gold/30">
+                                  <span className="font-mono text-xs font-extrabold text-navy bg-navy/8 px-2 py-0.5 rounded border border-navy/10">
                                     {item.programme?.event_code || "N/A"}
                                   </span>
-                                  <span className="text-[10px] font-bold uppercase text-slate-400 bg-white/5 px-2 py-0.5 rounded">
+                                  <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                                     {item.programme?.category}
                                   </span>
                                 </div>
-                                <div className="font-bold text-white text-base leading-snug">
+                                <div className="font-bold text-navy text-base leading-snug">
                                   {item.programme?.name}
                                 </div>
                               </td>
@@ -869,9 +859,9 @@ export default function PublicSchedulePage() {
                               </td>
 
                               {/* Time */}
-                              <td className="px-5 py-4 font-mono font-extrabold text-white text-xs">
+                              <td className="px-5 py-4 font-mono font-extrabold text-navy text-xs">
                                 <div className="flex items-center gap-1.5">
-                                  <Clock className="size-3.5 text-gold shrink-0" />
+                                  <Clock className="size-3.5 text-amber-600 shrink-0" />
                                   <span>{format12Hour(item.start_time)} – {format12Hour(item.end_time)}</span>
                                 </div>
                               </td>
@@ -879,23 +869,23 @@ export default function PublicSchedulePage() {
                               {/* Status */}
                               <td className="px-5 py-4">
                                 {isLive ? (
-                                  <span className="inline-flex items-center gap-1.5 text-xs font-black bg-red-500 text-white px-3 py-1 rounded-full animate-pulse shadow-md">
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-black bg-red-600 text-white px-3 py-1 rounded-full animate-pulse shadow-xs">
                                     <span className="size-2 rounded-full bg-white" />
                                     <span>LIVE NOW</span>
                                   </span>
                                 ) : liveStat.status === "COMPLETED" ? (
-                                  <span className="inline-flex items-center text-[11px] font-bold text-slate-400 bg-white/5 border border-white/10 px-2.5 py-0.5 rounded-full">
+                                  <span className="inline-flex items-center text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">
                                     Completed
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center text-[11px] font-bold text-blue-300 bg-blue-500/15 border border-blue-400/30 px-2.5 py-0.5 rounded-full">
+                                  <span className="inline-flex items-center text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
                                     Upcoming
                                   </span>
                                 )}
                               </td>
 
                               {/* Topic */}
-                              <td className="px-5 py-4 text-xs text-slate-300">
+                              <td className="px-5 py-4 text-xs text-slate-700">
                                 {item.topic?.general_topic ? (
                                   <div
                                     className={`line-clamp-2 ${
@@ -907,7 +897,7 @@ export default function PublicSchedulePage() {
                                     {item.topic.general_topic}
                                   </div>
                                 ) : (
-                                  <span className="text-slate-500 italic">Spot / No Topic</span>
+                                  <span className="text-slate-400 italic">Spot / No Topic</span>
                                 )}
                               </td>
 
@@ -918,20 +908,20 @@ export default function PublicSchedulePage() {
                                     {item.participants.slice(0, 4).map((p, pIdx) => (
                                       <span
                                         key={p.id || pIdx}
-                                        className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-800 border border-white/10 text-white"
+                                        className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-100 border border-navy/10 text-navy"
                                         title={`${p.code_letter ? `Code ${p.code_letter} - ` : ""}${p.student_name} (${p.team_name})`}
                                       >
                                         {p.code_letter ? `${p.code_letter}: ` : ""}{p.chest_no || p.student_name.slice(0, 8)}
                                       </span>
                                     ))}
                                     {item.participants.length > 4 && (
-                                      <span className="text-[10px] font-bold text-slate-400">
+                                      <span className="text-[10px] font-bold text-slate-500">
                                         +{item.participants.length - 4} more
                                       </span>
                                     )}
                                   </div>
                                 ) : (
-                                  <span className="text-slate-500 italic">None</span>
+                                  <span className="text-slate-400 italic">None</span>
                                 )}
                               </td>
                             </tr>
@@ -948,10 +938,10 @@ export default function PublicSchedulePage() {
       </div>
 
       {/* Footer Notice */}
-      <footer className="border-t border-white/10 bg-[#0A1626] py-4 px-4 sm:px-6 text-center text-xs text-slate-400 mt-10">
+      <footer className="border-t border-navy/10 bg-white py-4 px-4 sm:px-6 text-center text-xs text-slate-500 mt-10">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            <span className="font-bold text-gold">Wafy Campus Kalikavu Arts Fest 2026-27</span> • Official Main Stage Display System
+            <span className="font-bold text-navy">Wafy Campus Kalikavu Arts Fest 2026-27</span> • Official Main Stage Display System
           </div>
           <div className="text-[11px] text-slate-400 font-mono">
             Auto-refreshed: {lastRefreshed.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
