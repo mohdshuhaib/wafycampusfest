@@ -21,6 +21,9 @@ import {
   Layers,
   Check,
   Copy,
+  Lock,
+  Unlock,
+  ShieldAlert,
 } from "lucide-react"
 
 interface EnrichedEvent {
@@ -47,12 +50,27 @@ export function PublishManager({ onPublishChanged }: { onPublishChanged?: () => 
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [bulkPublishing, setBulkPublishing] = useState(false)
   const [copyingId, setCopyingId] = useState<string | null>(null)
+  const [isResultsLocked, setIsResultsLocked] = useState(false)
+  const [togglingLock, setTogglingLock] = useState(false)
 
   const supabase = createClient()
+
+  const loadLockStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/results-lock")
+      if (res.ok) {
+        const data = await res.json()
+        setIsResultsLocked(Boolean(data.locked))
+      }
+    } catch (err) {
+      console.error("Failed to load results-lock status:", err)
+    }
+  }
 
   const loadData = async () => {
     try {
       setLoading(true)
+      await loadLockStatus()
       const res = await fetch("/api/admin/publish-event")
       if (res.ok) {
         const data = await res.json()
@@ -65,6 +83,33 @@ export function PublishManager({ onPublishChanged }: { onPublishChanged?: () => 
       toast.error("Failed to load events: " + err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToggleLock = async () => {
+    try {
+      setTogglingLock(true)
+      const nextState = !isResultsLocked
+      const res = await fetch("/api/admin/results-lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locked: nextState }),
+      })
+      if (res.ok) {
+        setIsResultsLocked(nextState)
+        if (nextState) {
+          toast.success("Public results LOCKED! Curiosity/suspense mode is active on the main page.")
+        } else {
+          toast.success("Public results UNLOCKED! Official scores are now live.")
+        }
+        if (onPublishChanged) onPublishChanged()
+      } else {
+        toast.error("Failed to update results lock")
+      }
+    } catch (err: any) {
+      toast.error("Error: " + err.message)
+    } finally {
+      setTogglingLock(false)
     }
   }
 
@@ -288,6 +333,64 @@ export function PublishManager({ onPublishChanged }: { onPublishChanged?: () => 
 
   return (
     <div className="space-y-6">
+      {/* Suspense Results Lock (Curiosity Mode) Banner */}
+      <div className={`rounded-2xl border p-4 sm:p-5 transition-all shadow-sm ${
+        isResultsLocked
+          ? "border-rose-300 bg-rose-50/90 text-rose-950 ring-2 ring-rose-400/40"
+          : "border-navy/10 bg-ivory/90 text-navy"
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className={`grid size-12 shrink-0 place-items-center rounded-2xl ${
+              isResultsLocked
+                ? "bg-rose-600 text-white animate-pulse shadow-md"
+                : "bg-emerald-600 text-white"
+            }`}>
+              {isResultsLocked ? <Lock className="size-6" /> : <Unlock className="size-6" />}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base sm:text-lg font-black tracking-tight text-navy">
+                  {isResultsLocked ? "Public Results Suspense Lock (Active)" : "Public Results Visibility"}
+                </h3>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                  isResultsLocked
+                    ? "bg-rose-200 text-rose-900 border border-rose-300 animate-pulse"
+                    : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                }`}>
+                  {isResultsLocked ? "LOCKED (CURIOSITY MODE)" : "LIVE & VISIBLE"}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-600 max-w-2xl leading-relaxed">
+                {isResultsLocked
+                  ? "Curiosity mode active: Main landing page conceals overall podium, champions, and event scoreboards behind suspense dots (•••) and mystery blur to heighten excitement for the grand finale."
+                  : "Main landing page is currently displaying live scores, team podium ranks, individual champions, and published event scores."}
+              </p>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            onClick={handleToggleLock}
+            disabled={togglingLock}
+            className={`h-11 px-5 rounded-xl font-bold shrink-0 transition-all ${
+              isResultsLocked
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg"
+                : "bg-rose-600 hover:bg-rose-700 text-white shadow-md hover:shadow-lg"
+            }`}
+          >
+            {togglingLock ? (
+              <Loader2 className="size-4 animate-spin mr-2" />
+            ) : isResultsLocked ? (
+              <Unlock className="size-4 mr-2" />
+            ) : (
+              <Lock className="size-4 mr-2" />
+            )}
+            {isResultsLocked ? "Unlock Results (Show Live)" : "Lock Results (Curiosity Mode)"}
+          </Button>
+        </div>
+      </div>
+
       {/* Overview Stats Bar */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-navy/10 bg-ivory/80 p-4 shadow-xs">

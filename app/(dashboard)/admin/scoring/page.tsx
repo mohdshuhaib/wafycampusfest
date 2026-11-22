@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal, Globe, Calculator, TrendingUp, MinusCircle } from "lucide-react"
+import { Settings, BarChart3, Download, ChevronDown, Loader2, FileSpreadsheet, Trophy, Sparkles, Medal, SlidersHorizontal, Globe, Calculator, TrendingUp, MinusCircle, Lock, Unlock } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -41,9 +41,47 @@ export default function ScoringPage() {
   const [activeTab, setActiveTab] = useState(SECTIONS[0].id)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isPenaltyOpen, setIsPenaltyOpen] = useState(false)
+  const [isResultsLocked, setIsResultsLocked] = useState(false)
+  const [togglingLock, setTogglingLock] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [downloadingExcel, setDownloadingExcel] = useState(false)
   const supabase = createClient()
+
+  const loadLockStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/results-lock")
+      if (res.ok) {
+        const data = await res.json()
+        setIsResultsLocked(Boolean(data.locked))
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    loadLockStatus()
+  }, [])
+
+  const handleToggleResultsLock = async () => {
+    try {
+      setTogglingLock(true)
+      const next = !isResultsLocked
+      const res = await fetch("/api/admin/results-lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locked: next }),
+      })
+      if (res.ok) {
+        setIsResultsLocked(next)
+        handleScoreUpdate()
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setTogglingLock(false)
+    }
+  }
 
   // Load XLSX Script for Excel Generation
   useEffect(() => {
@@ -407,6 +445,27 @@ export default function ScoringPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button
+              variant="outline"
+              onClick={handleToggleResultsLock}
+              disabled={togglingLock}
+              className={
+                isResultsLocked
+                  ? "border-rose-400 bg-rose-600 text-white hover:bg-rose-700 font-bold animate-pulse"
+                  : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-white"
+              }
+              title={isResultsLocked ? "Public results are locked. Click to unlock." : "Public results are live. Click to lock in curiosity mode."}
+            >
+              {togglingLock ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : isResultsLocked ? (
+                <Lock className="size-4" />
+              ) : (
+                <Unlock className="size-4" />
+              )}
+              <span>{isResultsLocked ? "Results Locked" : "Lock Results"}</span>
+            </Button>
 
             <Button
               variant="outline"

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { getPublishedEventIds } from '@/app/api/admin/publish-event/route'
+import { isResultsLocked } from '@/lib/results-lock'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,6 +75,37 @@ export async function GET() {
 
     const teams = rawTeams || []
     const allParts = rawParts || []
+
+    // Check if public results are locked (Curiosity / Suspense Mode)
+    const isLocked = await isResultsLocked()
+
+    if (isLocked) {
+      // In locked/curiosity mode, withhold all scores and participant results so they cannot be inspected
+      const maskedTeams = teams.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        color_hex: t.color_hex || '#3b82f6',
+        offStage: 0,
+        onStage: 0,
+        general: 0,
+        special: 0,
+        penalty: 0,
+        total: 0,
+        is_masked: true,
+      }))
+
+      return NextResponse.json({
+        isLocked: true,
+        teams: maskedTeams,
+        hasAnyResults: false,
+        topStudents: [],
+        detailedResults: [],
+        publishedEventsCount: 0,
+        totalEvents: new Set(allParts.map((p: any) => p.event_id)).size,
+        totalParticipants: new Set(allParts.map((p: any) => p.student_id)).size,
+      })
+    }
 
     // Filter participations strictly to PUBLISHED events
     const publishedParts = allParts.filter((p: any) => publishedEventIds.has(p.event_id))
@@ -417,6 +449,7 @@ export async function GET() {
     })
 
     return NextResponse.json({
+      isLocked: false,
       teams: rankedTeams,
       hasAnyResults,
       topStudents: topStudentsList,

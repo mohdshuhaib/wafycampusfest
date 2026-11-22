@@ -23,6 +23,8 @@ import {
   Users,
   User,
   Sparkles,
+  Lock,
+  Unlock,
 } from "lucide-react"
 
 interface TeamScore {
@@ -145,6 +147,7 @@ export default function ArtsFestResultsPage() {
   const [topStudents, setTopStudents] = useState<TopStudentScorer[]>([])
   const [loading, setLoading] = useState(true)
   const [hasAnyResults, setHasAnyResults] = useState(false)
+  const [isLocked, setIsLocked] = useState(false)
   const [totalEvents, setTotalEvents] = useState(55)
   const [totalParticipants, setTotalParticipants] = useState(330)
 
@@ -171,6 +174,7 @@ export default function ArtsFestResultsPage() {
           setTopStudents(data.topStudents || [])
           setResults(data.detailedResults || [])
           setHasAnyResults(Boolean(data.hasAnyResults))
+          setIsLocked(Boolean(data.isLocked))
           if (data.totalEvents) setTotalEvents(data.totalEvents)
           if (data.totalParticipants) setTotalParticipants(data.totalParticipants)
         }
@@ -332,11 +336,23 @@ export default function ArtsFestResultsPage() {
       <section id="results-section" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-14">
+          {isLocked && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-2 rounded-full border border-rose-300 bg-rose-50 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-rose-800 mb-4 shadow-sm animate-pulse"
+            >
+              <Lock className="size-3.5 text-rose-600" />
+              <span>Suspense Lock • Curiosity Mode Active</span>
+            </motion.div>
+          )}
           <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-            Overall Team Standings
+            {isLocked ? "Championship Standings Sealed" : "Overall Team Standings"}
           </h2>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
-            {hasAnyResults
+            {isLocked
+              ? "Official scores across all houses have been placed under suspense lock for the Grand Valedictory Ceremony! Stay tuned for the live announcement."
+              : hasAnyResults
               ? "Live cumulative points across On-Stage, Off-Stage, General, and Special categories."
               : "Showing current seed positions. As results are evaluated, podium positions and scores update live."}
           </p>
@@ -376,8 +392,14 @@ export default function ArtsFestResultsPage() {
                 <div className="text-center pt-2">
                   <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Score</div>
                   <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 mt-1">
-                    {secondTeam.total}
-                    <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                    {isLocked ? (
+                      <span className="tracking-widest text-slate-400 font-sans">•••</span>
+                    ) : (
+                      <>
+                        {secondTeam.total}
+                        <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -385,27 +407,31 @@ export default function ArtsFestResultsPage() {
                 <div className="grid grid-cols-4 gap-1.5 mt-4 pt-3 border-t border-slate-100 text-[10px]">
                   <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[9px]">Off</span>
-                    <span className="font-bold text-slate-800 font-mono text-xs">{secondTeam.offStage}</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{isLocked ? "••" : secondTeam.offStage}</span>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[9px]">On</span>
-                    <span className="font-bold text-slate-800 font-mono text-xs">{secondTeam.onStage}</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{isLocked ? "••" : secondTeam.onStage}</span>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[9px]">Gen</span>
-                    <span className="font-bold text-slate-800 font-mono text-xs">{secondTeam.general}</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{isLocked ? "••" : secondTeam.general}</span>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[9px]">Spc</span>
-                    <span className="font-bold text-slate-800 font-mono text-xs">{secondTeam.special}</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{isLocked ? "••" : secondTeam.special}</span>
                   </div>
                 </div>
 
-                {secondTeam.penalty > 0 && (
+                {isLocked ? (
+                  <div className="mt-2 text-center text-[10px] font-black uppercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200 rounded-lg py-1 px-2 flex items-center justify-center gap-1">
+                    <Lock className="size-3" /> Sealed
+                  </div>
+                ) : secondTeam.penalty > 0 ? (
                   <div className="mt-2 text-center text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200/80 rounded-lg py-0.5 px-2">
                     Minus Mark: -{secondTeam.penalty} pts
                   </div>
-                )}
+                ) : null}
               </div>
             </motion.div>
 
@@ -445,8 +471,14 @@ export default function ArtsFestResultsPage() {
                     Total Score
                   </div>
                   <div className="text-4xl sm:text-5xl font-black font-mono text-amber-700 mt-1">
-                    {firstTeam.total}
-                    <span className="text-sm text-slate-500 font-sans ml-1">pts</span>
+                    {isLocked ? (
+                      <span className="tracking-widest text-amber-400 font-sans">•••</span>
+                    ) : (
+                      <>
+                        {firstTeam.total}
+                        <span className="text-sm text-slate-500 font-sans ml-1">pts</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -454,27 +486,31 @@ export default function ArtsFestResultsPage() {
                 <div className="grid grid-cols-4 gap-1.5 mt-5 pt-3 border-t border-amber-200/60 text-xs">
                   <div className="rounded-xl bg-amber-50/70 p-1.5 text-center border border-amber-200/50">
                     <span className="text-amber-800 block text-[9px] font-bold">Off</span>
-                    <span className="font-bold text-slate-900 font-mono text-xs">{firstTeam.offStage}</span>
+                    <span className="font-bold text-slate-900 font-mono text-xs">{isLocked ? "••" : firstTeam.offStage}</span>
                   </div>
                   <div className="rounded-xl bg-amber-50/70 p-1.5 text-center border border-amber-200/50">
                     <span className="text-amber-800 block text-[9px] font-bold">On</span>
-                    <span className="font-bold text-slate-900 font-mono text-xs">{firstTeam.onStage}</span>
+                    <span className="font-bold text-slate-900 font-mono text-xs">{isLocked ? "••" : firstTeam.onStage}</span>
                   </div>
                   <div className="rounded-xl bg-amber-50/70 p-1.5 text-center border border-amber-200/50">
                     <span className="text-amber-800 block text-[9px] font-bold">Gen</span>
-                    <span className="font-bold text-slate-900 font-mono text-xs">{firstTeam.general}</span>
+                    <span className="font-bold text-slate-900 font-mono text-xs">{isLocked ? "••" : firstTeam.general}</span>
                   </div>
                   <div className="rounded-xl bg-amber-50/70 p-1.5 text-center border border-amber-200/50">
                     <span className="text-amber-800 block text-[9px] font-bold">Spc</span>
-                    <span className="font-bold text-slate-900 font-mono text-xs">{firstTeam.special}</span>
+                    <span className="font-bold text-slate-900 font-mono text-xs">{isLocked ? "••" : firstTeam.special}</span>
                   </div>
                 </div>
 
-                {firstTeam.penalty > 0 && (
+                {isLocked ? (
+                  <div className="mt-2 text-center text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 border border-amber-300 rounded-lg py-1 px-2 flex items-center justify-center gap-1">
+                    <Lock className="size-3" /> Sealed
+                  </div>
+                ) : firstTeam.penalty > 0 ? (
                   <div className="mt-2 text-center text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200/80 rounded-lg py-0.5 px-2">
                     Minus Mark: -{firstTeam.penalty} pts
                   </div>
-                )}
+                ) : null}
               </div>
             </motion.div>
 
@@ -508,8 +544,14 @@ export default function ArtsFestResultsPage() {
                 <div className="text-center pt-2">
                   <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Score</div>
                   <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 mt-1">
-                    {thirdTeam.total}
-                    <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                    {isLocked ? (
+                      <span className="tracking-widest text-slate-400 font-sans">•••</span>
+                    ) : (
+                      <>
+                        {thirdTeam.total}
+                        <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -517,27 +559,31 @@ export default function ArtsFestResultsPage() {
                 <div className="grid grid-cols-4 gap-1.5 mt-4 pt-3 border-t border-slate-100 text-[10px]">
                   <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[9px]">Off</span>
-                    <span className="font-bold text-slate-800 font-mono text-xs">{thirdTeam.offStage}</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{isLocked ? "••" : thirdTeam.offStage}</span>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[9px]">On</span>
-                    <span className="font-bold text-slate-800 font-mono text-xs">{thirdTeam.onStage}</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{isLocked ? "••" : thirdTeam.onStage}</span>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[9px]">Gen</span>
-                    <span className="font-bold text-slate-800 font-mono text-xs">{thirdTeam.general}</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{isLocked ? "••" : thirdTeam.general}</span>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-1.5 text-center border border-slate-100">
                     <span className="text-slate-500 block text-[9px]">Spc</span>
-                    <span className="font-bold text-slate-800 font-mono text-xs">{thirdTeam.special}</span>
+                    <span className="font-bold text-slate-800 font-mono text-xs">{isLocked ? "••" : thirdTeam.special}</span>
                   </div>
                 </div>
 
-                {thirdTeam.penalty > 0 && (
+                {isLocked ? (
+                  <div className="mt-2 text-center text-[10px] font-black uppercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200 rounded-lg py-1 px-2 flex items-center justify-center gap-1">
+                    <Lock className="size-3" /> Sealed
+                  </div>
+                ) : thirdTeam.penalty > 0 ? (
                   <div className="mt-2 text-center text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200/80 rounded-lg py-0.5 px-2">
                     Minus Mark: -{thirdTeam.penalty} pts
                   </div>
-                )}
+                ) : null}
               </div>
             </motion.div>
           </div>
@@ -601,16 +647,20 @@ export default function ArtsFestResultsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-3 text-center font-mono text-slate-700">{t.offStage}</td>
-                    <td className="py-4 px-3 text-center font-mono text-slate-700">{t.onStage}</td>
-                    <td className="py-4 px-3 text-center font-mono text-slate-700">{t.general}</td>
-                    <td className="py-4 px-3 text-center font-mono text-slate-700">{t.special}</td>
+                    <td className="py-4 px-3 text-center font-mono text-slate-700">{isLocked ? "••" : t.offStage}</td>
+                    <td className="py-4 px-3 text-center font-mono text-slate-700">{isLocked ? "••" : t.onStage}</td>
+                    <td className="py-4 px-3 text-center font-mono text-slate-700">{isLocked ? "••" : t.general}</td>
+                    <td className="py-4 px-3 text-center font-mono text-slate-700">{isLocked ? "••" : t.special}</td>
                     <td className="py-4 px-3 text-center font-mono text-rose-600 font-bold">
-                      {t.penalty > 0 ? `-${t.penalty}` : "0"}
+                      {isLocked ? "••" : t.penalty > 0 ? `-${t.penalty}` : "0"}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <span className="font-mono text-xl sm:text-2xl font-black text-slate-900">
-                        {t.total}
+                        {isLocked ? (
+                          <span className="text-slate-400 font-sans tracking-widest">•••</span>
+                        ) : (
+                          t.total
+                        )}
                       </span>
                     </td>
                   </tr>
@@ -627,15 +677,27 @@ export default function ArtsFestResultsPage() {
       <section id="top-students-section" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-14">
+          {isLocked && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-2 rounded-full border border-rose-300 bg-rose-50 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-rose-800 mb-4 shadow-sm animate-pulse"
+            >
+              <Lock className="size-3.5 text-rose-600" />
+              <span>Champions Embargo Active</span>
+            </motion.div>
+          )}
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-50 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-amber-900 mb-3 shadow-xs">
             <Sparkles className="size-3.5 text-amber-600" />
             <span>Individual Champions</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-            Top Students of the Fest
+            {isLocked ? "Top Students (Sealed)" : "Top Students of the Fest"}
           </h2>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
-            Festival individual toppers with cumulative points across all published competitions.
+            {isLocked
+              ? "Individual performer cumulative rankings are placed under suspense embargo. Final winners will be revealed live on stage!"
+              : "Festival individual toppers with cumulative points across all published competitions."}
           </p>
         </div>
 
@@ -661,23 +723,30 @@ export default function ArtsFestResultsPage() {
 
                   {/* Student Image */}
                   <div className="relative size-24 sm:size-28 rounded-2xl overflow-hidden border-2 border-cyan-400/80 shadow-md bg-slate-50 flex items-center justify-center shrink-0">
-                    <StudentAvatar
-                      imageLink={topStudents[1]?.image_link}
-                      name={topStudents[1]?.name}
-                      fallbackIconSize="size-12"
-                    />
+                    {isLocked ? (
+                      <div className="flex flex-col items-center justify-center gap-1 text-cyan-700">
+                        <Lock className="size-8 animate-pulse text-cyan-600" />
+                        <span className="text-[9px] font-black uppercase tracking-wider">Sealed</span>
+                      </div>
+                    ) : (
+                      <StudentAvatar
+                        imageLink={topStudents[1]?.image_link}
+                        name={topStudents[1]?.name}
+                        fallbackIconSize="size-12"
+                      />
+                    )}
                   </div>
 
                   {/* Student Name & Chest */}
                   <div className="mt-3">
                     <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug">
-                      {topStudents[1]?.name || (topStudents.length === 0 ? "Awaiting Results" : "Top Scorer #2")}
+                      {isLocked ? "🔒 Classified Performer" : topStudents[1]?.name || (topStudents.length === 0 ? "Awaiting Results" : "Top Scorer #2")}
                     </h3>
                     <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
                       <span className="font-mono text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                        #{topStudents[1]?.chest_no || "—"}
+                        #{isLocked ? "••" : topStudents[1]?.chest_no || "—"}
                       </span>
-                      {topStudents[1]?.team_name && (
+                      {topStudents[1]?.team_name && !isLocked && (
                         <span
                           className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-800"
                           style={{
@@ -702,8 +771,14 @@ export default function ArtsFestResultsPage() {
                       Total Points
                     </div>
                     <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 mt-0.5">
-                      {topStudents[1]?.total_points || 0}
-                      <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                      {isLocked ? (
+                        <span className="text-slate-400 font-sans tracking-widest">•••</span>
+                      ) : (
+                        <>
+                          {topStudents[1]?.total_points || 0}
+                          <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -712,13 +787,13 @@ export default function ArtsFestResultsPage() {
                     <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
                       <span className="text-[10px] text-slate-500 font-bold block">Off Stage</span>
                       <span className="font-mono font-black text-slate-800 text-sm">
-                        {topStudents[1]?.off_stage_points || 0} pts
+                        {isLocked ? "••" : `${topStudents[1]?.off_stage_points || 0} pts`}
                       </span>
                     </div>
                     <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
                       <span className="text-[10px] text-slate-500 font-bold block">On Stage</span>
                       <span className="font-mono font-black text-slate-800 text-sm">
-                        {topStudents[1]?.on_stage_points || 0} pts
+                        {isLocked ? "••" : `${topStudents[1]?.on_stage_points || 0} pts`}
                       </span>
                     </div>
                   </div>
@@ -744,23 +819,30 @@ export default function ArtsFestResultsPage() {
 
                   {/* Student Image (Big) */}
                   <div className="relative size-28 sm:size-32 rounded-3xl overflow-hidden border-3 border-amber-400 shadow-xl bg-amber-50 flex items-center justify-center shrink-0">
-                    <StudentAvatar
-                      imageLink={topStudents[0]?.image_link}
-                      name={topStudents[0]?.name}
-                      fallbackIconSize="size-14 text-amber-400"
-                    />
+                    {isLocked ? (
+                      <div className="flex flex-col items-center justify-center gap-1.5 text-amber-700">
+                        <Lock className="size-10 animate-pulse text-amber-600" />
+                        <span className="text-[10px] font-black uppercase tracking-wider">Top Champion</span>
+                      </div>
+                    ) : (
+                      <StudentAvatar
+                        imageLink={topStudents[0]?.image_link}
+                        name={topStudents[0]?.name}
+                        fallbackIconSize="size-14 text-amber-400"
+                      />
+                    )}
                   </div>
 
                   {/* Student Name & Chest */}
                   <div className="mt-3">
                     <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
-                      {topStudents[0]?.name || (topStudents.length === 0 ? "Awaiting Results" : "Top Scorer #1")}
+                      {isLocked ? "🔒 Top Performer #1" : topStudents[0]?.name || (topStudents.length === 0 ? "Awaiting Results" : "Top Scorer #1")}
                     </h3>
                     <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
                       <span className="font-mono text-xs font-extrabold text-amber-900 bg-amber-100/90 px-2.5 py-0.5 rounded-md border border-amber-300">
-                        #{topStudents[0]?.chest_no || "—"}
+                        #{isLocked ? "••" : topStudents[0]?.chest_no || "—"}
                       </span>
-                      {topStudents[0]?.team_name && (
+                      {topStudents[0]?.team_name && !isLocked && (
                         <span
                           className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-slate-800"
                           style={{
@@ -785,8 +867,14 @@ export default function ArtsFestResultsPage() {
                       Total Points
                     </div>
                     <div className="text-4xl sm:text-5xl font-black font-mono text-amber-700 mt-0.5">
-                      {topStudents[0]?.total_points || 0}
-                      <span className="text-sm font-sans font-bold text-slate-500 ml-1">pts</span>
+                      {isLocked ? (
+                        <span className="text-amber-400 font-sans tracking-widest">•••</span>
+                      ) : (
+                        <>
+                          {topStudents[0]?.total_points || 0}
+                          <span className="text-sm font-sans font-bold text-slate-500 ml-1">pts</span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -795,13 +883,13 @@ export default function ArtsFestResultsPage() {
                     <div className="rounded-xl bg-amber-50/80 p-2.5 border border-amber-200/60">
                       <span className="text-[10px] text-amber-800 font-bold block">Off Stage</span>
                       <span className="font-mono font-black text-slate-900 text-sm">
-                        {topStudents[0]?.off_stage_points || 0} pts
+                        {isLocked ? "••" : `${topStudents[0]?.off_stage_points || 0} pts`}
                       </span>
                     </div>
                     <div className="rounded-xl bg-amber-50/80 p-2.5 border border-amber-200/60">
                       <span className="text-[10px] text-amber-800 font-bold block">On Stage</span>
                       <span className="font-mono font-black text-slate-900 text-sm">
-                        {topStudents[0]?.on_stage_points || 0} pts
+                        {isLocked ? "••" : `${topStudents[0]?.on_stage_points || 0} pts`}
                       </span>
                     </div>
                   </div>
@@ -827,23 +915,30 @@ export default function ArtsFestResultsPage() {
 
                   {/* Student Image */}
                   <div className="relative size-24 sm:size-28 rounded-2xl overflow-hidden border-2 border-emerald-400/80 shadow-md bg-slate-50 flex items-center justify-center shrink-0">
-                    <StudentAvatar
-                      imageLink={topStudents[2]?.image_link}
-                      name={topStudents[2]?.name}
-                      fallbackIconSize="size-12"
-                    />
+                    {isLocked ? (
+                      <div className="flex flex-col items-center justify-center gap-1 text-emerald-700">
+                        <Lock className="size-8 animate-pulse text-emerald-600" />
+                        <span className="text-[9px] font-black uppercase tracking-wider">Sealed</span>
+                      </div>
+                    ) : (
+                      <StudentAvatar
+                        imageLink={topStudents[2]?.image_link}
+                        name={topStudents[2]?.name}
+                        fallbackIconSize="size-12"
+                      />
+                    )}
                   </div>
 
                   {/* Student Name & Chest */}
                   <div className="mt-3">
                     <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug">
-                      {topStudents[2]?.name || (topStudents.length === 0 ? "Awaiting Results" : "Top Scorer #3")}
+                      {isLocked ? "🔒 Classified Performer" : topStudents[2]?.name || (topStudents.length === 0 ? "Awaiting Results" : "Top Scorer #3")}
                     </h3>
                     <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
                       <span className="font-mono text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                        #{topStudents[2]?.chest_no || "—"}
+                        #{isLocked ? "••" : topStudents[2]?.chest_no || "—"}
                       </span>
-                      {topStudents[2]?.team_name && (
+                      {topStudents[2]?.team_name && !isLocked && (
                         <span
                           className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-800"
                           style={{
@@ -868,8 +963,14 @@ export default function ArtsFestResultsPage() {
                       Total Points
                     </div>
                     <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 mt-0.5">
-                      {topStudents[2]?.total_points || 0}
-                      <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                      {isLocked ? (
+                        <span className="text-slate-400 font-sans tracking-widest">•••</span>
+                      ) : (
+                        <>
+                          {topStudents[2]?.total_points || 0}
+                          <span className="text-xs text-slate-500 font-sans ml-1">pts</span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -878,13 +979,13 @@ export default function ArtsFestResultsPage() {
                     <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
                       <span className="text-[10px] text-slate-500 font-bold block">Off Stage</span>
                       <span className="font-mono font-black text-slate-800 text-sm">
-                        {topStudents[2]?.off_stage_points || 0} pts
+                        {isLocked ? "••" : `${topStudents[2]?.off_stage_points || 0} pts`}
                       </span>
                     </div>
                     <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
                       <span className="text-[10px] text-slate-500 font-bold block">On Stage</span>
                       <span className="font-mono font-black text-slate-800 text-sm">
-                        {topStudents[2]?.on_stage_points || 0} pts
+                        {isLocked ? "••" : `${topStudents[2]?.on_stage_points || 0} pts`}
                       </span>
                     </div>
                   </div>
@@ -970,7 +1071,28 @@ export default function ArtsFestResultsPage() {
         </div>
 
         {/* GROUPED EVENTS LIST: Carousel View with Next/Back and Top 3 Highlights */}
-        {filteredEvents.length === 0 ? (
+        {isLocked ? (
+          <div className="rounded-3xl border-2 border-dashed border-rose-300 bg-gradient-to-b from-rose-50/70 via-white to-white p-10 sm:p-14 text-center shadow-lg">
+            <div className="mx-auto flex size-20 items-center justify-center rounded-3xl bg-rose-100 text-rose-600 shadow-inner mb-4 animate-pulse">
+              <Lock className="size-10" />
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-rose-100 border border-rose-300 px-4 py-1 text-xs font-black uppercase tracking-wider text-rose-900 mb-3">
+              🔒 Final Suspense Embargo Active
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Event Scoreboards Temporarily Sealed
+            </h3>
+            <p className="mt-3 max-w-lg mx-auto text-sm text-slate-600 leading-relaxed">
+              All individual event results, position rankings, and grade certificates are under suspense lock for the Grand Valedictory Ceremony. Final winners will be announced live on the main stage!
+            </p>
+            <div className="mt-6 flex justify-center items-center gap-2">
+              <span className="size-2 rounded-full bg-rose-500 animate-ping" />
+              <span className="font-mono text-xs font-bold text-rose-700 uppercase tracking-widest">
+                Curiosity Mode Active • • •
+              </span>
+            </div>
+          </div>
+        ) : filteredEvents.length === 0 ? (
           <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-xs">
             <Award className="mx-auto size-12 text-slate-300 mb-3" />
             <h4 className="text-base font-bold text-slate-800">No Events Found</h4>
