@@ -47,6 +47,7 @@ export async function GET() {
         performance_grade,
         result_position,
         attendance_status,
+        group_label,
         event:events (
           id,
           name,
@@ -251,51 +252,119 @@ export async function GET() {
           : ev.category || 'OFF STAGE'
 
       if (isTeamEvent) {
-        // Team Event: ONLY show teams, NEVER show student participants
-        // For each team in teams, find its participation or create placeholder so 1,2,3 and 4th team appear
+        // Team Event: ONLY show teams/groups, NEVER show individual student participants
+        const isMultiGroup = ev.grade_type === 'C' || ev.grade_type === 'D'
         const teamEventResults: any[] = []
 
-        teams.forEach((t: any) => {
-          const part = publishedParts.find(
-            (p: any) => p.event_id === ev.id && !p.student_id && p.team_id === t.id
-          )
+        // All team participations for this event (no student_id)
+        const eventTeamParts = publishedParts.filter(
+          (p: any) => p.event_id === ev.id && !p.student_id
+        )
 
-          const effectivePoints = part ? Number(part.points_earned || 0) : 0
-          const effectiveGrade =
-            part && part.performance_grade && part.performance_grade !== 'NONE'
-              ? part.performance_grade
-              : null
-          const effectivePosition = part?.result_position || null
+        const posRank: Record<string, number> = { FIRST: 1, SECOND: 2, THIRD: 3 }
 
-          teamEventResults.push({
-            id: part?.id || `team-${t.id}-${ev.id}`,
-            chest_no: '',
-            student_name: t.name,
-            team_name: t.name,
-            team_color: t.color_hex || '#3b82f6',
-            team_slug: t.slug || '',
-            event_id: ev.id,
-            event_name: ev.name,
-            event_code: ev.event_code || '',
-            category: effectiveCategory,
-            stage_type: ev.category || 'OFF STAGE',
-            grade_type: ev.grade_type,
-            points_earned: effectivePoints,
-            performance_grade: effectiveGrade,
-            result_position: effectivePosition,
-            has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition),
-            image_link: null,
-            is_team_entry: true,
+        if (isMultiGroup) {
+          // Grade C and D events: each team has 2 groups (Group 1 & Group 2), 6 groups total
+          teams.forEach((t: any) => {
+            const teamParts = eventTeamParts.filter((p: any) => p.team_id === t.id)
+
+            // Sort team parts: winners first (FIRST, SECOND, THIRD), then by points DESC
+            teamParts.sort((a: any, b: any) => {
+              const rankA = a.result_position ? posRank[a.result_position] || 9 : 10
+              const rankB = b.result_position ? posRank[b.result_position] || 9 : 10
+              if (rankA !== rankB) return rankA - rankB
+              return Number(b.points_earned || 0) - Number(a.points_earned || 0)
+            })
+
+            // Generate slots for Group 1 and Group 2 (or more if exists)
+            const totalGroups = Math.max(2, teamParts.length)
+            for (let grpNum = 1; grpNum <= totalGroups; grpNum++) {
+              const expectedLabel = `Group ${grpNum}`
+              // Try to find matching group_label first, otherwise match by index
+              let part = teamParts.find((p: any) => p.group_label === expectedLabel)
+              if (!part) {
+                part = teamParts[grpNum - 1] || null
+              }
+
+              const effectivePoints = part ? Number(part.points_earned || 0) : 0
+              const effectiveGrade =
+                part && part.performance_grade && part.performance_grade !== 'NONE'
+                  ? part.performance_grade
+                  : null
+              const effectivePosition = part?.result_position || null
+              const groupLabel = `Group ${grpNum}`
+              const displayName = `${t.name} (${groupLabel})`
+
+              teamEventResults.push({
+                id: part?.id || `team-${t.id}-${ev.id}-grp${grpNum}`,
+                chest_no: '',
+                student_name: displayName,
+                team_name: t.name,
+                team_color: t.color_hex || '#3b82f6',
+                team_slug: t.slug || '',
+                group_label: groupLabel,
+                display_name: displayName,
+                event_id: ev.id,
+                event_name: ev.name,
+                event_code: ev.event_code || '',
+                category: effectiveCategory,
+                stage_type: ev.category || 'OFF STAGE',
+                grade_type: ev.grade_type,
+                points_earned: effectivePoints,
+                performance_grade: effectiveGrade,
+                result_position: effectivePosition,
+                has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition),
+                image_link: null,
+                is_team_entry: true,
+                is_multi_group: true,
+              })
+            }
           })
-        })
+        } else {
+          // Standard single-group team event
+          teams.forEach((t: any) => {
+            const part = eventTeamParts.find((p: any) => p.team_id === t.id)
 
-        // Sort teams: 1st, 2nd, 3rd, then by points, then by name
+            const effectivePoints = part ? Number(part.points_earned || 0) : 0
+            const effectiveGrade =
+              part && part.performance_grade && part.performance_grade !== 'NONE'
+                ? part.performance_grade
+                : null
+            const effectivePosition = part?.result_position || null
+
+            teamEventResults.push({
+              id: part?.id || `team-${t.id}-${ev.id}`,
+              chest_no: '',
+              student_name: t.name,
+              team_name: t.name,
+              team_color: t.color_hex || '#3b82f6',
+              team_slug: t.slug || '',
+              group_label: null,
+              display_name: t.name,
+              event_id: ev.id,
+              event_name: ev.name,
+              event_code: ev.event_code || '',
+              category: effectiveCategory,
+              stage_type: ev.category || 'OFF STAGE',
+              grade_type: ev.grade_type,
+              points_earned: effectivePoints,
+              performance_grade: effectiveGrade,
+              result_position: effectivePosition,
+              has_result: Boolean(effectivePoints > 0 || effectiveGrade || effectivePosition),
+              image_link: null,
+              is_team_entry: true,
+              is_multi_group: false,
+            })
+          })
+        }
+
+        // Sort teams/groups: 1st, 2nd, 3rd, then by points DESC, then by display_name
         teamEventResults.sort((a, b) => {
           const rankA = a.result_position ? positionOrder[a.result_position] || 9 : 9
           const rankB = b.result_position ? positionOrder[b.result_position] || 9 : 9
           if (rankA !== rankB) return rankA - rankB
           if (b.points_earned !== a.points_earned) return b.points_earned - a.points_earned
-          return a.team_name.localeCompare(b.team_name)
+          return a.display_name.localeCompare(b.display_name)
         })
 
         detailedResults.push(...teamEventResults)

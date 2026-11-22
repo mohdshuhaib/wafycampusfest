@@ -58,6 +58,9 @@ interface ParticipantResult {
   has_result: boolean
   image_link?: string | null
   is_team_entry?: boolean
+  group_label?: string | null
+  display_name?: string | null
+  is_multi_group?: boolean
 }
 
 interface GroupedEvent {
@@ -1066,7 +1069,7 @@ export default function ArtsFestResultsPage() {
                           <span>•</span>
                           <span className="flex items-center gap-1 font-medium text-slate-600">
                             <Users className="size-3 text-cyan-600" />
-                            {currentEvent.participants.length} {isTeamEvent ? "Contending Teams" : "Total Participants"}
+                            {currentEvent.participants.length} {isTeamEvent ? (currentEvent.gradeType === "C" || currentEvent.gradeType === "D" ? "Contending Groups" : "Contending Teams") : "Total Participants"}
                           </span>
                         </div>
                       </div>
@@ -1133,7 +1136,9 @@ export default function ArtsFestResultsPage() {
                                   }}
                                 >
                                   <Users className="size-8 sm:size-9 mb-0.5 opacity-90" />
-                                  <span className="text-[10px] font-mono tracking-wider uppercase opacity-95">Team</span>
+                                  <span className="text-[10px] font-mono tracking-wider uppercase opacity-95">
+                                    {winner.group_label || "Team"}
+                                  </span>
                                 </div>
                               ) : (
                                 <div className="relative size-20 sm:size-24 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-md bg-white flex items-center justify-center shrink-0 mb-3">
@@ -1147,7 +1152,9 @@ export default function ArtsFestResultsPage() {
 
                               {/* Student or Team Name */}
                               <h5 className="text-base sm:text-lg font-black text-slate-900 leading-tight uppercase tracking-wide">
-                                {isTeamEvent ? winner.team_name : winner.student_name}
+                                {isTeamEvent
+                                  ? (winner.display_name || (winner.group_label ? `${winner.team_name} (${winner.group_label})` : winner.team_name))
+                                  : winner.student_name}
                               </h5>
 
                               {isTeamEvent ? (
@@ -1164,7 +1171,7 @@ export default function ArtsFestResultsPage() {
                                       className="size-1.5 rounded-full"
                                       style={{ backgroundColor: winner.team_color }}
                                     />
-                                    Contending Team
+                                    {winner.group_label ? `${winner.team_name} • ${winner.group_label}` : `${winner.team_name} • Contending Team`}
                                   </span>
                                 </div>
                               ) : (
@@ -1222,7 +1229,11 @@ export default function ArtsFestResultsPage() {
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">
                         {isTeamEvent
-                          ? topWinners.length > 0
+                          ? currentEvent.gradeType === "C" || currentEvent.gradeType === "D"
+                            ? topWinners.length > 0
+                              ? `Other Contending Groups (${otherParticipants.length})`
+                              : `All Contending Groups (${currentEvent.participants.length})`
+                            : topWinners.length > 0
                             ? `Other Contending Teams (${otherParticipants.length})`
                             : `All Contending Teams (${currentEvent.participants.length})`
                           : topWinners.length > 0
@@ -1247,7 +1258,9 @@ export default function ArtsFestResultsPage() {
                               <tr className="border-b border-slate-100 text-[10px] uppercase tracking-wider text-slate-500 font-bold bg-slate-50/50">
                                 <th className="py-2.5 px-3 text-center w-12">Sl</th>
                                 {isTeamEvent ? (
-                                  <th className="py-2.5 px-3">Contending Team</th>
+                                  <th className="py-2.5 px-3">
+                                    {currentEvent.gradeType === "C" || currentEvent.gradeType === "D" ? "Contending Group" : "Contending Team"}
+                                  </th>
                                 ) : (
                                   <>
                                     <th className="py-2.5 px-3">Chest No</th>
@@ -1277,10 +1290,10 @@ export default function ArtsFestResultsPage() {
                                             style={{ backgroundColor: p.team_color }}
                                           />
                                           <span className="text-slate-900 font-black text-sm uppercase tracking-wide">
-                                            {p.team_name}
+                                            {p.display_name || (p.group_label ? `${p.team_name} (${p.group_label})` : p.team_name)}
                                           </span>
-                                          <span className="text-[10px] font-semibold text-slate-400">
-                                            Team Entry
+                                          <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                                            {p.group_label || "Team Entry"}
                                           </span>
                                         </div>
                                       </td>
@@ -1406,10 +1419,10 @@ export default function ArtsFestResultsPage() {
                                       />
                                       <div>
                                         <span className="font-black text-slate-900 text-sm uppercase tracking-wide">
-                                          {p.team_name}
+                                          {p.display_name || (p.group_label ? `${p.team_name} (${p.group_label})` : p.team_name)}
                                         </span>
                                         <div className="text-[10px] text-slate-400 font-semibold">
-                                          {rowSl === 4 ? "4th Place Team" : `Team #${rowSl}`}
+                                          {p.group_label ? `${p.team_name} • ${p.group_label}` : `Team #${rowSl}`}
                                         </div>
                                       </div>
                                     </div>

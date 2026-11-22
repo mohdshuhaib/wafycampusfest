@@ -170,7 +170,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
       const { data } = await supabase
         .from('participations')
         .select(`
-            id, result_position, performance_grade, student_id,
+            id, result_position, performance_grade, student_id, group_label,
             students ( id, name, chest_no ),
             teams ( id, name, color_hex )
         `)
@@ -182,6 +182,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
           student_id: p.student_id,
           result_position: p.result_position,
           performance_grade: p.performance_grade,
+          group_label: p.group_label,
           student: p.students,
           team: p.teams
         }))
@@ -208,11 +209,12 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
             rows.sort((a, b) => {
               const rankA = a.result_position ? (posRank[a.result_position] || 9) : 10
               const rankB = b.result_position ? (posRank[b.result_position] || 9) : 10
-              return rankA - rankB
+              if (rankA !== rankB) return rankA - rankB
+              return (b.points_earned || 0) - (a.points_earned || 0)
             })
 
             rows.forEach((p, idx) => {
-              const grpNum = idx + 1
+              const grpNum = p.group_label === 'Group 2' ? 2 : (p.group_label === 'Group 1' ? 1 : idx + 1)
               if (grpNum > 2) return // Maximum 2 groups per team
               const key = `${tId}__grp${grpNum}`
 
@@ -385,7 +387,7 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
           const newResults: any[] = []
 
           // Helper to add results
-          const addResult = (teamId: string, pos: string | null, grade: string | null, basePts: number) => {
+          const addResult = (teamId: string, pos: string | null, grade: string | null, basePts: number, groupLabel?: string | null) => {
               if (pos) hasWinners = true
               const key = (grade || 'NONE');
               const total = basePts + (perfPoints[key] || 0)
@@ -397,29 +399,34 @@ export function EventScorer({ section, category, onScoreSaved }: EventScorerProp
                   result_position: pos,
                   performance_grade: grade === 'NONE' ? null : grade,
                   points_earned: total,
-                  status: pos ? 'winner' : 'completed'
+                  status: pos ? 'winner' : 'completed',
+                  group_label: groupLabel || null,
               })
           }
 
           // Process Winners (grpKey is either `${teamId}__grp1` / `${teamId}__grp2` or legacy `teamId`)
           winners.FIRST.forEach((perf, grpKey) => {
             const teamId = grpKey.includes('__') ? grpKey.split('__')[0] : grpKey
-            addResult(teamId, 'FIRST', perf, basePoints?.FIRST || 0)
+            const grpLabel = grpKey.includes('__grp2') ? 'Group 2' : (grpKey.includes('__grp1') ? 'Group 1' : null)
+            addResult(teamId, 'FIRST', perf, basePoints?.FIRST || 0, grpLabel)
           })
           winners.SECOND.forEach((perf, grpKey) => {
             const teamId = grpKey.includes('__') ? grpKey.split('__')[0] : grpKey
-            addResult(teamId, 'SECOND', perf, basePoints?.SECOND || 0)
+            const grpLabel = grpKey.includes('__grp2') ? 'Group 2' : (grpKey.includes('__grp1') ? 'Group 1' : null)
+            addResult(teamId, 'SECOND', perf, basePoints?.SECOND || 0, grpLabel)
           })
           winners.THIRD.forEach((perf, grpKey) => {
             const teamId = grpKey.includes('__') ? grpKey.split('__')[0] : grpKey
-            addResult(teamId, 'THIRD', perf, basePoints?.THIRD || 0)
+            const grpLabel = grpKey.includes('__grp2') ? 'Group 2' : (grpKey.includes('__grp1') ? 'Group 1' : null)
+            addResult(teamId, 'THIRD', perf, basePoints?.THIRD || 0, grpLabel)
           })
 
           // Process Others (Groups that were given a performance grade but not in winners)
           otherGrades.forEach((grade, grpKey) => {
             const teamId = grpKey.includes('__') ? grpKey.split('__')[0] : grpKey
+            const grpLabel = grpKey.includes('__grp2') ? 'Group 2' : (grpKey.includes('__grp1') ? 'Group 1' : null)
             if (grade && grade !== 'NONE') {
-              addResult(teamId, null, grade, 0)
+              addResult(teamId, null, grade, 0, grpLabel)
             }
           })
 
