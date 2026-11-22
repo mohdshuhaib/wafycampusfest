@@ -50,6 +50,7 @@ interface StudentInfo {
 interface ProgrammeSchedule {
   id: string
   programme_id: string
+  stage?: string | null
   schedule_date: string
   start_time: string
   end_time: string
@@ -114,12 +115,30 @@ function doTimesOverlap(startA: string, endA: string, startB: string, endB: stri
   return sA < eB && sB < eA
 }
 
+const STAGE_OPTIONS = ["Stage 1", "Stage 2", "Stage 3", "Stage 4"]
+
+function getStageBadgeStyle(stage?: string | null): string {
+  switch (stage) {
+    case "Stage 1":
+      return "bg-amber-500/15 text-amber-900 border-amber-500/30"
+    case "Stage 2":
+      return "bg-blue-500/15 text-blue-900 border-blue-500/30"
+    case "Stage 3":
+      return "bg-purple-500/15 text-purple-900 border-purple-500/30"
+    case "Stage 4":
+      return "bg-emerald-500/15 text-emerald-900 border-emerald-500/30"
+    default:
+      return "bg-navy/10 text-navy border-navy/20"
+  }
+}
+
 export default function AdminSchedulePage() {
   const [events, setEvents] = useState<ProgrammeEvent[]>([])
   const [schedules, setSchedules] = useState<ProgrammeSchedule[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedDateFilter, setSelectedDateFilter] = useState<string>("ALL")
+  const [selectedStageFilter, setSelectedStageFilter] = useState<string>("ALL")
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -127,6 +146,7 @@ export default function AdminSchedulePage() {
   const [modalCategoryFilter, setModalCategoryFilter] = useState<string>("ALL")
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null)
   const [selectedProgrammeId, setSelectedProgrammeId] = useState<string>("")
+  const [stage, setStage] = useState<string>("Stage 1")
   const [scheduleDate, setScheduleDate] = useState<string>("")
   const [startTime, setStartTime] = useState<string>("09:00")
   const [endTime, setEndTime] = useState<string>("10:00")
@@ -163,6 +183,7 @@ export default function AdminSchedulePage() {
       .select(`
         id,
         programme_id,
+        stage,
         schedule_date,
         start_time,
         end_time,
@@ -316,12 +337,14 @@ export default function AdminSchedulePage() {
     if (schedToEdit) {
       setEditingScheduleId(schedToEdit.id)
       setSelectedProgrammeId(schedToEdit.programme_id)
+      setStage(schedToEdit.stage || "Stage 1")
       setScheduleDate(schedToEdit.schedule_date)
       setStartTime(schedToEdit.start_time.slice(0, 5))
       setEndTime(schedToEdit.end_time.slice(0, 5))
     } else {
       setEditingScheduleId(null)
       setSelectedProgrammeId("")
+      setStage("Stage 1")
       // Default to today or existing date
       const today = new Date().toISOString().slice(0, 10)
       setScheduleDate(today)
@@ -362,11 +385,12 @@ export default function AdminSchedulePage() {
         s.id !== editingScheduleId &&
         s.programme_id === selectedProgrammeId &&
         s.schedule_date === scheduleDate &&
+        (s.stage || "Stage 1") === (stage || "Stage 1") &&
         s.start_time.slice(0, 5) === startTime.slice(0, 5)
     )
 
     if (isDuplicate) {
-      toast.error("This programme is already scheduled for the exact same date and start time")
+      toast.error("This programme is already scheduled for the exact same stage, date, and start time")
       return
     }
 
@@ -374,6 +398,7 @@ export default function AdminSchedulePage() {
 
     const payload = {
       programme_id: selectedProgrammeId,
+      stage: stage || "Stage 1",
       schedule_date: scheduleDate,
       start_time: startTime + ":00",
       end_time: endTime + ":00",
@@ -447,15 +472,20 @@ export default function AdminSchedulePage() {
       if (selectedDateFilter !== "ALL" && s.schedule_date !== selectedDateFilter) {
         return false
       }
+      // Stage filter
+      if (selectedStageFilter !== "ALL" && (s.stage || "Stage 1") !== selectedStageFilter) {
+        return false
+      }
       // Text search
       const q = searchQuery.toLowerCase()
       const code = s.programme?.event_code?.toLowerCase() || ""
       const name = s.programme?.name?.toLowerCase() || ""
       const category = s.programme?.category?.toLowerCase() || ""
+      const stageName = (s.stage || "Stage 1").toLowerCase()
 
-      return code.includes(q) || name.includes(q) || category.includes(q)
+      return code.includes(q) || name.includes(q) || category.includes(q) || stageName.includes(q)
     })
-  }, [schedules, selectedDateFilter, searchQuery])
+  }, [schedules, selectedDateFilter, selectedStageFilter, searchQuery])
 
   // Filter modal programmes by search text & category tab
   const filteredModalEvents = useMemo(() => {
@@ -568,16 +598,17 @@ export default function AdminSchedulePage() {
     const tableData = itemsToExport.map((s, idx) => {
       const formattedDate = formatDateLabel(s.schedule_date)
       const timeSlot = `${format12Hour(s.start_time)} - ${format12Hour(s.end_time)}`
+      const stageName = s.stage || "Stage 1"
       const code = s.programme?.event_code || "—"
       const name = s.programme?.name || "Unnamed Event"
       const category = s.programme?.category || "Standard"
 
-      return [idx + 1, formattedDate, timeSlot, code, name, category]
+      return [idx + 1, formattedDate, timeSlot, stageName, code, name, category]
     })
 
     autoTable(doc, {
       startY: 48,
-      head: [["#", "Date", "Time Slot", "Code", "Programme Name", "Category"]],
+      head: [["#", "Date", "Time Slot", "Stage", "Code", "Programme Name", "Category"]],
       body: tableData,
       theme: "grid",
       margin: { left: 14, right: 14 },
@@ -599,12 +630,13 @@ export default function AdminSchedulePage() {
         lineWidth: 0.2,
       },
       columnStyles: {
-        0: { halign: "center", cellWidth: 10, fontStyle: "bold" },
-        1: { halign: "center", cellWidth: 32 },
-        2: { halign: "center", cellWidth: 38, fontStyle: "bold" },
+        0: { halign: "center", cellWidth: 8, fontStyle: "bold" },
+        1: { halign: "center", cellWidth: 28 },
+        2: { halign: "center", cellWidth: 34, fontStyle: "bold" },
         3: { halign: "center", cellWidth: 20, fontStyle: "bold" },
-        4: { halign: "left", cellWidth: 57, fontStyle: "bold" },
-        5: { halign: "center", cellWidth: 25 },
+        4: { halign: "center", cellWidth: 18, fontStyle: "bold" },
+        5: { halign: "left", cellWidth: 52, fontStyle: "bold" },
+        6: { halign: "center", cellWidth: 22 },
       },
     })
 
@@ -715,44 +747,76 @@ export default function AdminSchedulePage() {
       )}
 
       {/* Filters & Search Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-        {/* Search */}
-        <div className="relative w-full md:max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slatebrand" />
-          <Input
-            placeholder="Search by code, programme name, or category..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-11 bg-ivory/80 border-navy/10 focus:border-gold rounded-xl shadow-xs text-sm"
-          />
-        </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+          {/* Search */}
+          <div className="relative w-full md:max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slatebrand" />
+            <Input
+              placeholder="Search by code, programme name, stage, or category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 bg-ivory/80 border-navy/10 focus:border-gold rounded-xl shadow-xs text-sm"
+            />
+          </div>
 
-        {/* Date Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
-          <button
-            type="button"
-            onClick={() => setSelectedDateFilter("ALL")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
-              selectedDateFilter === "ALL"
-                ? "bg-navy text-ivory border-navy shadow-xs"
-                : "bg-white/70 border-navy/10 text-slatebrand hover:border-navy/25"
-            }`}
-          >
-            All Dates ({schedules.length})
-          </button>
-
-          {availableDates.map((d) => (
+          {/* Date Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
             <button
-              key={d}
               type="button"
-              onClick={() => setSelectedDateFilter(d)}
+              onClick={() => setSelectedDateFilter("ALL")}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
-                selectedDateFilter === d
+                selectedDateFilter === "ALL"
                   ? "bg-navy text-ivory border-navy shadow-xs"
                   : "bg-white/70 border-navy/10 text-slatebrand hover:border-navy/25"
               }`}
             >
-              {formatDateLabel(d)}
+              All Dates ({schedules.length})
+            </button>
+
+            {availableDates.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setSelectedDateFilter(d)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
+                  selectedDateFilter === d
+                    ? "bg-navy text-ivory border-navy shadow-xs"
+                    : "bg-white/70 border-navy/10 text-slatebrand hover:border-navy/25"
+                }`}
+              >
+                {formatDateLabel(d)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Stage Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
+          <span className="text-xs font-bold text-navy shrink-0 mr-1">Stage:</span>
+          <button
+            type="button"
+            onClick={() => setSelectedStageFilter("ALL")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
+              selectedStageFilter === "ALL"
+                ? "bg-navy text-ivory border-navy shadow-xs"
+                : "bg-white/70 border-navy/10 text-slatebrand hover:border-navy/25"
+            }`}
+          >
+            All Stages
+          </button>
+          {STAGE_OPTIONS.map((stg) => (
+            <button
+              key={stg}
+              type="button"
+              onClick={() => setSelectedStageFilter(stg)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
+                selectedStageFilter === stg
+                  ? "bg-navy text-ivory border-navy shadow-xs"
+                  : "bg-white/70 border-navy/10 text-slatebrand hover:border-navy/25"
+              }`}
+            >
+              {stg}
             </button>
           ))}
         </div>
@@ -772,8 +836,8 @@ export default function AdminSchedulePage() {
             </div>
             <h3 className="text-lg font-bold text-navy">No Scheduled Programmes</h3>
             <p className="text-sm text-slatebrand max-w-md mt-1 mb-6">
-              {searchQuery || selectedDateFilter !== "ALL"
-                ? "No schedule entries match your search or date filter."
+              {searchQuery || selectedDateFilter !== "ALL" || selectedStageFilter !== "ALL"
+                ? "No schedule entries match your search, date, or stage filter."
                 : "No programmes have been scheduled yet. Click '+ Add Programme' to begin."}
             </p>
             {schedules.length === 0 && (
@@ -795,6 +859,9 @@ export default function AdminSchedulePage() {
                   </th>
                   <th scope="col" className="px-5 py-4 min-w-[220px]">
                     Programme
+                  </th>
+                  <th scope="col" className="px-5 py-4 min-w-[120px]">
+                    Stage
                   </th>
                   <th scope="col" className="px-5 py-4 min-w-[140px]">
                     Date
@@ -842,6 +909,13 @@ export default function AdminSchedulePage() {
                         <div className="font-bold text-navy text-base leading-snug">
                           {sched.programme?.name}
                         </div>
+                      </td>
+
+                      {/* Stage Badge */}
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black border ${getStageBadgeStyle(sched.stage)}`}>
+                          {sched.stage || "Stage 1"}
+                        </span>
                       </td>
 
                       {/* Schedule Date */}
@@ -1067,17 +1141,35 @@ export default function AdminSchedulePage() {
               </div>
             </div>
 
-            {/* 2. Schedule Date Picker */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-navy">
-                Date
-              </Label>
-              <Input
-                type="date"
-                value={scheduleDate}
-                onChange={(e) => setScheduleDate(e.target.value)}
-                className="h-11 bg-white border-navy/15 rounded-xl text-sm font-semibold text-navy"
-              />
+            {/* 2. Stage & Schedule Date Picker */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-navy">
+                  Stage
+                </Label>
+                <select
+                  value={stage}
+                  onChange={(e) => setStage(e.target.value)}
+                  className="h-11 w-full bg-white border border-navy/15 rounded-xl text-sm font-bold text-navy px-3 focus:outline-none focus:ring-2 focus:ring-gold/50 cursor-pointer"
+                >
+                  <option value="Stage 1">Stage 1</option>
+                  <option value="Stage 2">Stage 2</option>
+                  <option value="Stage 3">Stage 3</option>
+                  <option value="Stage 4">Stage 4</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-navy">
+                  Date
+                </Label>
+                <Input
+                  type="date"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  className="h-11 bg-white border-navy/15 rounded-xl text-sm font-semibold text-navy"
+                />
+              </div>
             </div>
 
             {/* 3. Start & End Time Pickers */}
